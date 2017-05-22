@@ -1,0 +1,11 @@
+URL: https://sourceforge.net/projects/proguard/files/proguard/5.2/
+Version: 5.2.1
+License: GPL
+License File: docs/license.html
+
+Description:
+ProGuard Java Optimizer and Obfuscator
+Java class file shrinker, optimizer, obfuscator, and preverifier
+
+Local Modifications:
+None.

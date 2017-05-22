@@ -1,0 +1,4 @@
+#
+# package.map file used by java/com/android/tools/r8/dex/ExtraFileTest.java
+#
+memberrebinding.subpackage:1

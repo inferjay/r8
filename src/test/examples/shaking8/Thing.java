@@ -1,0 +1,18 @@
+// Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+package shaking8;
+
+public class Thing {
+
+  private final int aField;
+
+  public Thing(int aField) {
+    this.aField = aField;
+  }
+
+  @Override
+  public String toString() {
+    return "Thing(" + aField + ")";
+  }
+}

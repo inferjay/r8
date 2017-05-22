@@ -1,0 +1,117 @@
+// Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+package com.android.tools.r8.graph;
+
+import java.util.IdentityHashMap;
+import java.util.Map;
+
+public abstract class GraphLense {
+
+  public static class Builder {
+
+    private final Map<DexType, DexType> typeMap = new IdentityHashMap<>();
+    private final Map<DexMethod, DexMethod> methodMap = new IdentityHashMap<>();
+    private final Map<DexField, DexField> fieldMap = new IdentityHashMap<>();
+
+    public void map(DexType from, DexType to) {
+      typeMap.put(from, to);
+    }
+
+    public void map(DexMethod from, DexMethod to) {
+      methodMap.put(from, to);
+    }
+
+    public void map(DexField from, DexField to) {
+      fieldMap.put(from, to);
+    }
+
+    public GraphLense build() {
+      return build(new IdentityGraphLense());
+    }
+
+    public GraphLense build(GraphLense previousLense) {
+      return new NestedGraphLense(typeMap, methodMap, fieldMap, previousLense);
+    }
+
+  }
+
+  public abstract DexType lookupType(DexType type, DexEncodedMethod context);
+
+  public abstract DexMethod lookupMethod(DexMethod method, DexEncodedMethod context);
+
+  public abstract DexField lookupField(DexField field, DexEncodedMethod context);
+
+  public abstract boolean isContextFree();
+
+  public static GraphLense getIdentityLense() {
+    return new IdentityGraphLense();
+  }
+
+  public final boolean isIdentityLense() {
+    return this instanceof IdentityGraphLense;
+  }
+
+  private static class IdentityGraphLense extends GraphLense {
+
+    @Override
+    public DexType lookupType(DexType type, DexEncodedMethod context) {
+      return type;
+    }
+
+    @Override
+    public DexMethod lookupMethod(DexMethod method, DexEncodedMethod context) {
+      return method;
+    }
+
+    @Override
+    public DexField lookupField(DexField field, DexEncodedMethod context) {
+      return field;
+    }
+
+    @Override
+    public boolean isContextFree() {
+      return true;
+    }
+  }
+
+  private static class NestedGraphLense extends GraphLense {
+
+    private final GraphLense previousLense;
+
+    private final Map<DexType, DexType> typeMap;
+    private final Map<DexMethod, DexMethod> methodMap;
+    private final Map<DexField, DexField> fieldMap;
+
+    private NestedGraphLense(Map<DexType, DexType> typeMap, Map<DexMethod, DexMethod> methodMap,
+        Map<DexField, DexField> fieldMap, GraphLense previousLense) {
+      this.typeMap = typeMap;
+      this.methodMap = methodMap;
+      this.fieldMap = fieldMap;
+      this.previousLense = previousLense;
+    }
+
+    @Override
+    public DexType lookupType(DexType type, DexEncodedMethod context) {
+      DexType previous = previousLense.lookupType(type, context);
+      return typeMap.getOrDefault(previous, previous);
+    }
+
+    @Override
+    public DexMethod lookupMethod(DexMethod method, DexEncodedMethod context) {
+      DexMethod previous = previousLense.lookupMethod(method, context);
+      return methodMap.getOrDefault(previous, previous);
+    }
+
+    @Override
+    public DexField lookupField(DexField field, DexEncodedMethod context) {
+      DexField previous = previousLense.lookupField(field, context);
+      return fieldMap.getOrDefault(previous, previous);
+    }
+
+    @Override
+    public boolean isContextFree() {
+      return previousLense.isContextFree();
+    }
+  }
+}

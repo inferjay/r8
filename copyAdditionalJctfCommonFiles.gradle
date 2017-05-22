@@ -1,0 +1,220 @@
+// Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+
+// The `copyAdditionalJctfCommonFiles` task copies files common to all JCTF test
+// cases into an intermediate directory which is then passed to gradle as a
+// source set.
+//
+// Details:
+//
+// The JCTF source tree consists of individual test cases and other sources
+// common to all test cases. The latter is compiled into a single jar file.
+//
+// The problem is the many common source files are scattered under the same
+// directory where the test cases are and gradle has no simple way to add
+// individual files to a source set.
+//
+// That's why we first copy over the common files into an intermediate directory
+// then pass gradle the source set as a single directory.
+
+task copyAdditionalJctfCommonFiles(type: Copy) {
+    def prefix = 'LibTests/src/com/google/jctf/test/lib/java'
+    def inputDir = 'third_party/jctf'
+    def outputDir = 'build/additionalJctfCommonFiles'
+    doFirst {
+        delete outputDir
+    }
+
+    // All the files containing "@Test" and also the files located in a directory where there is "@Test"
+    // file will be compiled into individual, per-test dex files.
+    // Here we need the files not containing "@Test" which are not siblings of "@Test" files. We compile
+    // them into a common jar file which will be added into each test's dex file.
+    //
+    // The following list is compiled with this script:
+    //
+    // # create list of directories that contain non-"@Test" files but do not contain "@Test" files
+    // dirlist=$(comm -23 \
+    // <(grep -rL "@Test" "third_party/jctf/LibTests/src/com/google/jctf/test/lib" --include=*.java | sed 's;/[^/]*\.java$;;' | sort | uniq) \
+    // <(grep -rl "@Test" "third_party/jctf/LibTests/src/com/google/jctf/test/lib" --include=*.java | sed 's;/[^/]*\.java$;;' | sort | uniq))
+    //
+    // # all the java files from these dirs
+    // (for d in $dirlist; do ls -1 $d/*.java; done) \
+    //   | sort | sed 's,.*test/lib/java/,,' | sed -E "s/(.*)/'\1',/"
+    def files = [
+        'lang/annotation/Annotation/AllTypesAntn2.java',
+        'lang/annotation/Annotation/AllTypesAntn.java',
+        'lang/Character/CharacterData.java',
+        'lang/Character/CharacterUtils.java',
+        'lang/Character/Subset/TestSubset.java',
+        'lang/Class/ClassAnnotationsData.java',
+        'lang/ClassLoader/EmptyCertificate.java',
+        'lang/ClassLoader/EmptyClassLoader.java',
+        'lang/ClassLoader/setPackageAssertionStatusLjava_lang_StringZ/pckg1/pckg11/C01.java',
+        'lang/ClassLoader/setPackageAssertionStatusLjava_lang_StringZ/pckg1/pckg11/pckg111/C01.java',
+        'lang/ClassLoader/setPackageAssertionStatusLjava_lang_StringZ/pckg1/pckg11/pckg111/C02.java',
+        'lang/ClassLoader/setPackageAssertionStatusLjava_lang_StringZ/pckg1/pckg12/C01.java',
+        'lang/Class/PackageAccessible.java',
+        'lang/Class/PackageInstantiable.java',
+        'lang/Enum/EnumMocks.java',
+        'lang/InheritableThreadLocal/TestThread.java',
+        'lang/Number/TestNumber.java',
+        'lang/Package/PackageAnnotationsData.java',
+        'lang/Package/PackageLoader.java',
+        'lang/ProcessBuilder/ProcessBuilderHelper.java',
+        'lang/reflect/AccessibleObject/ChildTestClass.java',
+        'lang/reflect/AccessibleObject/ClassTestAnnotation.java',
+        'lang/reflect/AccessibleObject/DefaultTestAnnotation.java',
+        'lang/reflect/AccessibleObject/Helper.java',
+        'lang/reflect/AccessibleObject/Runtime1TestAnnotation.java',
+        'lang/reflect/AccessibleObject/Runtime2TestAnnotation.java',
+        'lang/reflect/AccessibleObject/Runtime3TestAnnotation.java',
+        'lang/reflect/AccessibleObject/SourceTestAnnotation.java',
+        'lang/reflect/AccessibleObject/TestClass.java',
+        'lang/reflect/Constructor/ConstructorAnnotationsData.java',
+        'lang/reflect/Constructor/ConstructorTestHelper.java',
+        'lang/reflect/Constructor/PrivateClass.java',
+        'lang/reflect/Constructor/PrivateConstructor.java',
+        'lang/reflect/Field/FieldAnnotationsData.java',
+        'lang/reflect/Field/TestExceptionInInitializerError.java',
+        'lang/reflect/Field/TestFinalObjectField.java',
+        'lang/reflect/Field/TestFinalPrimitiveField.java',
+        'lang/reflect/Field/TestObjectField.java',
+        'lang/reflect/Field/TestOtherField.java',
+        'lang/reflect/Field/TestPrimitiveField.java',
+        'lang/reflect/Field/TestStaticFinalObjectField.java',
+        'lang/reflect/Field/TestStaticFinalPrimitiveField.java',
+        'lang/reflect/Field/TestStaticObjectField.java',
+        'lang/reflect/Field/TestStaticPrimitiveField.java',
+        'lang/reflect/Method/AbstractTestMethod.java',
+        'lang/reflect/Method/MethodAnnotationsData.java',
+        'lang/reflect/Method/PrivateClass.java',
+        'lang/reflect/Method/PrivateMethod.java',
+        'lang/reflect/Method/TestMethod.java',
+        'lang/reflect/Method/TestMethodSub.java',
+        'lang/reflect/Proxy/HiddenInterface.java',
+        'lang/reflect/Proxy/NullHandler.java',
+        'lang/ref/MemoryHog.java',
+        'lang/ref/MyReferenceQueue.java',
+        'lang/ref/PhantomReference/MyPhantomReference.java',
+        'lang/ref/SoftReference/MySoftReference.java',
+        'lang/ref/WeakReference/MyWeakReference.java',
+        'lang/Runtime/CountLoads.java',
+        'lang/Runtime/CWD.java',
+        'lang/Runtime/EchoArgs.java',
+        'lang/Runtime/EchoEnv.java',
+        'lang/SecurityManager/CheckingDomain.java',
+        'lang/SecurityManager/SecurityManagerTest.java',
+        'lang/StackTraceElement/ElementData.java',
+        'lang/StackTraceElement/InitTestFixture.java',
+        'lang/StackTraceElement/StaticInitTestFixture.java',
+        'lang/StackTraceElement/TestFixture.java',
+        'lang/StrictMath/FPUtil.java',
+        'lang/StringBuffer/MultiThreadTestHelper.java',
+        'lang/String/String_Character.java',
+        'lang/String/StringHelper.java',
+        'lang/String/String_ISO88591.java',
+        'lang/String/String_UnicodeCodePoint.java',
+        'lang/String/String_USASCII.java',
+        'lang/String/String_UTF16BE.java',
+        'lang/String/String_UTF16.java',
+        'lang/String/String_UTF16LE.java',
+        'lang/String/String_UTF8.java',
+        'lang/System/System_propertyKeys.java',
+        'lang/Thread/CatchThread.java',
+        'lang/Thread/CheckHandler.java',
+        'lang/Thread/CheckRun.java',
+        'lang/ThreadGroup/AccessCheckThread.java',
+        'lang/ThreadGroup/CatchGroup.java',
+        'lang/ThreadGroup/MyThread.java',
+        'lang/ThreadGroup/SMTestCheckAccessThreadGroupThrowSE.java',
+        'lang/ThreadGroup/SMTestCheckAccessThreadGroupWasCalled.java',
+        'lang/ThreadGroup/SMTestCheckAccessThreadThrowSE.java',
+        'lang/ThreadGroup/ThreadGroupHelper.java',
+        'lang/Thread/SlowIncThread.java',
+        'lang/Thread/StepThread.java',
+        'lang/Thread/WaitRun.java',
+        'lang/Throwable/Exception1.java',
+        'lang/Throwable/Exception2.java',
+        'lang/Throwable/Exception3.java',
+        'lang/Throwable/MethodStackFixture.java',
+        'lang/Throwable/MultipleExceptionsFixture.java',
+        'lang/Throwable/MultipleExceptionsStackChecker.java',
+        'util/concurrent/AbstractExecutorService/DirectExecutorService.java',
+        'util/concurrent/AdjustablePolicy.java',
+        'util/concurrent/ArrayBlockingQueue/ArrayBlockingQueueHelper.java',
+        'util/concurrent/CheckedCallable.java',
+        'util/concurrent/CheckedInterruptedCallable.java',
+        'util/concurrent/CheckedInterruptedRunnable.java',
+        'util/concurrent/CheckedRunnable.java',
+        'util/concurrent/ConcurrentHashMap/ConcurrentHashMapHelper.java',
+        'util/concurrent/ConcurrentLinkedQueue/ConcurrentLinkedQueueHelper.java',
+        'util/concurrent/ConcurrentSkipListMap/ConcurrentSkipListMapHelper.java',
+        'util/concurrent/ConcurrentSkipListSet/ConcurrentSkipListSetHelper.java',
+        'util/concurrent/ConcurrentSkipListSet/MyReverseComparator.java',
+        'util/concurrent/CopyOnWriteArrayList/CopyOnWriteArrayListHelper.java',
+        'util/concurrent/CopyOnWriteArraySet/CopyOnWriteArraySetHelper.java',
+        'util/concurrent/CyclicBarrier/MyAction.java',
+        'util/concurrent/DelayQueue/DelayQueueHelper.java',
+        'util/concurrent/DelayQueue/NanoDelay.java',
+        'util/concurrent/DelayQueue/PDelay.java',
+        'util/concurrent/FutureTask/CounterCallable.java',
+        'util/concurrent/FutureTask/PublicFutureTask.java',
+        'util/concurrent/Helper.java',
+        'util/concurrent/InterruptedCallable.java',
+        'util/concurrent/InterruptingCallable.java',
+        'util/concurrent/LinkedBlockingDeque/LinkedBlockingDequeHelper.java',
+        'util/concurrent/LinkedBlockingQueue/LinkedBlockingQueueHelper.java',
+        'util/concurrent/MediumPossiblyInterruptedRunnable.java',
+        'util/concurrent/MediumRunnable.java',
+        'util/concurrent/NoOpCallable.java',
+        'util/concurrent/NoOpREHandler.java',
+        'util/concurrent/NoOpRunnable.java',
+        'util/concurrent/NPETask.java',
+        'util/concurrent/PriorityBlockingQueue/MyReverseComparator.java',
+        'util/concurrent/PriorityBlockingQueue/PriorityBlockingQueueHelper.java',
+        'util/concurrent/RunnableShouldThrow.java',
+        'util/concurrent/ScheduledThreadPoolExecutor/CustomExecutor.java',
+        'util/concurrent/ScheduledThreadPoolExecutor/CustomTask.java',
+        'util/concurrent/ScheduledThreadPoolExecutor/RunnableCounter.java',
+        'util/concurrent/Semaphore/InterruptedLockRunnable.java',
+        'util/concurrent/Semaphore/InterruptibleLockRunnable.java',
+        'util/concurrent/Semaphore/PublicSemaphore.java',
+        'util/concurrent/ShortRunnable.java',
+        'util/concurrent/SimpleThreadFactory.java',
+        'util/concurrent/SmallCallable.java',
+        'util/concurrent/SmallPossiblyInterruptedRunnable.java',
+        'util/concurrent/SmallRunnable.java',
+        'util/concurrent/StringTask.java',
+        'util/concurrent/ThreadPoolExecutor/CustomTask.java',
+        'util/concurrent/ThreadPoolExecutor/CustomTPE.java',
+        'util/concurrent/ThreadPoolExecutor/ExtendedTPE.java',
+        'util/concurrent/ThreadPoolExecutor/FailingThreadFactory.java',
+        'util/concurrent/ThreadShouldThrow.java',
+        'util/concurrent/TrackedCallable.java',
+        'util/concurrent/TrackedLongRunnable.java',
+        'util/concurrent/TrackedNoOpRunnable.java',
+        'util/concurrent/TrackedShortRunnable.java',
+    ]
+    files.each {
+        def dir = new File(it).parent
+        from ("$inputDir/$prefix/$it") {
+            into "$prefix/$dir"
+        }
+
+    }
+
+    def prefixNoPackage = 'LibTests/src'
+    def filesNoPackage = [
+        'DefaultPackageInterface.java',
+        'UnnamedPackageClass.java'
+    ]
+    filesNoPackage.each {
+        from ("$inputDir/$prefixNoPackage/$it") {
+            into "$prefixNoPackage"
+        }
+    }
+
+    into outputDir
+}

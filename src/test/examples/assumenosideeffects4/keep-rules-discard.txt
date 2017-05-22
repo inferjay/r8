@@ -1,0 +1,29 @@
+# Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# Keep the application entry point. Get rid of everything that is not
+# reachable from there.
+-keep public class assumenosideeffects4.Assumenosideeffects {
+  public static final int ASSUMED_VALUE_0;
+  public static final int ASSUMED_VALUE_1;
+  public static final long ASSUMED_VALUE_0L;
+  public static final long ASSUMED_VALUE_1L;
+  public static void main(...);
+}
+
+# Mark some methods to have no side effects.
+-assumenosideeffects public class assumenosideeffects4.Assumenosideeffects {
+  public static int method0(...) return assumenosideeffects4.Assumenosideeffects.ASSUMED_VALUE_1;
+  public static int method1(...) return assumenosideeffects4.Assumenosideeffects.ASSUMED_VALUE_0;
+  public static long method0L(...) return assumenosideeffects4.Assumenosideeffects.ASSUMED_VALUE_1L;
+  public static long method1L(...) return assumenosideeffects4.Assumenosideeffects.ASSUMED_VALUE_0L;
+}
+
+# Allow access modification to enable minifcation.
+-allowaccessmodification
+
+# Check that methods has been discarded.
+-checkdiscard class * {
+  @assumenosideeffects4.CheckDiscarded *;
+}

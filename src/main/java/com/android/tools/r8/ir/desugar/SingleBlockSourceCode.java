@@ -1,0 +1,212 @@
+// Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+package com.android.tools.r8.ir.desugar;
+
+import static com.android.tools.r8.ir.code.BasicBlock.ThrowingInfo.NO_THROW;
+
+import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.DebugLocalInfo;
+import com.android.tools.r8.graph.DexProto;
+import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.ir.code.Argument;
+import com.android.tools.r8.ir.code.CatchHandlers;
+import com.android.tools.r8.ir.code.MoveType;
+import com.android.tools.r8.ir.code.Switch;
+import com.android.tools.r8.ir.code.Value;
+import com.android.tools.r8.ir.conversion.IRBuilder;
+import com.android.tools.r8.ir.conversion.SourceCode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+abstract class SingleBlockSourceCode implements SourceCode {
+  final DexType receiver;
+  final DexProto proto;
+
+  // The next free register, note that we always
+  // assign each value a new (next available) register.
+  private int nextRegister = 0;
+
+  // Registers for receiver and parameters
+  private final int receiverRegister;
+  private int[] paramRegisters;
+  // Values representing receiver and parameters will be filled in
+  // buildPrelude() and should only be accessed via appropriate methods
+  private Value receiverValue;
+  private Value[] paramValues;
+
+  // Instruction constructors
+  private List<Consumer<IRBuilder>> constructors = new ArrayList<>();
+
+  SingleBlockSourceCode(DexType receiver, DexProto proto) {
+    assert proto != null;
+    this.receiver = receiver;
+    this.proto = proto;
+
+    // Initialize register values for receiver and arguments
+    this.receiverRegister = receiver != null ? nextRegister(MoveType.OBJECT) : -1;
+
+    DexType[] params = proto.parameters.values;
+    int paramCount = params.length;
+    this.paramRegisters = new int[paramCount];
+    this.paramValues = new Value[paramCount];
+    for (int i = 0; i < paramCount; i++) {
+      this.paramRegisters[i] = nextRegister(MoveType.fromDexType(params[i]));
+    }
+  }
+
+  final void add(Consumer<IRBuilder> constructor) {
+    constructors.add(constructor);
+  }
+
+  final int nextRegister(MoveType type) {
+    int value = nextRegister;
+    nextRegister += type == MoveType.WIDE ? 2 : 1;
+    return value;
+  }
+
+  final Value getReceiverValue() {
+    assert receiver != null;
+    assert receiverValue != null;
+    return receiverValue;
+  }
+
+  final int getReceiverRegister() {
+    assert receiver != null;
+    assert receiverRegister >= 0;
+    return receiverRegister;
+  }
+
+  final Value getParamValue(int paramIndex) {
+    assert paramIndex >= 0;
+    assert paramIndex < paramValues.length;
+    return paramValues[paramIndex];
+  }
+
+  final int getParamCount() {
+    return paramValues.length;
+  }
+
+  final int getParamRegister(int paramIndex) {
+    assert paramIndex >= 0;
+    assert paramIndex < paramRegisters.length;
+    return paramRegisters[paramIndex];
+  }
+
+  abstract void prepareInstructions();
+
+  @Override
+  public final boolean needsPrelude() {
+    return receiver != null || paramRegisters.length > 0;
+  }
+
+  @Override
+  public final int instructionCount() {
+    return constructors.size();
+  }
+
+  @Override
+  public final int instructionIndex(int instructionOffset) {
+    return instructionOffset;
+  }
+
+  @Override
+  public final int instructionOffset(int instructionIndex) {
+    return instructionIndex;
+  }
+
+  @Override
+  public DebugLocalInfo getCurrentLocal(int register) {
+    return null;
+  }
+
+  @Override
+  public final boolean traceInstruction(int instructionIndex, IRBuilder builder) {
+    return instructionIndex == constructors.size() - 1;
+  }
+
+  @Override
+  public final void closedCurrentBlockWithFallthrough(int fallthroughInstructionIndex) {
+  }
+
+  @Override
+  public final void closedCurrentBlock() {
+  }
+
+  @Override
+  public final void setUp() {
+    assert constructors.isEmpty();
+    prepareInstructions();
+    assert !constructors.isEmpty();
+  }
+
+  @Override
+  public final void clear() {
+    constructors = null;
+    paramRegisters = null;
+    paramValues = null;
+    receiverValue = null;
+  }
+
+  @Override
+  public final void buildPrelude(IRBuilder builder) {
+    if (receiver != null) {
+      receiverValue = builder.writeRegister(receiverRegister, MoveType.OBJECT, NO_THROW);
+      builder.add(new Argument(receiverValue));
+    }
+
+    // Fill in the Argument instructions in the argument block.
+    DexType[] parameters = proto.parameters.values;
+    for (int i = 0; i < parameters.length; i++) {
+      MoveType moveType = MoveType.fromDexType(parameters[i]);
+      Value paramValue = builder.writeRegister(paramRegisters[i], moveType, NO_THROW);
+      paramValues[i] = paramValue;
+      builder.add(new Argument(paramValue));
+    }
+  }
+
+  @Override
+  public final void buildPostlude(IRBuilder builder) {
+    // Intentionally left empty.
+  }
+
+  @Override
+  public final void buildInstruction(IRBuilder builder, int instructionIndex) {
+    constructors.get(instructionIndex).accept(builder);
+  }
+
+  @Override
+  public final void resolveAndBuildSwitch(
+      Switch.Type type, int value, int fallthroughOffset,
+      int payloadOffset, IRBuilder builder) {
+    throw new Unreachable("Unexpected call to resolveAndBuildSwitch");
+  }
+
+  @Override
+  public final void resolveAndBuildNewArrayFilledData(
+      int arrayRef, int payloadOffset, IRBuilder builder) {
+    throw new Unreachable("Unexpected call to resolveAndBuildNewArrayFilledData");
+  }
+
+  @Override
+  public final CatchHandlers<Integer> getCurrentCatchHandlers() {
+    return null;
+  }
+
+  @Override
+  public final boolean verifyCurrentInstructionCanThrow() {
+    return true;
+  }
+
+  @Override
+  public boolean verifyLocalInScope(DebugLocalInfo local) {
+    return true;
+  }
+
+  @Override
+  public final boolean verifyRegister(int register) {
+    return true;
+  }
+}

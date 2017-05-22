@@ -1,0 +1,46 @@
+// Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+package com.android.tools.r8;
+
+import com.android.tools.r8.utils.AndroidApp;
+import com.google.common.collect.ImmutableList;
+import java.io.IOException;
+import java.nio.file.Path;
+
+abstract class BaseOutput {
+
+  private final AndroidApp app;
+
+  BaseOutput(AndroidApp app) {
+    this.app = app;
+  }
+
+  // Internal access to the underlying app.
+  AndroidApp getAndroidApp() {
+    return app;
+  }
+
+  /**
+   * Get the list of compiled DEX resources.
+   *
+   * <p>The order of the list corresponds to the usual naming convention:
+   *
+   * <pre>
+   *   resources.get(0)     ~=~ classes.dex  (the main dex file)
+   *   resources.get(N - 1) ~=~ classesN.dex (where N > 0).
+   * </pre>
+   *
+   * @return list of compiled DEX resources.
+   */
+  public ImmutableList<Resource> getDexResources() {
+    return ImmutableList.copyOf(app.getDexProgramResources());
+  }
+
+  /**
+   * Write the output resources to a zip-archive or directory.
+   *
+   * @param output Path to existing directory or non-existing zip-archive.
+   */
+  abstract public void write(Path output) throws IOException;
+}

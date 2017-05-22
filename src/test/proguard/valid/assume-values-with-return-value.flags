@@ -1,0 +1,11 @@
+# Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+-assumevalues class com.example.SomeClass {
+    public static final boolean isTrue() return true;
+    public static final boolean isFalse() return false;
+    public static final int is1() return 1;
+    public static final int is2To4() return 2..4;
+    public static final int isField() return com.google.C.X;
+}

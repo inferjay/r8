@@ -1,0 +1,18 @@
+Build from branch android-4.4.4_r1
+
+mkdir kitkat
+cd kitkat
+repo init -u https://android.googlesource.com/platform/manifest -b  android-4.4.4_r1
+repo sync
+source build/envsetup.sh
+lunch aosp_x86-eng
+m -j24
+m -j24 dalvik
+m -j24 dalvikvm
+
+Collect
+ bin
+ framework
+ lib
+ usr
+into tools/linux/dalvik

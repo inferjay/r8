@@ -1,0 +1,4 @@
+-keep !public abstract !final @com.company.Something class * {
+  public !static <fields>;
+  !public !protected ! volatile <methods>;
+}

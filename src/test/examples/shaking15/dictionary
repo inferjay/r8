@@ -1,0 +1,14 @@
+# this is a comment
+abc# this is another comment
+def # this is again another comment after an ignored character
+ghi
+jkl
+mno pqr
+stu!vw$[
+
+/*-+&~"'
+xyz_
+
+    ea
+1abc
+!

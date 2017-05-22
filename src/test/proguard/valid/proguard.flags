@@ -1,0 +1,95 @@
+# This is a comment.
+
+   # I bet there will be many of those.
+
+-keep @Annotation class hello.Hello {
+  public *;
+}
+
+-keep @Annotation class hello.Hello {
+  public <methods>;
+}
+
+-keep @Annotation class hello.Hello {
+  public <fields>;
+}
+
+-keep @Annotation class hello.Hello {
+  public <init>();
+}
+
+-keep  @Annotation class hello.Hello {
+  public <init>(hello.***.B, hello.**.A, hello.?);
+}
+
+-keep @Annotation class hello.Hello{  # Missing space before '{' on purpose.
+  public <init>(hello.A);
+}
+
+-keep class hello.Hello {
+  public static static void main(java.lang.String[]);
+}
+
+-keep class hello.Hello {
+  public static static % method(...);
+}
+
+-keep class hello.Hello {
+  public static boolean theFlag;
+}
+
+-keep class hello.Hello {
+  public Hello(...);
+}
+
+-keepnames class hello.Hello extends Hello.Base {
+  public *;
+}
+
+-keepclassmembers class hello.Hello implements @Hep Hello.Base {
+  public *;
+}
+
+-keepclasseswithmembers class hello.Hello {
+  public *;
+}
+
+-keepclassmembernames class hello.Hello {
+  public *;
+}
+
+-keepclasseswithmembernames class hello.Hello {
+  public *;
+}
+
+-keepclassmembers,includedescriptorclasses @com.company.Annotation* public class **JNI {
+  public static *** methodPrefix_*(...);
+}
+
+-keepclassmembernames,includedescriptorclasses @com.company.Annotation* public class * {
+  public <methods>;
+  protected <methods>;
+}
+
+-keepclasseswithmembernames public class **JNI {
+  public final static native <methods>;
+}
+
+-keep class com.company.some.package.MyClass
+
+-keep @interface com.company.SomeAnnotation
+
+-keep @com.company.SomeAnnotation class *
+
+-keepclasseswithmembers class * {
+  @com.company.SomeAnnotation <fields>;
+}
+
+-keepclasseswithmembers class * {
+  @com.company.SomeAnnotation <methods>;
+}
+
+-keep public @com.company.Something class * {
+  public <fields>;
+  public <methods>;
+}

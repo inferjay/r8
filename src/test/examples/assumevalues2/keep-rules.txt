@@ -1,0 +1,18 @@
+# Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# Keep the application entry point. Get rid of everything that is not
+# reachable from there.
+-keep public class assumevalues2.Assumevalues {
+  public static void main(...);
+}
+
+# Assume values for fields.
+-assumevalues public class assumevalues2.Assumevalues {
+  public static int value return 2..3;
+  public static long valueL return 2..3;
+}
+
+# Allow access modification to enable minifcation.
+-allowaccessmodification

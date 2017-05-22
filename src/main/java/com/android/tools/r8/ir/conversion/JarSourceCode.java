@@ -1,0 +1,2097 @@
+// Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+package com.android.tools.r8.ir.conversion;
+
+import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.DebugLocalInfo;
+import com.android.tools.r8.graph.Descriptor;
+import com.android.tools.r8.graph.DexCallSite;
+import com.android.tools.r8.graph.DexField;
+import com.android.tools.r8.graph.DexItem;
+import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.graph.DexMethod;
+import com.android.tools.r8.graph.DexMethodHandle;
+import com.android.tools.r8.graph.DexMethodHandle.MethodHandleType;
+import com.android.tools.r8.graph.DexProto;
+import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.graph.DexValue;
+import com.android.tools.r8.graph.JarApplicationReader;
+import com.android.tools.r8.ir.code.CatchHandlers;
+import com.android.tools.r8.ir.code.Cmp.Bias;
+import com.android.tools.r8.ir.code.ConstType;
+import com.android.tools.r8.ir.code.If;
+import com.android.tools.r8.ir.code.Invoke;
+import com.android.tools.r8.ir.code.MemberType;
+import com.android.tools.r8.ir.code.Monitor;
+import com.android.tools.r8.ir.code.MoveType;
+import com.android.tools.r8.ir.code.NumericType;
+import com.android.tools.r8.ir.code.Switch;
+import com.android.tools.r8.ir.conversion.JarState.Local;
+import com.android.tools.r8.ir.conversion.JarState.Slot;
+import com.android.tools.r8.logging.Log;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.IincInsnNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.LineNumberNode;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.LookupSwitchInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.MultiANewArrayInsnNode;
+import org.objectweb.asm.tree.TableSwitchInsnNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
+import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceMethodVisitor;
+
+
+public class JarSourceCode implements SourceCode {
+
+  // Try-catch block wrapper containing resolved offsets.
+  private static class TryCatchBlock {
+
+    private final int handler;
+    private final int start;
+    private final int end;
+
+    private final String type;
+
+    public TryCatchBlock(TryCatchBlockNode node, JarSourceCode code) {
+      this(code.getOffset(node.handler),
+          code.getOffset(node.start),
+          code.getOffset(node.end),
+          node.type);
+    }
+
+    private TryCatchBlock(int handler, int start, int end, String type) {
+      assert start < end;
+      this.handler = handler;
+      this.start = start;
+      this.end = end;
+      this.type = type;
+    }
+
+    int getStart() {
+      return start;
+    }
+
+    int getEnd() {
+      return end;
+    }
+
+    int getHandler() {
+      return handler;
+    }
+
+    String getType() {
+      return type;
+    }
+  }
+
+  // Various descriptors.
+  private static final String INT_ARRAY_DESC = "[I";
+  private static final String REFLECT_ARRAY_DESC = "Ljava/lang/reflect/Array;";
+  private static final String REFLECT_ARRAY_NEW_INSTANCE_NAME = "newInstance";
+  private static final String REFLECT_ARRAY_NEW_INSTANCE_DESC =
+      "(Ljava/lang/Class;[I)Ljava/lang/Object;";
+  private static final String METHODHANDLE_INVOKE_OR_INVOKEEXACT_DESC =
+      "([Ljava/lang/Object;)Ljava/lang/Object;";
+
+  // Language types.
+  private static final Type CLASS_TYPE = Type.getObjectType("java/lang/Class");
+  private static final Type STRING_TYPE = Type.getObjectType("java/lang/String");
+  private static final Type INT_ARRAY_TYPE = Type.getObjectType(INT_ARRAY_DESC);
+  private static final Type THROWABLE_TYPE = Type.getObjectType("java/lang/Throwable");
+
+  private static final int[] NO_TARGETS = {};
+
+  private final JarApplicationReader application;
+  private final MethodNode node;
+  private final DexType clazz;
+  private final List<Type> parameterTypes;
+  private final LabelNode initialLabel;
+
+  private TraceMethodVisitor printVisitor = null;
+
+  private final JarState state;
+  private AbstractInsnNode currentInstruction = null;
+
+  // Special try-catch block for synchronized methods.
+  // This block is given a negative instruction index as it is not part of the instruction stream.
+  // The start range of 0 ensures that a new block will start at the first real instruction and
+  // thus that the monitor-entry prelude (part of the argument block which must not have a try-catch
+  // successor) is not joined with the first instruction block (which likely will have a try-catch
+  // successor).
+  private static final int EXCEPTIONAL_SYNC_EXIT_OFFSET = -1;
+  private static final TryCatchBlock EXCEPTIONAL_SYNC_EXIT =
+      new TryCatchBlock(EXCEPTIONAL_SYNC_EXIT_OFFSET, 0, Integer.MAX_VALUE, null);
+
+  // Instruction that enters the monitor. Null if the method is not synchronized.
+  private Monitor monitorEnter = null;
+
+  // State to signal that the code currently being emitted is part of synchronization prelude/exits.
+  private boolean generatingMethodSynchronization = false;
+
+  public JarSourceCode(DexType clazz, MethodNode node, JarApplicationReader application) {
+    assert node != null;
+    assert node.desc != null;
+    this.node = node;
+    this.application = application;
+    this.clazz = clazz;
+    parameterTypes = Arrays.asList(Type.getArgumentTypes(node.desc));
+    state = new JarState(node.maxLocals, computeLocals(node.localVariables, application));
+    AbstractInsnNode first = node.instructions.getFirst();
+    initialLabel = first instanceof LabelNode ? (LabelNode) first : null;
+  }
+
+  private static Map<LocalVariableNode, DebugLocalInfo> computeLocals(
+      List localNodes, JarApplicationReader application) {
+    Map<DebugLocalInfo, DebugLocalInfo> canonical = new HashMap<>(localNodes.size());
+    Map<LocalVariableNode, DebugLocalInfo> localVariables = new HashMap<>(localNodes.size());
+    for (Object o : localNodes) {
+      LocalVariableNode node = (LocalVariableNode) o;
+      localVariables.computeIfAbsent(node, n -> canonicalizeLocal(n, canonical, application));
+    }
+    return localVariables;
+  }
+
+  private static DebugLocalInfo canonicalizeLocal(
+      LocalVariableNode node,
+      Map<DebugLocalInfo, DebugLocalInfo> canonicalLocalVariables,
+      JarApplicationReader application) {
+    DebugLocalInfo info = new DebugLocalInfo(
+        application.getString(node.name),
+        application.getType(Type.getType(node.desc)),
+        node.signature == null ? null : application.getString(node.signature));
+    DebugLocalInfo canonical = canonicalLocalVariables.putIfAbsent(info, info);
+    return canonical != null ? canonical : info;
+  }
+
+  private boolean isStatic() {
+    return (node.access & Opcodes.ACC_STATIC) > 0;
+  }
+
+  private boolean isSynchronized() {
+    return (node.access & Opcodes.ACC_SYNCHRONIZED) > 0;
+  }
+
+  private int formalParameterCount() {
+    return parameterTypes.size();
+  }
+
+  private int actualArgumentCount() {
+    return isStatic() ? formalParameterCount() : formalParameterCount() + 1;
+  }
+
+  @Override
+  public int instructionCount() {
+    return node.instructions.size();
+  }
+
+  @Override
+  public int instructionIndex(int instructionOffset) {
+    return instructionOffset;
+  }
+
+  @Override
+  public int instructionOffset(int instructionIndex) {
+    return instructionIndex;
+  }
+
+  @Override
+  public boolean verifyRegister(int register) {
+    // The register set is dynamically managed by the state so we assume all values valid here.
+    return true;
+  }
+
+  @Override
+  public void setUp() {
+    if (Log.ENABLED) {
+      Log.debug(JarSourceCode.class, "Computing blocks for:\n" + toString());
+    }
+  }
+
+  @Override
+  public void clear() {
+
+  }
+
+  @Override
+  public boolean needsPrelude() {
+    return isSynchronized() || actualArgumentCount() > 0 || !node.localVariables.isEmpty();
+  }
+
+  @Override
+  public void buildPrelude(IRBuilder builder) {
+    Map<Integer, MoveType> initializedLocals = new HashMap<>(node.localVariables.size());
+    if (initialLabel != null) {
+      state.openLocals(initialLabel);
+    }
+    int argumentRegister = 0;
+    if (!isStatic()) {
+      Type thisType = Type.getType(clazz.descriptor.toString());
+      int register = state.writeLocal(argumentRegister++, thisType);
+      builder.addThisArgument(register);
+      initializedLocals.put(register, moveType(thisType));
+    }
+    for (Type type : parameterTypes) {
+      MoveType moveType = moveType(type);
+      int register = state.writeLocal(argumentRegister, type);
+      builder.addNonThisArgument(register, moveType);
+      argumentRegister += moveType.requiredRegisters();
+      initializedLocals.put(register, moveType);
+    }
+    if (isSynchronized()) {
+      generatingMethodSynchronization = true;
+      Type clazzType = Type.getType(clazz.toDescriptorString());
+      int monitorRegister;
+      if (isStatic()) {
+        // Load the class using a temporary on the stack.
+        monitorRegister = state.push(clazzType);
+        state.pop();
+        builder.addConstClass(monitorRegister, clazz);
+      } else {
+        assert actualArgumentCount() > 0;
+        // The object is stored in the first local.
+        monitorRegister = state.readLocal(0, clazzType).register;
+      }
+      // Build the monitor enter and save it for when generating exits later.
+      monitorEnter = builder.addMonitor(Monitor.Type.ENTER, monitorRegister);
+      generatingMethodSynchronization = false;
+    }
+    // Initialize all non-argument locals to ensure safe insertion of debug-local instructions.
+    for (Object o : node.localVariables) {
+      LocalVariableNode local = (LocalVariableNode) o;
+      Type localType = Type.getType(local.desc);
+      int localRegister = state.getLocalRegister(local.index, localType);
+      MoveType exitingLocalType = initializedLocals.get(localRegister);
+      assert exitingLocalType == null || exitingLocalType == moveType(localType);
+      if (exitingLocalType == null) {
+        int localRegister2 = state.writeLocal(local.index, localType);
+        assert localRegister == localRegister2;
+        initializedLocals.put(localRegister, moveType(localType));
+        builder.addDebugUninitialized(localRegister, constType(localType));
+      }
+    }
+  }
+
+  @Override
+  public void buildPostlude(IRBuilder builder) {
+    if (isSynchronized()) {
+      generatingMethodSynchronization = true;
+      buildMonitorExit(builder);
+      generatingMethodSynchronization = false;
+    }
+  }
+
+  private void buildExceptionalPostlude(IRBuilder builder) {
+    assert isSynchronized();
+    assert state.isInvalid();
+    generatingMethodSynchronization = true;
+    int exceptionRegister = 0; // We are exiting the method so we just overwrite register 0.
+    builder.addMoveException(exceptionRegister);
+    buildMonitorExit(builder);
+    builder.addThrow(exceptionRegister);
+    generatingMethodSynchronization = false;
+  }
+
+  private void buildMonitorExit(IRBuilder builder) {
+    assert generatingMethodSynchronization;
+    builder.add(new Monitor(Monitor.Type.EXIT, monitorEnter.inValues().get(0)));
+  }
+
+  @Override
+  public void closedCurrentBlockWithFallthrough(int fallthroughInstructionIndex) {
+    assert !state.isInvalid();
+    state.recordStateForTarget(fallthroughInstructionIndex, this);
+    state.invalidateState();
+  }
+
+  @Override
+  public void closedCurrentBlock() {
+    assert state.isInvalid();
+  }
+
+  @Override
+  public void buildInstruction(IRBuilder builder, int instructionIndex) {
+    if (instructionIndex == EXCEPTIONAL_SYNC_EXIT_OFFSET) {
+      buildExceptionalPostlude(builder);
+      return;
+    }
+    AbstractInsnNode insn = getInstruction(instructionIndex);
+    currentInstruction = insn;
+    assert verifyExceptionEdgesAreRecorded(insn);
+
+    // Restore the state if invalid.
+    if (state.isInvalid()) {
+      state.restoreState(instructionIndex);
+      // If the block being restored is a try-catch handler push the exception on the stack.
+      for (int i = 0; i < node.tryCatchBlocks.size(); i++) {
+        TryCatchBlockNode tryCatchBlockNode = (TryCatchBlockNode) node.tryCatchBlocks.get(i);
+        if (tryCatchBlockNode.handler == insn) {
+          builder.addMoveException(state.push(THROWABLE_TYPE));
+          break;
+        }
+      }
+    }
+
+    String preInstructionState;
+    if (Log.ENABLED) {
+      preInstructionState = state.toString();
+    }
+
+    build(insn, builder);
+
+    // Process local-variable end scopes if this instruction is not a control-flow instruction.
+    // For control-flow instructions, processing takes place before closing their respective blocks.
+    if (!isControlFlowInstruction(insn)) {
+      processLocalVariableEnd(insn, builder);
+    }
+
+    if (Log.ENABLED && !(insn instanceof LineNumberNode)) {
+      int offset = getOffset(insn);
+      if (insn instanceof LabelNode) {
+        Log.debug(getClass(), "\n%4d: %s",
+            offset, instructionToString(insn).replace('\n', ' '));
+      } else {
+        Log.debug(getClass(), "\n%4d: %s          pre:  %s\n          post: %s",
+            offset, instructionToString(insn), preInstructionState, state);
+      }
+    }
+  }
+
+  private boolean verifyExceptionEdgesAreRecorded(AbstractInsnNode insn) {
+    if (canThrow(insn)) {
+      for (TryCatchBlock tryCatchBlock : getTryHandlers(insn)) {
+        assert tryCatchBlock.getHandler() == EXCEPTIONAL_SYNC_EXIT_OFFSET
+            || state.hasState(tryCatchBlock.getHandler());
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public void resolveAndBuildSwitch(Switch.Type type, int value, int fallthroughOffset,
+      int payloadOffset, IRBuilder builder) {
+    throw new Unreachable();
+  }
+
+  @Override
+  public void resolveAndBuildNewArrayFilledData(int arrayRef, int payloadOffset,
+      IRBuilder builder) {
+    throw new Unreachable();
+  }
+
+  @Override
+  public DebugLocalInfo getCurrentLocal(int register) {
+    return state.getLocalInfoForRegister(register);
+  }
+
+  @Override
+  public CatchHandlers<Integer> getCurrentCatchHandlers() {
+    if (generatingMethodSynchronization) {
+      return null;
+    }
+    List<TryCatchBlock> tryCatchBlocks = getTryHandlers(currentInstruction);
+    if (tryCatchBlocks.isEmpty()) {
+      return null;
+    }
+    // TODO(zerny): Compute this more efficiently.
+    return new CatchHandlers<>(
+        getTryHandlerGuards(tryCatchBlocks),
+        getTryHandlerOffsets(tryCatchBlocks));
+  }
+
+  @Override
+  public boolean verifyCurrentInstructionCanThrow() {
+    return generatingMethodSynchronization || canThrow(currentInstruction);
+  }
+
+  @Override
+  public boolean verifyLocalInScope(DebugLocalInfo local) {
+    for (Local open : state.getLocals()) {
+      if (open.info != null && open.info.name == local.name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private AbstractInsnNode getInstruction(int index) {
+    return node.instructions.get(index);
+  }
+
+  private static boolean isReturn(AbstractInsnNode insn) {
+    return Opcodes.IRETURN <= insn.getOpcode() && insn.getOpcode() <= Opcodes.RETURN;
+  }
+
+  private static boolean isSwitch(AbstractInsnNode insn) {
+    return Opcodes.TABLESWITCH == insn.getOpcode() || insn.getOpcode() == Opcodes.LOOKUPSWITCH;
+  }
+
+  private static boolean isThrow(AbstractInsnNode insn) {
+    return Opcodes.ATHROW == insn.getOpcode();
+  }
+
+  private static boolean isControlFlowInstruction(AbstractInsnNode insn) {
+    return isReturn(insn) || isThrow(insn) || isSwitch(insn) || (insn instanceof JumpInsnNode)
+        || insn.getOpcode() == Opcodes.RET;
+  }
+
+  private boolean canThrow(AbstractInsnNode insn) {
+    switch (insn.getOpcode()) {
+      case Opcodes.AALOAD:
+      case Opcodes.AASTORE:
+      case Opcodes.ANEWARRAY:
+        // ARETURN does not throw in its dex image.
+      case Opcodes.ARRAYLENGTH:
+      case Opcodes.ATHROW:
+      case Opcodes.BALOAD:
+      case Opcodes.BASTORE:
+      case Opcodes.CALOAD:
+      case Opcodes.CASTORE:
+      case Opcodes.CHECKCAST:
+      case Opcodes.DALOAD:
+      case Opcodes.DASTORE:
+        // DRETURN does not throw in its dex image.
+      case Opcodes.FALOAD:
+      case Opcodes.FASTORE:
+        // FRETURN does not throw in its dex image.
+      case Opcodes.GETFIELD:
+      case Opcodes.GETSTATIC:
+      case Opcodes.IALOAD:
+      case Opcodes.IASTORE:
+      case Opcodes.IDIV:
+      case Opcodes.INSTANCEOF:
+      case Opcodes.INVOKEDYNAMIC:
+      case Opcodes.INVOKEINTERFACE:
+      case Opcodes.INVOKESPECIAL:
+      case Opcodes.INVOKESTATIC:
+      case Opcodes.INVOKEVIRTUAL:
+      case Opcodes.IREM:
+        // IRETURN does not throw in its dex image.
+      case Opcodes.LALOAD:
+      case Opcodes.LASTORE:
+      case Opcodes.LDIV:
+      case Opcodes.LREM:
+        // LRETURN does not throw in its dex image.
+      case Opcodes.MONITORENTER:
+      case Opcodes.MONITOREXIT:
+      case Opcodes.MULTIANEWARRAY:
+      case Opcodes.NEW:
+      case Opcodes.NEWARRAY:
+      case Opcodes.PUTFIELD:
+      case Opcodes.PUTSTATIC:
+        // RETURN does not throw in its dex image.
+      case Opcodes.SALOAD:
+      case Opcodes.SASTORE:
+        return true;
+      case Opcodes.LDC: {
+        // const-class and const-string* may throw in dex.
+        LdcInsnNode ldc = (LdcInsnNode) insn;
+        return ldc.cst instanceof String || ldc.cst instanceof Type;
+      }
+      default:
+        return false;
+    }
+  }
+
+  @Override
+  public boolean traceInstruction(int index, IRBuilder builder) {
+    AbstractInsnNode insn = getInstruction(index);
+    // Exit early on no-op instructions.
+    if (insn instanceof LabelNode || insn instanceof LineNumberNode) {
+      return false;
+    }
+    // If this instruction exits, close this block.
+    if (isReturn(insn)) {
+      return true;
+    }
+    // For each target ensure a basic block and close this block.
+    int[] targets = getTargets(insn);
+    if (targets != NO_TARGETS) {
+      assert !canThrow(insn);
+      for (int target : targets) {
+        builder.ensureSuccessorBlock(target);
+      }
+      return true;
+    }
+    if (canThrow(insn)) {
+      List<TryCatchBlock> tryCatchBlocks = getTryHandlers(insn);
+      if (!tryCatchBlocks.isEmpty()) {
+        Set<Integer> seenHandlerOffsets = new HashSet<>();
+        for (TryCatchBlock tryCatchBlock : tryCatchBlocks) {
+          // Ensure the block starts at the start of the try-range (don't enqueue, not a target).
+          builder.ensureBlockWithoutEnqueuing(tryCatchBlock.getStart());
+          // Add edge to exceptional successor (only one edge for each unique successor).
+          int handler = tryCatchBlock.getHandler();
+          if (!seenHandlerOffsets.contains(handler)) {
+            seenHandlerOffsets.add(handler);
+            builder.ensureSuccessorBlock(handler);
+          }
+        }
+        // Edge to normal successor if any (fallthrough).
+        if (!isThrow(insn)) {
+          builder.ensureSuccessorBlock(getOffset(insn.getNext()));
+        }
+        return true;
+      }
+      // If the throwable instruction is "throw" it closes the block.
+      return isThrow(insn);
+    }
+    // This instruction does not close the block.
+    return false;
+  }
+
+  private List<TryCatchBlock> getPotentialTryHandlers(AbstractInsnNode insn) {
+    int offset = getOffset(insn);
+    return getPotentialTryHandlers(offset);
+  }
+
+  private boolean tryBlockRelevant(TryCatchBlockNode tryHandler, int offset) {
+    int start = getOffset(tryHandler.start);
+    int end = getOffset(tryHandler.end);
+    return start <= offset && offset < end;
+  }
+
+  private List<TryCatchBlock> getPotentialTryHandlers(int offset) {
+    List<TryCatchBlock> handlers = new ArrayList<>();
+    for (int i = 0; i < node.tryCatchBlocks.size(); i++) {
+      TryCatchBlockNode tryBlock = (TryCatchBlockNode) node.tryCatchBlocks.get(i);
+      if (tryBlockRelevant(tryBlock, offset)) {
+        handlers.add(new TryCatchBlock(tryBlock, this));
+      }
+    }
+    return handlers;
+  }
+
+  private List<TryCatchBlock> getTryHandlers(AbstractInsnNode insn) {
+    List<TryCatchBlock> handlers = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
+    // The try-catch blocks are ordered by precedence.
+    for (TryCatchBlock tryCatchBlock : getPotentialTryHandlers(insn)) {
+      if (tryCatchBlock.getType() == null) {
+        handlers.add(tryCatchBlock);
+        return handlers;
+      }
+      if (!seen.contains(tryCatchBlock.getType())) {
+        seen.add(tryCatchBlock.getType());
+        handlers.add(tryCatchBlock);
+      }
+    }
+    if (isSynchronized()) {
+      // Add synchronized exceptional exit for synchronized-method instructions without a default.
+      assert handlers.isEmpty() || handlers.get(handlers.size() - 1).getType() != null;
+      handlers.add(EXCEPTIONAL_SYNC_EXIT);
+    }
+    return handlers;
+  }
+
+  private List<Integer> getTryHandlerOffsets(List<TryCatchBlock> tryCatchBlocks) {
+    List<Integer> offsets = new ArrayList<>();
+    for (TryCatchBlock tryCatchBlock : tryCatchBlocks) {
+      offsets.add(tryCatchBlock.getHandler());
+    }
+    return offsets;
+  }
+
+  private List<DexType> getTryHandlerGuards(List<TryCatchBlock> tryCatchBlocks) {
+    List<DexType> guards = new ArrayList<>();
+    for (TryCatchBlock tryCatchBlock : tryCatchBlocks) {
+      guards.add(tryCatchBlock.getType() == null
+          ? DexItemFactory.catchAllType
+          : application.getTypeFromName(tryCatchBlock.getType()));
+
+    }
+    return guards;
+  }
+
+  int getOffset(AbstractInsnNode insn) {
+    return node.instructions.indexOf(insn);
+  }
+
+  private int[] getTargets(AbstractInsnNode insn) {
+    switch (insn.getType()) {
+      case AbstractInsnNode.TABLESWITCH_INSN: {
+        TableSwitchInsnNode switchInsn = (TableSwitchInsnNode) insn;
+        return getSwitchTargets(switchInsn.dflt, switchInsn.labels);
+      }
+      case AbstractInsnNode.LOOKUPSWITCH_INSN: {
+        LookupSwitchInsnNode switchInsn = (LookupSwitchInsnNode) insn;
+        return getSwitchTargets(switchInsn.dflt, switchInsn.labels);
+      }
+      case AbstractInsnNode.JUMP_INSN: {
+        return getJumpTargets((JumpInsnNode) insn);
+      }
+      case AbstractInsnNode.VAR_INSN: {
+        return getVarTargets((VarInsnNode) insn);
+      }
+      default:
+        return NO_TARGETS;
+    }
+  }
+
+  private int[] getSwitchTargets(LabelNode dflt, List labels) {
+    int[] targets = new int[1 + labels.size()];
+    targets[0] = getOffset(dflt);
+    for (int i = 1; i < targets.length; i++) {
+      targets[i] = getOffset((LabelNode) labels.get(i - 1));
+    }
+    return targets;
+  }
+
+  private int[] getJumpTargets(JumpInsnNode jump) {
+    switch (jump.getOpcode()) {
+      case Opcodes.IFEQ:
+      case Opcodes.IFNE:
+      case Opcodes.IFLT:
+      case Opcodes.IFGE:
+      case Opcodes.IFGT:
+      case Opcodes.IFLE:
+      case Opcodes.IF_ICMPEQ:
+      case Opcodes.IF_ICMPNE:
+      case Opcodes.IF_ICMPLT:
+      case Opcodes.IF_ICMPGE:
+      case Opcodes.IF_ICMPGT:
+      case Opcodes.IF_ICMPLE:
+      case Opcodes.IF_ACMPEQ:
+      case Opcodes.IF_ACMPNE:
+      case Opcodes.IFNULL:
+      case Opcodes.IFNONNULL:
+        return new int[]{getOffset(jump.label), getOffset(jump.getNext())};
+      case Opcodes.GOTO:
+        return new int[]{getOffset(jump.label)};
+      case Opcodes.JSR: {
+        throw new Unreachable("JSR should be handled by the ASM jsr inliner");
+      }
+      default:
+        throw new Unreachable("Unexpected opcode in jump instruction: " + jump);
+    }
+  }
+
+  private int[] getVarTargets(VarInsnNode insn) {
+    if (insn.getOpcode() == Opcodes.RET) {
+      throw new Unreachable("RET should be handled by the ASM jsr inliner");
+    }
+    return NO_TARGETS;
+  }
+
+  // Type conversion helpers.
+
+  private static MoveType moveType(Type type) {
+    switch (type.getSort()) {
+      case Type.ARRAY:
+      case Type.OBJECT:
+        return MoveType.OBJECT;
+      case Type.BOOLEAN:
+      case Type.BYTE:
+      case Type.SHORT:
+      case Type.CHAR:
+      case Type.INT:
+      case Type.FLOAT:
+        return MoveType.SINGLE;
+      case Type.LONG:
+      case Type.DOUBLE:
+        return MoveType.WIDE;
+      case Type.VOID:
+        // Illegal. Throws in fallthrough.
+      default:
+        throw new Unreachable("Invalid type in moveType: " + type);
+    }
+  }
+
+  private static ConstType constType(Type type) {
+    switch (type.getSort()) {
+      case Type.ARRAY:
+      case Type.OBJECT:
+        return ConstType.OBJECT;
+      case Type.BOOLEAN:
+      case Type.BYTE:
+      case Type.SHORT:
+      case Type.CHAR:
+      case Type.INT:
+        return ConstType.INT;
+      case Type.FLOAT:
+        return ConstType.FLOAT;
+      case Type.LONG:
+        return ConstType.LONG;
+      case Type.DOUBLE:
+        return ConstType.DOUBLE;
+      case Type.VOID:
+        // Illegal. Throws in fallthrough.
+      default:
+        throw new Unreachable("Invalid type in constType: " + type);
+    }
+  }
+
+  private static MemberType memberType(Type type) {
+    switch (type.getSort()) {
+      case Type.ARRAY:
+      case Type.OBJECT:
+        return MemberType.OBJECT;
+      case Type.BOOLEAN:
+        return MemberType.BOOLEAN;
+      case Type.BYTE:
+        return MemberType.BYTE;
+      case Type.SHORT:
+        return MemberType.SHORT;
+      case Type.CHAR:
+        return MemberType.CHAR;
+      case Type.INT:
+      case Type.FLOAT:
+        return MemberType.SINGLE;
+      case Type.LONG:
+      case Type.DOUBLE:
+        return MemberType.WIDE;
+      case Type.VOID:
+        // Illegal. Throws in fallthrough.
+      default:
+        throw new Unreachable("Invalid type in memberType: " + type);
+    }
+  }
+
+  private static MemberType memberType(String fieldDesc) {
+    return memberType(Type.getType(fieldDesc));
+  }
+
+  private static NumericType numericType(Type type) {
+    switch (type.getSort()) {
+      case Type.BYTE:
+        return NumericType.BYTE;
+      case Type.CHAR:
+        return NumericType.CHAR;
+      case Type.SHORT:
+        return NumericType.SHORT;
+      case Type.INT:
+        return NumericType.INT;
+      case Type.LONG:
+        return NumericType.LONG;
+      case Type.FLOAT:
+        return NumericType.FLOAT;
+      case Type.DOUBLE:
+        return NumericType.DOUBLE;
+      default:
+        throw new Unreachable("Invalid type in numericType: " + type);
+    }
+  }
+
+  private Invoke.Type invokeType(MethodInsnNode method) {
+    switch (method.getOpcode()) {
+      case Opcodes.INVOKEVIRTUAL:
+        if (isCallToPolymorphicSignatureMethod(method)) {
+          return Invoke.Type.POLYMORPHIC;
+        }
+        return Invoke.Type.VIRTUAL;
+      case Opcodes.INVOKESTATIC:
+        return Invoke.Type.STATIC;
+      case Opcodes.INVOKEINTERFACE:
+        return Invoke.Type.INTERFACE;
+      case Opcodes.INVOKESPECIAL: {
+        DexType owner = application.getTypeFromName(method.owner);
+        if (owner == clazz || method.name.equals(Constants.INSTANCE_INITIALIZER_NAME)) {
+          return Invoke.Type.DIRECT;
+        } else {
+          return Invoke.Type.SUPER;
+        }
+      }
+      default:
+        throw new Unreachable("Unexpected MethodInsnNode opcode: " + method.getOpcode());
+    }
+  }
+
+  static Type getArrayElementType(Type array) {
+    if (array == JarState.NULL_TYPE) {
+      return null;
+    }
+    String desc = array.getDescriptor();
+    assert desc.charAt(0) == '[';
+    return Type.getType(desc.substring(1));
+  }
+
+  private static Type makeArrayType(Type elementType) {
+    return Type.getObjectType("[" + elementType.getDescriptor());
+  }
+
+  private static String arrayTypeDesc(int arrayTypeCode) {
+    switch (arrayTypeCode) {
+      case Opcodes.T_BOOLEAN:
+        return "[Z";
+      case Opcodes.T_CHAR:
+        return "[C";
+      case Opcodes.T_FLOAT:
+        return "[F";
+      case Opcodes.T_DOUBLE:
+        return "[D";
+      case Opcodes.T_BYTE:
+        return "[B";
+      case Opcodes.T_SHORT:
+        return "[S";
+      case Opcodes.T_INT:
+        return "[I";
+      case Opcodes.T_LONG:
+        return "[J";
+      default:
+        throw new Unreachable("Unexpected array-type code " + arrayTypeCode);
+    }
+  }
+
+  private static Type getArrayElementTypeForOpcode(int opcode) {
+    switch (opcode) {
+      case Opcodes.IALOAD:
+      case Opcodes.IASTORE:
+        return Type.INT_TYPE;
+      case Opcodes.FALOAD:
+      case Opcodes.FASTORE:
+        return Type.FLOAT_TYPE;
+      case Opcodes.LALOAD:
+      case Opcodes.LASTORE:
+        return Type.LONG_TYPE;
+      case Opcodes.DALOAD:
+      case Opcodes.DASTORE:
+        return Type.DOUBLE_TYPE;
+      case Opcodes.AALOAD:
+      case Opcodes.AASTORE:
+        return JarState.NULL_TYPE; // We might not know the type.
+      case Opcodes.BALOAD:
+      case Opcodes.BASTORE:
+        return Type.BYTE_TYPE; // We don't distinguish byte and boolean.
+      case Opcodes.CALOAD:
+      case Opcodes.CASTORE:
+        return Type.CHAR_TYPE;
+      case Opcodes.SALOAD:
+      case Opcodes.SASTORE:
+        return Type.SHORT_TYPE;
+      default:
+        throw new Unreachable("Unexpected array opcode " + opcode);
+    }
+  }
+
+  private static boolean isCompatibleArrayElementType(int opcode, Type type) {
+    switch (opcode) {
+      case Opcodes.IALOAD:
+      case Opcodes.IASTORE:
+        return Slot.isCompatible(type, Type.INT_TYPE);
+      case Opcodes.FALOAD:
+      case Opcodes.FASTORE:
+        return Slot.isCompatible(type, Type.FLOAT_TYPE);
+      case Opcodes.LALOAD:
+      case Opcodes.LASTORE:
+        return Slot.isCompatible(type, Type.LONG_TYPE);
+      case Opcodes.DALOAD:
+      case Opcodes.DASTORE:
+        return Slot.isCompatible(type, Type.DOUBLE_TYPE);
+      case Opcodes.AALOAD:
+      case Opcodes.AASTORE:
+        return Slot.isCompatible(type, JarState.REFERENCE_TYPE);
+      case Opcodes.BALOAD:
+      case Opcodes.BASTORE:
+        return Slot.isCompatible(type, Type.BYTE_TYPE)
+            || Slot.isCompatible(type, Type.BOOLEAN_TYPE);
+      case Opcodes.CALOAD:
+      case Opcodes.CASTORE:
+        return Slot.isCompatible(type, Type.CHAR_TYPE);
+      case Opcodes.SALOAD:
+      case Opcodes.SASTORE:
+        return Slot.isCompatible(type, Type.SHORT_TYPE);
+      default:
+        throw new Unreachable("Unexpected array opcode " + opcode);
+    }
+  }
+
+  private static If.Type ifType(int opcode) {
+    switch (opcode) {
+      case Opcodes.IFEQ:
+      case Opcodes.IF_ICMPEQ:
+      case Opcodes.IF_ACMPEQ:
+        return If.Type.EQ;
+      case Opcodes.IFNE:
+      case Opcodes.IF_ICMPNE:
+      case Opcodes.IF_ACMPNE:
+        return If.Type.NE;
+      case Opcodes.IFLT:
+      case Opcodes.IF_ICMPLT:
+        return If.Type.LT;
+      case Opcodes.IFGE:
+      case Opcodes.IF_ICMPGE:
+        return If.Type.GE;
+      case Opcodes.IFGT:
+      case Opcodes.IF_ICMPGT:
+        return If.Type.GT;
+      case Opcodes.IFLE:
+      case Opcodes.IF_ICMPLE:
+        return If.Type.LE;
+      default:
+        throw new Unreachable("Unexpected If instruction opcode: " + opcode);
+    }
+  }
+
+  private static Type opType(int opcode) {
+    switch (opcode) {
+      case Opcodes.IADD:
+      case Opcodes.ISUB:
+      case Opcodes.IMUL:
+      case Opcodes.IDIV:
+      case Opcodes.IREM:
+      case Opcodes.INEG:
+      case Opcodes.ISHL:
+      case Opcodes.ISHR:
+      case Opcodes.IUSHR:
+        return Type.INT_TYPE;
+      case Opcodes.LADD:
+      case Opcodes.LSUB:
+      case Opcodes.LMUL:
+      case Opcodes.LDIV:
+      case Opcodes.LREM:
+      case Opcodes.LNEG:
+      case Opcodes.LSHL:
+      case Opcodes.LSHR:
+      case Opcodes.LUSHR:
+        return Type.LONG_TYPE;
+      case Opcodes.FADD:
+      case Opcodes.FSUB:
+      case Opcodes.FMUL:
+      case Opcodes.FDIV:
+      case Opcodes.FREM:
+      case Opcodes.FNEG:
+        return Type.FLOAT_TYPE;
+      case Opcodes.DADD:
+      case Opcodes.DSUB:
+      case Opcodes.DMUL:
+      case Opcodes.DDIV:
+      case Opcodes.DREM:
+      case Opcodes.DNEG:
+        return Type.DOUBLE_TYPE;
+      default:
+        throw new Unreachable("Unexpected opcode " + opcode);
+    }
+  }
+
+  // IR instruction building procedures.
+
+  private void build(AbstractInsnNode insn, IRBuilder builder) {
+    switch (insn.getType()) {
+      case AbstractInsnNode.INSN:
+        build((InsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.INT_INSN:
+        build((IntInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.VAR_INSN:
+        build((VarInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.TYPE_INSN:
+        build((TypeInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.FIELD_INSN:
+        build((FieldInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.METHOD_INSN:
+        build((MethodInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.INVOKE_DYNAMIC_INSN:
+        build((InvokeDynamicInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.JUMP_INSN:
+        build((JumpInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.LABEL:
+        build((LabelNode) insn, builder);
+        break;
+      case AbstractInsnNode.LDC_INSN:
+        build((LdcInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.IINC_INSN:
+        build((IincInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.TABLESWITCH_INSN:
+        build((TableSwitchInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.LOOKUPSWITCH_INSN:
+        build((LookupSwitchInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.MULTIANEWARRAY_INSN:
+        build((MultiANewArrayInsnNode) insn, builder);
+        break;
+      case AbstractInsnNode.LINE:
+        build((LineNumberNode) insn, builder);
+        break;
+      default:
+        throw new Unreachable("Unexpected instruction " + insn);
+    }
+  }
+
+  private void processLocalVariableEnd(AbstractInsnNode insn, IRBuilder builder) {
+    assert !isControlFlowInstruction(insn);
+    if (!(insn.getNext() instanceof LabelNode)) {
+      return;
+    }
+    // If the label is the end of any local-variable scopes end the locals.
+    LabelNode label = (LabelNode) insn.getNext();
+    List<Local> locals = state.getLocalsToClose(label);
+    for (Local local : locals) {
+      builder.addDebugLocalEnd(local.slot.register, local.info);
+    }
+    state.closeLocals(locals);
+  }
+
+  private void processLocalVariablesAtControlEdge(AbstractInsnNode insn, IRBuilder builder) {
+    assert isControlFlowInstruction(insn) && !isReturn(insn);
+    if (!(insn.getNext() instanceof LabelNode)) {
+      return;
+    }
+    // If the label is the end of any local-variable scopes read the locals to ensure liveness.
+    LabelNode label = (LabelNode) insn.getNext();
+    for (Local local : state.getLocalsToClose(label)) {
+      builder.addDebugLocalRead(local.slot.register, local.info);
+    }
+  }
+
+  private void processLocalVariablesAtExit(AbstractInsnNode insn, IRBuilder builder) {
+    assert isReturn(insn) || isThrow(insn);
+    // Read all locals live at exit to ensure liveness.
+    for (Local local : state.getLocals()) {
+      if (local.info != null) {
+        builder.addDebugLocalRead(local.slot.register, local.info);
+      }
+    }
+  }
+
+  private void build(InsnNode insn, IRBuilder builder) {
+    int opcode = insn.getOpcode();
+    switch (opcode) {
+      case Opcodes.NOP:
+        // Intentionally left empty.
+        break;
+      case Opcodes.ACONST_NULL:
+        builder.addNullConst(state.push(JarState.NULL_TYPE), 0);
+        break;
+      case Opcodes.ICONST_M1:
+      case Opcodes.ICONST_0:
+      case Opcodes.ICONST_1:
+      case Opcodes.ICONST_2:
+      case Opcodes.ICONST_3:
+      case Opcodes.ICONST_4:
+      case Opcodes.ICONST_5:
+        builder.addIntConst(state.push(Type.INT_TYPE), opcode - Opcodes.ICONST_0);
+        break;
+      case Opcodes.LCONST_0:
+      case Opcodes.LCONST_1:
+        builder.addLongConst(state.push(Type.LONG_TYPE), opcode - Opcodes.LCONST_0);
+        break;
+      case Opcodes.FCONST_0:
+      case Opcodes.FCONST_1:
+      case Opcodes.FCONST_2:
+        builder.addFloatConst(state.push(Type.FLOAT_TYPE),
+            Float.floatToRawIntBits(opcode - Opcodes.FCONST_0));
+        break;
+      case Opcodes.DCONST_0:
+      case Opcodes.DCONST_1:
+        builder.addDoubleConst(state.push(Type.DOUBLE_TYPE),
+            Double.doubleToRawLongBits(opcode - Opcodes.DCONST_0));
+        break;
+      case Opcodes.IALOAD:
+      case Opcodes.LALOAD:
+      case Opcodes.FALOAD:
+      case Opcodes.DALOAD:
+      case Opcodes.AALOAD:
+      case Opcodes.BALOAD:
+      case Opcodes.CALOAD:
+      case Opcodes.SALOAD: {
+        Slot index = state.pop(Type.INT_TYPE);
+        Slot array = state.pop(JarState.ARRAY_TYPE);
+        Type elementType = getArrayElementType(array.type);
+        if (elementType == null) {
+          elementType = getArrayElementTypeForOpcode(opcode);
+        }
+        int dest = state.push(elementType);
+        assert isCompatibleArrayElementType(opcode, elementType);
+        builder.addArrayGet(memberType(elementType), dest, array.register, index.register);
+        break;
+      }
+      case Opcodes.IASTORE:
+      case Opcodes.LASTORE:
+      case Opcodes.FASTORE:
+      case Opcodes.DASTORE:
+      case Opcodes.AASTORE:
+      case Opcodes.BASTORE:
+      case Opcodes.CASTORE:
+      case Opcodes.SASTORE: {
+        Slot value = state.pop();
+        Slot index = state.pop(Type.INT_TYPE);
+        Slot array = state.pop(JarState.ARRAY_TYPE);
+        Type elementType = getArrayElementType(array.type);
+        if (elementType == null) {
+          elementType = getArrayElementTypeForOpcode(opcode);
+        }
+        assert isCompatibleArrayElementType(opcode, elementType);
+        assert isCompatibleArrayElementType(opcode, value.type);
+        builder.addArrayPut(
+            memberType(elementType), value.register, array.register, index.register);
+        break;
+      }
+      case Opcodes.POP: {
+        Slot value = state.pop();
+        assert value.isCategory1();
+        break;
+      }
+      case Opcodes.POP2: {
+        Slot value = state.pop();
+        if (value.isCategory1()) {
+          Slot value2 = state.pop();
+          assert value2.isCategory1();
+        }
+        break;
+      }
+      case Opcodes.DUP: {
+        Slot value = state.peek();
+        assert value.isCategory1();
+        int copy = state.push(value.type);
+        builder.addMove(moveType(value.type), copy, value.register);
+        break;
+      }
+      case Opcodes.DUP_X1: {
+        // Stack transformation: ..., v2, v1 -> ..., v1, v2, v1
+        Slot value1 = state.pop();
+        Slot value2 = state.pop();
+        assert value1.isCategory1() && value2.isCategory1();
+        int stack2 = state.push(value1.type);
+        int stack1 = state.push(value2.type);
+        int stack0 = state.push(value1.type);
+        assert value2.register == stack2;
+        assert value1.register == stack1;
+        // stack0 is new top-of-stack.
+        builder.addMove(moveType(value1.type), stack0, stack1);
+        builder.addMove(moveType(value2.type), stack1, stack2);
+        builder.addMove(moveType(value1.type), stack2, stack0);
+        break;
+      }
+      case Opcodes.DUP_X2: {
+        Slot value1 = state.pop();
+        Slot value2 = state.pop();
+        assert value1.isCategory1();
+        if (value2.isCategory1()) {
+          Slot value3 = state.pop();
+          assert value3.isCategory1();
+          // Stack transformation: ..., v3, v2, v1 -> ..., v1, v3, v2, v1
+          dupOneBelowTwo(value3, value2, value1, builder);
+        } else {
+          // Stack transformation: ..., w2, v1 -> ..., v1, w2, v1
+          dupOneBelowOne(value2, value1, builder);
+        }
+        break;
+      }
+      case Opcodes.DUP2: {
+        Slot value1 = state.pop();
+        if (value1.isCategory1()) {
+          Slot value2 = state.pop();
+          // Stack transformation: ..., v2, v1 -> ..., v2, v1, v2, v1
+          assert value2.isCategory1();
+          state.push(value2.type);
+          state.push(value1.type);
+          int copy2 = state.push(value2.type);
+          int copy1 = state.push(value1.type);
+          builder.addMove(moveType(value1.type), copy1, value1.register);
+          builder.addMove(moveType(value2.type), copy2, value2.register);
+        } else {
+          // Stack transformation: ..., w1 -> ..., w1, w1
+          state.push(value1.type);
+          int copy1 = state.push(value1.type);
+          builder.addMove(moveType(value1.type), copy1, value1.register);
+        }
+        break;
+      }
+      case Opcodes.DUP2_X1: {
+        Slot value1 = state.pop();
+        Slot value2 = state.pop();
+        assert value2.isCategory1();
+        if (value1.isCategory1()) {
+          // Stack transformation: ..., v3, v2, v1 -> v2, v1, v3, v2, v1
+          Slot value3 = state.pop();
+          assert value3.isCategory1();
+          dupTwoBelowOne(value3, value2, value1, builder);
+        } else {
+          // Stack transformation: ..., v2, w1 -> ..., w1, v2, w1
+          dupOneBelowOne(value2, value1, builder);
+        }
+        break;
+      }
+      case Opcodes.DUP2_X2: {
+        Slot value1 = state.pop();
+        Slot value2 = state.pop();
+        if (!value1.isCategory1() && !value2.isCategory1()) {
+          // State transformation: ..., w2, w1 -> w1, w2, w1
+          dupOneBelowOne(value2, value1, builder);
+        } else {
+          Slot value3 = state.pop();
+          if (!value1.isCategory1()) {
+            assert value2.isCategory1();
+            assert value3.isCategory1();
+            // State transformation: ..., v3, v2, w1 -> w1, v3, v2, w1
+            dupOneBelowTwo(value3, value2, value1, builder);
+          } else if (!value3.isCategory1()) {
+            assert value1.isCategory1();
+            assert value2.isCategory1();
+            // State transformation: ..., w3, v2, v1 -> v2, v1, w3, v2, v1
+            dupTwoBelowOne(value3, value2, value1, builder);
+          } else {
+            Slot value4 = state.pop();
+            assert value1.isCategory1();
+            assert value2.isCategory1();
+            assert value3.isCategory1();
+            assert value4.isCategory1();
+            // State transformation: ..., v4, v3, v2, v1 -> v2, v1, v4, v3, v2, v1
+            dupTwoBelowTwo(value4, value3, value2, value1, builder);
+          }
+        }
+        break;
+      }
+      case Opcodes.SWAP: {
+        Slot value1 = state.pop();
+        Slot value2 = state.pop();
+        assert value1.isCategory1() && value2.isCategory1();
+        state.push(value1.type);
+        state.push(value2.type);
+        int tmp = state.push(value1.type);
+        builder.addMove(moveType(value1.type), tmp, value1.register);
+        builder.addMove(moveType(value2.type), value1.register, value2.register);
+        builder.addMove(moveType(value1.type), value2.register, tmp);
+        state.pop(); // Remove temp.
+        break;
+      }
+      case Opcodes.IADD:
+      case Opcodes.LADD:
+      case Opcodes.FADD:
+      case Opcodes.DADD:
+      case Opcodes.ISUB:
+      case Opcodes.LSUB:
+      case Opcodes.FSUB:
+      case Opcodes.DSUB:
+      case Opcodes.IMUL:
+      case Opcodes.LMUL:
+      case Opcodes.FMUL:
+      case Opcodes.DMUL:
+      case Opcodes.IDIV:
+      case Opcodes.LDIV:
+      case Opcodes.FDIV:
+      case Opcodes.DDIV:
+      case Opcodes.IREM:
+      case Opcodes.LREM:
+      case Opcodes.FREM:
+      case Opcodes.DREM: {
+        Type type = opType(opcode);
+        NumericType numericType = numericType(type);
+        int right = state.pop(type).register;
+        int left = state.pop(type).register;
+        int dest = state.push(type);
+        if (opcode <= Opcodes.DADD) {
+          builder.addAdd(numericType, dest, left, right);
+        } else if (opcode <= Opcodes.DSUB) {
+          builder.addSub(numericType, dest, left, right);
+        } else if (opcode <= Opcodes.DMUL) {
+          builder.addMul(numericType, dest, left, right);
+        } else if (opcode <= Opcodes.DDIV) {
+          builder.addDiv(numericType, dest, left, right);
+        } else {
+          assert Opcodes.IREM <= opcode && opcode <= Opcodes.DREM;
+          builder.addRem(numericType, dest, left, right);
+        }
+        break;
+      }
+      case Opcodes.INEG:
+      case Opcodes.LNEG:
+      case Opcodes.FNEG:
+      case Opcodes.DNEG: {
+        Type type = opType(opcode);
+        NumericType numericType = numericType(type);
+        int value = state.pop(type).register;
+        int dest = state.push(type);
+        builder.addNeg(numericType, dest, value);
+        break;
+      }
+      case Opcodes.ISHL:
+      case Opcodes.LSHL:
+      case Opcodes.ISHR:
+      case Opcodes.LSHR:
+      case Opcodes.IUSHR:
+      case Opcodes.LUSHR: {
+        Type type = opType(opcode);
+        NumericType numericType = numericType(type);
+        int right = state.pop(Type.INT_TYPE).register;
+        int left = state.pop(type).register;
+        int dest = state.push(type);
+        if (opcode <= Opcodes.LSHL) {
+          builder.addShl(numericType, dest, left, right);
+        } else if (opcode <= Opcodes.LSHR) {
+          builder.addShr(numericType, dest, left, right);
+        } else {
+          assert opcode == Opcodes.IUSHR || opcode == Opcodes.LUSHR;
+          builder.addUshr(numericType, dest, left, right);
+        }
+        break;
+      }
+      case Opcodes.IAND:
+      case Opcodes.LAND: {
+        Type type = opcode == Opcodes.IAND ? Type.INT_TYPE : Type.LONG_TYPE;
+        int right = state.pop(type).register;
+        int left = state.pop(type).register;
+        int dest = state.push(type);
+        builder.addAnd(numericType(type), dest, left, right);
+        break;
+      }
+      case Opcodes.IOR:
+      case Opcodes.LOR: {
+        Type type = opcode == Opcodes.IOR ? Type.INT_TYPE : Type.LONG_TYPE;
+        int right = state.pop(type).register;
+        int left = state.pop(type).register;
+        int dest = state.push(type);
+        builder.addOr(numericType(type), dest, left, right);
+        break;
+      }
+      case Opcodes.IXOR:
+      case Opcodes.LXOR: {
+        Type type = opcode == Opcodes.IXOR ? Type.INT_TYPE : Type.LONG_TYPE;
+        int right = state.pop(type).register;
+        int left = state.pop(type).register;
+        int dest = state.push(type);
+        builder.addXor(numericType(type), dest, left, right);
+        break;
+      }
+      case Opcodes.I2L:
+        buildConversion(Type.INT_TYPE, Type.LONG_TYPE, builder);
+        break;
+      case Opcodes.I2F:
+        buildConversion(Type.INT_TYPE, Type.FLOAT_TYPE, builder);
+        break;
+      case Opcodes.I2D:
+        buildConversion(Type.INT_TYPE, Type.DOUBLE_TYPE, builder);
+        break;
+      case Opcodes.L2I:
+        buildConversion(Type.LONG_TYPE, Type.INT_TYPE, builder);
+        break;
+      case Opcodes.L2F:
+        buildConversion(Type.LONG_TYPE, Type.FLOAT_TYPE, builder);
+        break;
+      case Opcodes.L2D:
+        buildConversion(Type.LONG_TYPE, Type.DOUBLE_TYPE, builder);
+        break;
+      case Opcodes.F2I:
+        buildConversion(Type.FLOAT_TYPE, Type.INT_TYPE, builder);
+        break;
+      case Opcodes.F2L:
+        buildConversion(Type.FLOAT_TYPE, Type.LONG_TYPE, builder);
+        break;
+      case Opcodes.F2D:
+        buildConversion(Type.FLOAT_TYPE, Type.DOUBLE_TYPE, builder);
+        break;
+      case Opcodes.D2I:
+        buildConversion(Type.DOUBLE_TYPE, Type.INT_TYPE, builder);
+        break;
+      case Opcodes.D2L:
+        buildConversion(Type.DOUBLE_TYPE, Type.LONG_TYPE, builder);
+        break;
+      case Opcodes.D2F:
+        buildConversion(Type.DOUBLE_TYPE, Type.FLOAT_TYPE, builder);
+        break;
+      case Opcodes.I2B:
+        buildConversion(Type.INT_TYPE, Type.BYTE_TYPE, builder);
+        break;
+      case Opcodes.I2C:
+        buildConversion(Type.INT_TYPE, Type.CHAR_TYPE, builder);
+        break;
+      case Opcodes.I2S:
+        buildConversion(Type.INT_TYPE, Type.SHORT_TYPE, builder);
+        break;
+      case Opcodes.LCMP: {
+        Slot right = state.pop(Type.LONG_TYPE);
+        Slot left = state.pop(Type.LONG_TYPE);
+        int dest = state.push(Type.INT_TYPE);
+        builder.addCmp(NumericType.LONG, Bias.NONE, dest, left.register, right.register);
+        break;
+      }
+      case Opcodes.FCMPL:
+      case Opcodes.FCMPG: {
+        Slot right = state.pop(Type.FLOAT_TYPE);
+        Slot left = state.pop(Type.FLOAT_TYPE);
+        int dest = state.push(Type.INT_TYPE);
+        Bias bias = opcode == Opcodes.FCMPL ? Bias.LT : Bias.GT;
+        builder.addCmp(NumericType.FLOAT, bias, dest, left.register, right.register);
+        break;
+      }
+      case Opcodes.DCMPL:
+      case Opcodes.DCMPG: {
+        Slot right = state.pop(Type.DOUBLE_TYPE);
+        Slot left = state.pop(Type.DOUBLE_TYPE);
+        int dest = state.push(Type.INT_TYPE);
+        Bias bias = opcode == Opcodes.DCMPL ? Bias.LT : Bias.GT;
+        builder.addCmp(NumericType.DOUBLE, bias, dest, left.register, right.register);
+        break;
+      }
+      case Opcodes.IRETURN: {
+        Slot value = state.pop(Type.INT_TYPE);
+        addReturn(insn, MoveType.SINGLE, value.register, builder);
+        break;
+      }
+      case Opcodes.LRETURN: {
+        Slot value = state.pop(Type.LONG_TYPE);
+        addReturn(insn, MoveType.WIDE, value.register, builder);
+        break;
+      }
+      case Opcodes.FRETURN: {
+        Slot value = state.pop(Type.FLOAT_TYPE);
+        addReturn(insn, MoveType.SINGLE, value.register, builder);
+        break;
+      }
+      case Opcodes.DRETURN: {
+        Slot value = state.pop(Type.DOUBLE_TYPE);
+        addReturn(insn, MoveType.WIDE, value.register, builder);
+        break;
+      }
+      case Opcodes.ARETURN: {
+        Slot obj = state.pop(JarState.REFERENCE_TYPE);
+        addReturn(insn, MoveType.OBJECT, obj.register, builder);
+        break;
+      }
+      case Opcodes.RETURN: {
+        addReturn(insn, null, -1, builder);
+        break;
+      }
+      case Opcodes.ARRAYLENGTH: {
+        Slot array = state.pop(JarState.ARRAY_TYPE);
+        int dest = state.push(Type.INT_TYPE);
+        builder.addArrayLength(dest, array.register);
+        break;
+      }
+      case Opcodes.ATHROW: {
+        Slot object = state.pop(JarState.OBJECT_TYPE);
+        addThrow(insn, object.register, builder);
+        break;
+      }
+      case Opcodes.MONITORENTER: {
+        Slot object = state.pop(JarState.REFERENCE_TYPE);
+        builder.addMonitor(Monitor.Type.ENTER, object.register);
+        break;
+      }
+      case Opcodes.MONITOREXIT: {
+        Slot object = state.pop(JarState.REFERENCE_TYPE);
+        builder.addMonitor(Monitor.Type.EXIT, object.register);
+        break;
+      }
+      default:
+        throw new Unreachable("Unexpected Insn opcode: " + insn.getOpcode());
+    }
+  }
+
+  private void addThrow(InsnNode insn, int register, IRBuilder builder) {
+    if (getTryHandlers(insn).isEmpty()) {
+      processLocalVariablesAtExit(insn, builder);
+    } else {
+      processLocalVariablesAtControlEdge(insn, builder);
+    }
+    builder.addThrow(register);
+    state.invalidateState();
+  }
+
+  private void addReturn(InsnNode insn, MoveType type, int register, IRBuilder builder) {
+    processLocalVariablesAtExit(insn, builder);
+    if (type == null) {
+      assert register == -1;
+      builder.addReturn();
+    } else {
+      builder.addReturn(type, register);
+    }
+    state.invalidateState();
+  }
+
+  private void dupOneBelowTwo(Slot value3, Slot value2, Slot value1, IRBuilder builder) {
+    int stack3 = state.push(value1.type);
+    int stack2 = state.push(value3.type);
+    int stack1 = state.push(value2.type);
+    int stack0 = state.push(value1.type);
+    assert value3.register == stack3;
+    assert value2.register == stack2;
+    assert value1.register == stack1;
+    builder.addMove(moveType(value1.type), stack0, stack1);
+    builder.addMove(moveType(value2.type), stack1, stack2);
+    builder.addMove(moveType(value3.type), stack2, stack3);
+    builder.addMove(moveType(value1.type), stack3, stack0);
+  }
+
+  private void dupOneBelowOne(Slot value2, Slot value1, IRBuilder builder) {
+    int stack2 = state.push(value1.type);
+    int stack1 = state.push(value2.type);
+    int stack0 = state.push(value1.type);
+    assert value2.register == stack2;
+    assert value1.register == stack1;
+    builder.addMove(moveType(value1.type), stack0, stack1);
+    builder.addMove(moveType(value2.type), stack1, stack2);
+    builder.addMove(moveType(value1.type), stack2, stack0);
+  }
+
+  private void dupTwoBelowOne(Slot value3, Slot value2, Slot value1, IRBuilder builder) {
+    int stack4 = state.push(value2.type);
+    int stack3 = state.push(value1.type);
+    int stack2 = state.push(value3.type);
+    int stack1 = state.push(value2.type);
+    int stack0 = state.push(value1.type);
+    assert value3.register == stack4;
+    assert value2.register == stack3;
+    assert value1.register == stack2;
+    builder.addMove(moveType(value1.type), stack0, stack2);
+    builder.addMove(moveType(value2.type), stack1, stack3);
+    builder.addMove(moveType(value3.type), stack2, stack4);
+    builder.addMove(moveType(value1.type), stack3, stack0);
+    builder.addMove(moveType(value2.type), stack4, stack1);
+  }
+
+  private void dupTwoBelowTwo(Slot value4, Slot value3, Slot value2, Slot value1,
+      IRBuilder builder) {
+    int stack5 = state.push(value2.type);
+    int stack4 = state.push(value1.type);
+    int stack3 = state.push(value4.type);
+    int stack2 = state.push(value3.type);
+    int stack1 = state.push(value2.type);
+    int stack0 = state.push(value1.type);
+    assert value4.register == stack5;
+    assert value3.register == stack4;
+    assert value2.register == stack3;
+    assert value1.register == stack2;
+    builder.addMove(moveType(value1.type), stack0, stack2);
+    builder.addMove(moveType(value2.type), stack1, stack3);
+    builder.addMove(moveType(value3.type), stack2, stack4);
+    builder.addMove(moveType(value3.type), stack3, stack5);
+    builder.addMove(moveType(value1.type), stack4, stack0);
+    builder.addMove(moveType(value2.type), stack5, stack1);
+  }
+
+  private void buildConversion(Type from, Type to, IRBuilder builder) {
+    int source = state.pop(from).register;
+    int dest = state.push(to);
+    builder.addConversion(numericType(to), numericType(from), dest, source);
+  }
+
+  private void build(IntInsnNode insn, IRBuilder builder) {
+    switch (insn.getOpcode()) {
+      case Opcodes.BIPUSH:
+      case Opcodes.SIPUSH: {
+        int dest = state.push(Type.INT_TYPE);
+        builder.addIntConst(dest, insn.operand);
+        break;
+      }
+      case Opcodes.NEWARRAY: {
+        String desc = arrayTypeDesc(insn.operand);
+        Type type = Type.getType(desc);
+        DexType dexType = application.getTypeFromDescriptor(desc);
+        int count = state.pop(Type.INT_TYPE).register;
+        int array = state.push(type);
+        builder.addNewArrayEmpty(array, count, dexType);
+        break;
+      }
+      default:
+        throw new Unreachable("Unexpected IntInsn opcode: " + insn.getOpcode());
+    }
+  }
+
+  private void build(VarInsnNode insn, IRBuilder builder) {
+    int opcode = insn.getOpcode();
+    Type expectedType;
+    switch (opcode) {
+      case Opcodes.ILOAD:
+      case Opcodes.ISTORE:
+        expectedType = Type.INT_TYPE;
+        break;
+      case Opcodes.FLOAD:
+      case Opcodes.FSTORE:
+        expectedType = Type.FLOAT_TYPE;
+        break;
+      case Opcodes.LLOAD:
+      case Opcodes.LSTORE:
+        expectedType = Type.LONG_TYPE;
+        break;
+      case Opcodes.DLOAD:
+      case Opcodes.DSTORE:
+        expectedType = Type.DOUBLE_TYPE;
+        break;
+      case Opcodes.ALOAD:
+      case Opcodes.ASTORE:
+        expectedType = JarState.REFERENCE_TYPE;
+        break;
+      case Opcodes.RET: {
+        throw new Unreachable("RET should be handled by the ASM jsr inliner");
+      }
+      default:
+        throw new Unreachable("Unexpected VarInsn opcode: " + insn.getOpcode());
+    }
+    if (Opcodes.ILOAD <= opcode && opcode <= Opcodes.ALOAD) {
+      Slot src = state.readLocal(insn.var, expectedType);
+      int dest = state.push(src.type);
+      builder.addMove(moveType(src.type), dest, src.register);
+    } else {
+      assert Opcodes.ISTORE <= opcode && opcode <= Opcodes.ASTORE;
+      Slot src = state.pop(expectedType);
+      int dest = state.writeLocal(insn.var, src.type);
+      builder.addMove(moveType(src.type), dest, src.register);
+    }
+  }
+
+  private void build(TypeInsnNode insn, IRBuilder builder) {
+    Type type = Type.getObjectType(insn.desc);
+    switch (insn.getOpcode()) {
+      case Opcodes.NEW: {
+        DexType dexType = application.getTypeFromName(insn.desc);
+        int dest = state.push(type);
+        builder.addNewInstance(dest, dexType);
+        break;
+      }
+      case Opcodes.ANEWARRAY: {
+        Type arrayType = makeArrayType(type);
+        DexType dexArrayType = application.getTypeFromDescriptor(arrayType.getDescriptor());
+        int count = state.pop(Type.INT_TYPE).register;
+        int dest = state.push(arrayType);
+        builder.addNewArrayEmpty(dest, count, dexArrayType);
+        break;
+      }
+      case Opcodes.CHECKCAST: {
+        DexType dexType = application.getTypeFromDescriptor(type.getDescriptor());
+        // Pop the top value and push it back on with the checked type.
+        state.pop(type);
+        int object = state.push(type);
+        builder.addCheckCast(object, dexType);
+        break;
+      }
+      case Opcodes.INSTANCEOF: {
+        int obj = state.pop(JarState.REFERENCE_TYPE).register;
+        int dest = state.push(Type.INT_TYPE);
+        DexType dexType = application.getTypeFromDescriptor(type.getDescriptor());
+        builder.addInstanceOf(dest, obj, dexType);
+        break;
+      }
+      default:
+        throw new Unreachable("Unexpected TypeInsn opcode: " + insn.getOpcode());
+    }
+  }
+
+  private void build(FieldInsnNode insn, IRBuilder builder) {
+    DexField field = application.getField(insn.owner, insn.name, insn.desc);
+    Type type = Type.getType(insn.desc);
+    MemberType fieldType = memberType(insn.desc);
+    switch (insn.getOpcode()) {
+      case Opcodes.GETSTATIC:
+        builder.addStaticGet(fieldType, state.push(type), field);
+        break;
+      case Opcodes.PUTSTATIC:
+        builder.addStaticPut(fieldType, state.pop(type).register, field);
+        break;
+      case Opcodes.GETFIELD: {
+        Slot object = state.pop(JarState.OBJECT_TYPE);
+        int dest = state.push(type);
+        builder.addInstanceGet(fieldType, dest, object.register, field);
+        break;
+      }
+      case Opcodes.PUTFIELD: {
+        Slot value = state.pop(type);
+        Slot object = state.pop(JarState.OBJECT_TYPE);
+        builder.addInstancePut(fieldType, value.register, object.register, field);
+        break;
+      }
+      default:
+        throw new Unreachable("Unexpected FieldInsn opcode: " + insn.getOpcode());
+    }
+  }
+
+  private void build(MethodInsnNode insn, IRBuilder builder) {
+    // Resolve the target method of the invoke.
+    DexMethod method = application.getMethod(insn.owner, insn.name, insn.desc);
+
+    buildInvoke(
+        insn.desc,
+        Type.getObjectType(insn.owner),
+        insn.getOpcode() != Opcodes.INVOKESTATIC,
+        builder,
+        (types, registers) -> {
+          Invoke.Type invokeType = invokeType(insn);
+          DexProto callSiteProto = null;
+          DexMethod targetMethod = method;
+          if (invokeType == Invoke.Type.POLYMORPHIC) {
+            targetMethod = application.getMethod(
+                insn.owner, insn.name, METHODHANDLE_INVOKE_OR_INVOKEEXACT_DESC);
+            callSiteProto = application.getProto(insn.desc);
+          }
+          builder.addInvoke(invokeType, targetMethod, callSiteProto, types, registers);
+        });
+  }
+
+  private void buildInvoke(
+      String methodDesc, Type methodOwner, boolean addImplicitReceiver,
+      IRBuilder builder, BiConsumer<List<MoveType>, List<Integer>> creator) {
+
+    // Build the argument list of the form [owner, param1, ..., paramN].
+    // The arguments are in reverse order on the stack, so we pop off the parameters here.
+    Type[] parameterTypes = Type.getArgumentTypes(methodDesc);
+    Slot[] parameterRegisters = state.popReverse(parameterTypes.length);
+
+    List<MoveType> types = new ArrayList<>(parameterTypes.length + 1);
+    List<Integer> registers = new ArrayList<>(parameterTypes.length + 1);
+
+    // Add receiver argument for non-static calls.
+    if (addImplicitReceiver) {
+      addArgument(types, registers, methodOwner, state.pop());
+    }
+
+    // The remaining arguments are the parameters of the method.
+    for (int i = 0; i < parameterTypes.length; i++) {
+      addArgument(types, registers, parameterTypes[i], parameterRegisters[i]);
+    }
+
+    // Create the invoke.
+    creator.accept(types, registers);
+
+    // Move the result to the "top of stack".
+    Type returnType = Type.getReturnType(methodDesc);
+    if (returnType != Type.VOID_TYPE) {
+      builder.addMoveResult(moveType(returnType), state.push(returnType));
+    }
+  }
+
+  private static void addArgument(List<MoveType> types, List<Integer> registers, Type type,
+      Slot slot) {
+    assert slot.isCompatibleWith(type);
+    types.add(moveType(type));
+    registers.add(slot.register);
+  }
+
+  private void build(InvokeDynamicInsnNode insn, IRBuilder builder) {
+    // Bootstrap method
+    Handle bsmHandle = insn.bsm;
+    if (bsmHandle.getTag() != Opcodes.H_INVOKESTATIC &&
+        bsmHandle.getTag() != Opcodes.H_NEWINVOKESPECIAL) {
+      throw new Unreachable(
+          "Bootstrap handle is not yet supported: tag == " + bsmHandle.getTag());
+    }
+    // Resolve the bootstrap method.
+    DexMethodHandle bootstrapMethod = getMethodHandle(application, bsmHandle);
+
+    // Decode static bootstrap arguments
+    List<DexValue> bootstrapArgs = new ArrayList<>();
+    for (Object arg : insn.bsmArgs) {
+      bootstrapArgs.add(decodeBootstrapArgument(arg));
+    }
+
+    // Construct call site
+    DexCallSite callSite = application
+        .getCallSite(insn.name, insn.desc, bootstrapMethod, bootstrapArgs);
+
+    buildInvoke(insn.desc, null /* Not needed */,
+        false /* Receiver is passed explicitly */, builder,
+        (types, registers) -> builder.addInvokeCustom(callSite, types, registers));
+  }
+
+  private DexValue decodeBootstrapArgument(Object value) {
+    if (value instanceof Integer) {
+      return DexValue.DexValueInt.create((Integer) value);
+    } else if (value instanceof Long) {
+      return DexValue.DexValueLong.create((Long) value);
+    } else if (value instanceof Float) {
+      return DexValue.DexValueFloat.create((Float) value);
+    } else if (value instanceof Double) {
+      return DexValue.DexValueDouble.create((Double) value);
+    } else if (value instanceof String) {
+      return new DexValue.DexValueString(application.getString((String) value));
+
+    } else if (value instanceof Type) {
+      Type type = (Type) value;
+      switch (type.getSort()) {
+        case Type.OBJECT:
+          return new DexValue.DexValueType(
+              application.getTypeFromDescriptor(((Type) value).getDescriptor()));
+        case Type.METHOD:
+          return new DexValue.DexValueMethodType(
+              application.getProto(((Type) value).getDescriptor()));
+      }
+      throw new Unreachable("Type sort is not supported: " + type.getSort());
+
+    } else if (value instanceof Handle) {
+      return new DexValue.DexValueMethodHandle(getMethodHandle(application, (Handle) value));
+    } else {
+      throw new Unreachable(
+          "Unsupported bootstrap static argument of type " + value.getClass().getSimpleName());
+    }
+  }
+
+  private DexMethodHandle getMethodHandle(JarApplicationReader application, Handle handle) {
+    MethodHandleType methodHandleType = getMethodHandleType(handle);
+    Descriptor<? extends DexItem, ? extends Descriptor> descriptor =
+        methodHandleType.isFieldType()
+            ? application.getField(handle.getOwner(), handle.getName(), handle.getDesc())
+            : application.getMethod(handle.getOwner(), handle.getName(), handle.getDesc());
+    return application.getMethodHandle(methodHandleType, descriptor);
+  }
+
+  private MethodHandleType getMethodHandleType(Handle handle) {
+    switch (handle.getTag()) {
+      case Opcodes.H_GETFIELD:
+        return MethodHandleType.INSTANCE_GET;
+      case Opcodes.H_GETSTATIC:
+        return MethodHandleType.STATIC_GET;
+      case Opcodes.H_PUTFIELD:
+        return MethodHandleType.INSTANCE_PUT;
+      case Opcodes.H_PUTSTATIC:
+        return MethodHandleType.STATIC_PUT;
+      case Opcodes.H_INVOKESPECIAL:
+        DexType owner = application.getTypeFromName(handle.getOwner());
+        if (owner == clazz || handle.getName().equals(Constants.INSTANCE_INITIALIZER_NAME)) {
+          return MethodHandleType.INVOKE_INSTANCE;
+        } else {
+          return MethodHandleType.INVOKE_SUPER;
+        }
+      case Opcodes.H_INVOKEVIRTUAL:
+        return MethodHandleType.INVOKE_INSTANCE;
+      case Opcodes.H_INVOKEINTERFACE:
+        return MethodHandleType.INVOKE_INTERFACE;
+      case Opcodes.H_INVOKESTATIC:
+        return MethodHandleType.INVOKE_STATIC;
+      case Opcodes.H_NEWINVOKESPECIAL:
+        return MethodHandleType.INVOKE_CONSTRUCTOR;
+      default:
+        throw new Unreachable("MethodHandle tag is not supported: " + handle.getTag());
+    }
+  }
+
+  private void build(JumpInsnNode insn, IRBuilder builder) {
+    processLocalVariablesAtControlEdge(insn, builder);
+    int[] targets = getTargets(insn);
+    int opcode = insn.getOpcode();
+    if (Opcodes.IFEQ <= opcode && opcode <= Opcodes.IF_ACMPNE) {
+      assert targets.length == 2;
+      if (opcode <= Opcodes.IFLE) {
+        Slot value = state.pop(Type.INT_TYPE);
+        builder.addIfZero(ifType(opcode), value.register, targets[0], targets[1]);
+      } else {
+        Type expectedType = opcode < Opcodes.IF_ACMPEQ ? Type.INT_TYPE : JarState.REFERENCE_TYPE;
+        Slot value2 = state.pop(expectedType);
+        Slot value1 = state.pop(expectedType);
+        builder.addIf(ifType(opcode), value1.register, value2.register, targets[0], targets[1]);
+      }
+    } else {
+      switch (opcode) {
+        case Opcodes.GOTO: {
+          assert targets.length == 1;
+          builder.addGoto(targets[0]);
+          break;
+        }
+        case Opcodes.IFNULL:
+        case Opcodes.IFNONNULL: {
+          Slot value = state.pop(JarState.REFERENCE_TYPE);
+          If.Type type = opcode == Opcodes.IFNULL ? If.Type.EQ : If.Type.NE;
+          builder.addIfZero(type, value.register, targets[0], targets[1]);
+          break;
+        }
+        case Opcodes.JSR: {
+          throw new Unreachable("JSR should be handled by the ASM jsr inliner");
+        }
+        default:
+          throw new Unreachable("Unexpected JumpInsn opcode: " + insn.getOpcode());
+      }
+    }
+    for (int target : targets) {
+      state.recordStateForTarget(target, this);
+    }
+    state.invalidateState();
+  }
+
+  private void build(LabelNode insn, IRBuilder builder) {
+    // Open the scope of locals starting at this point.
+    if (insn != initialLabel) {
+      for (Local local : state.openLocals(insn)) {
+        builder.addDebugLocalStart(local.slot.register, local.info);
+      }
+    }
+    // Processing local-variable ends is done before closing potential control-flow edges.
+    // Record the state for all the try-catch handlers that are active at this label.
+    for (TryCatchBlock tryCatchBlock : getTryHandlers(insn)) {
+      state.recordStateForExceptionalTarget(tryCatchBlock.getHandler(), this);
+    }
+  }
+
+  private void build(LdcInsnNode insn, IRBuilder builder) {
+    if (insn.cst instanceof Type) {
+      Type type = (Type) insn.cst;
+      int dest = state.push(type);
+      builder.addConstClass(dest, application.getTypeFromDescriptor(type.getDescriptor()));
+    } else if (insn.cst instanceof String) {
+      int dest = state.push(STRING_TYPE);
+      builder.addConstString(dest, application.getString((String) insn.cst));
+    } else if (insn.cst instanceof Long) {
+      int dest = state.push(Type.LONG_TYPE);
+      builder.addLongConst(dest, (Long) insn.cst);
+    } else if (insn.cst instanceof Double) {
+      int dest = state.push(Type.DOUBLE_TYPE);
+      builder.addDoubleConst(dest, Double.doubleToRawLongBits((Double) insn.cst));
+    } else if (insn.cst instanceof Integer) {
+      int dest = state.push(Type.INT_TYPE);
+      builder.addIntConst(dest, (Integer) insn.cst);
+    } else {
+      assert insn.cst instanceof Float;
+      int dest = state.push(Type.FLOAT_TYPE);
+      builder.addFloatConst(dest, Float.floatToRawIntBits((Float) insn.cst));
+    }
+  }
+
+  private void build(IincInsnNode insn, IRBuilder builder) {
+    int local = state.readLocal(insn.var, Type.INT_TYPE).register;
+    builder.addAddLiteral(NumericType.INT, local, local, insn.incr);
+  }
+
+  private void build(TableSwitchInsnNode insn, IRBuilder builder) {
+    processLocalVariablesAtControlEdge(insn, builder);
+    buildSwitch(Switch.Type.PACKED, insn.dflt, insn.labels, new int[]{insn.min}, builder);
+  }
+
+  private void build(LookupSwitchInsnNode insn, IRBuilder builder) {
+    int[] keys = new int[insn.keys.size()];
+    for (int i = 0; i < insn.keys.size(); i++) {
+      keys[i] = (int) insn.keys.get(i);
+    }
+    buildSwitch(Switch.Type.SPARSE, insn.dflt, insn.labels, keys, builder);
+  }
+
+  private void buildSwitch(Switch.Type type, LabelNode dflt, List labels, int[] keys,
+      IRBuilder builder) {
+    int index = state.pop(Type.INT_TYPE).register;
+    int fallthroughOffset = getOffset(dflt);
+    state.recordStateForTarget(fallthroughOffset, this);
+    int[] labelOffsets = new int[labels.size()];
+    for (int i = 0; i < labels.size(); i++) {
+      int offset = getOffset((LabelNode) labels.get(i));
+      labelOffsets[i] = offset;
+      state.recordStateForTarget(offset, this);
+    }
+    builder.addSwitch(type, index, keys, fallthroughOffset, labelOffsets);
+    state.invalidateState();
+  }
+
+  private void build(MultiANewArrayInsnNode insn, IRBuilder builder) {
+    // Type of the full array.
+    Type arrayType = Type.getObjectType(insn.desc);
+    DexType dexArrayType = application.getType(arrayType);
+    // Type of the members. Can itself be of array type, eg, 'int[]' for 'new int[x][y][]'
+    DexType memberType = application.getTypeFromDescriptor(insn.desc.substring(insn.dims));
+    // Push an array containing the dimensions of the desired multi-dimensional array.
+    DexType dimArrayType = application.getTypeFromDescriptor(INT_ARRAY_DESC);
+    Slot[] slots = state.popReverse(insn.dims, Type.INT_TYPE);
+    int[] dimensions = new int[insn.dims];
+    for (int i = 0; i < insn.dims; i++) {
+      dimensions[i] = slots[i].register;
+    }
+    builder.addInvokeNewArray(dimArrayType, insn.dims, dimensions);
+    int dimensionsDestTemp = state.push(INT_ARRAY_TYPE);
+    builder.addMoveResult(MoveType.OBJECT, dimensionsDestTemp);
+    // Push the class object for the member type of the array.
+    int classDestTemp = state.push(CLASS_TYPE);
+    builder.ensureBlockForThrowingInstruction();
+    builder.addConstClass(classDestTemp, memberType);
+    // Create the actual multi-dimensional array using java.lang.reflect.Array::newInstance
+    DexType reflectArrayClass = application.getTypeFromDescriptor(REFLECT_ARRAY_DESC);
+    DexMethod newInstance = application.getMethod(reflectArrayClass,
+        REFLECT_ARRAY_NEW_INSTANCE_NAME, REFLECT_ARRAY_NEW_INSTANCE_DESC);
+    List<MoveType> argumentTypes = Arrays.asList(moveType(CLASS_TYPE), moveType(INT_ARRAY_TYPE));
+    List<Integer> argumentRegisters = Arrays.asList(classDestTemp, dimensionsDestTemp);
+    builder.ensureBlockForThrowingInstruction();
+    builder.addInvoke(Invoke.Type.STATIC, newInstance, null, argumentTypes, argumentRegisters);
+    // Pop the temporaries and push the final result.
+    state.pop(); // classDestTemp.
+    state.pop(); // dimensionsDestTemp.
+    int result = state.push(arrayType);
+    builder.addMoveResult(moveType(arrayType), result);
+    // Insert cast check to satisfy verification.
+    builder.ensureBlockForThrowingInstruction();
+    builder.addCheckCast(result, dexArrayType);
+  }
+
+  private void build(LineNumberNode insn, IRBuilder builder) {
+    builder.updateCurrentDebugPosition(insn.line, null);
+  }
+
+  // Printing helpers.
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("node.name = [").append(node.name).append("]");
+    builder.append("\n");
+    builder.append("node.desc = ").append(node.desc);
+    builder.append("\n");
+    builder.append("node.maxStack = ").append(node.maxStack);
+    builder.append("\n");
+    builder.append("node.maxLocals = ").append(node.maxLocals);
+    builder.append("\n");
+    builder.append("node.locals.size = ").append(node.localVariables.size());
+    builder.append("\n");
+    builder.append("node.insns.size = ").append(node.instructions.size());
+    builder.append("\n");
+    for (int i = 0; i < parameterTypes.size(); i++) {
+      builder.append("arg ").append(i).append(", type: ").append(parameterTypes.get(i))
+          .append("\n");
+    }
+    for (int i = 0; i < node.localVariables.size(); i++) {
+      LocalVariableNode local = (LocalVariableNode) node.localVariables.get(i);
+      builder.append("local ").append(i)
+          .append(", name: ").append(local.name)
+          .append(", desc: ").append(local.desc)
+          .append(", index: ").append(local.index)
+          .append(", [").append(getOffset(local.start))
+          .append("..").append(getOffset(local.end))
+          .append("[\n");
+    }
+    for (int i = 0; i < node.tryCatchBlocks.size(); i++) {
+      TryCatchBlockNode tryCatchBlockNode = (TryCatchBlockNode) node.tryCatchBlocks.get(i);
+      builder.append("[").append(getOffset(tryCatchBlockNode.start))
+          .append("..").append(getOffset(tryCatchBlockNode.end)).append("[ ")
+          .append(tryCatchBlockNode.type).append(" -> ")
+          .append(getOffset(tryCatchBlockNode.handler))
+          .append("\n");
+    }
+    for (int i = 0; i < node.instructions.size(); i++) {
+      AbstractInsnNode insn = node.instructions.get(i);
+      builder.append(String.format("%4d: ", i)).append(instructionToString(insn));
+    }
+    return builder.toString();
+  }
+
+  private String instructionToString(AbstractInsnNode insn) {
+    if (printVisitor == null) {
+      printVisitor = new TraceMethodVisitor(new Textifier());
+    }
+    insn.accept(printVisitor);
+    StringWriter writer = new StringWriter();
+    printVisitor.p.print(new PrintWriter(writer));
+    printVisitor.p.getText().clear();
+    return writer.toString();
+  }
+
+  private boolean isCallToPolymorphicSignatureMethod(MethodInsnNode method) {
+    return method.owner.equals("java/lang/invoke/MethodHandle")
+        && (method.name.equals("invoke") || method.name.equals("invokeExact"));
+  }
+}

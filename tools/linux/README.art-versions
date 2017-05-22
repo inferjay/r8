@@ -1,0 +1,82 @@
+Art versions in the directory, and where they were build from
+-------------------------------------------------------------
+
+See https://source.android.com/source/build-numbers.html for build numbers.
+
+Device names:
+
+  angler: Nexus 6P
+  mako: Nexus 4
+
+art (default)
+---------
+Build from branch master with art
+
+  mkdir master
+  cd master
+  repo init -u https://android.googlesource.com/platform/manifest -b master
+  repo sync -cq -j24
+  source build/envsetup.sh
+  lunch aosp_angler-eng
+  m -j24
+  m -j24 build-art
+  m -j24 test-art-host
+
+Collected into tools/linux/art
+
+  scripts/update-host-art.sh --android-checkout ~/android/master --art-dir art
+
+
+art-7.0.0
+---------
+Build from branch android-7.0.0_r21.
+
+  mkdir 7.0.0_r21
+  cd 7.0.0_r21
+  repo init -u https://android.googlesource.com/platform/manifest -b android-7.0.0_r21
+  repo sync
+  source build/envsetup.sh
+  lunch aosp_angler-userdebug
+  m -j24
+  m -j24 build-art
+  m -j24 test-art-host
+
+Collected into tools/linux/art-7.0.0.
+
+  scripts/update-host-art.sh --android-checkout ~/android/7.0.0_r21 --art-dir art-7.0.0
+
+art-6.0.1
+---------
+Build from branch android-6.0.1_r66.
+
+  mkdir 6.0.1_r66
+  cd 6.0.1_r66
+  repo init -u https://android.googlesource.com/platform/manifest -b android-6.0.1_r66
+  repo sync
+  source build/envsetup.sh
+  lunch aosp_angler-userdebug
+  m -j24
+  m -j24 build-art
+  m -j24 test-art-host
+
+Collected into tools/linux/art-6.0.1.
+
+  scripts/update-host-art.sh --android-checkout ~/android/6.0.1_r66 --art-dir art-6.0.1
+
+art-5.1.1
+---------
+Build from branch 5.1.1_r19.
+
+  mkdir 5.1.1_r19
+  cd 5.1.1_r19
+  repo init -u https://android.googlesource.com/platform/manifest -b android-5.1.1_r19
+  repo sync
+  source build/envsetup.sh
+  lunch aosp_mako-userdebug
+  m -j24
+  m -j24 build-art
+  m -j24 test-art-host
+
+Collected into tools/linux/art-5.1.1.
+
+  scripts/update-host-art.sh --android-checkout ~/android/5.1.1_r19 --art-dir art-5.1.1 --android-product mako

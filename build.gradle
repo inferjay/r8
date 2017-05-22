@@ -1,0 +1,976 @@
+// Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+import org.gradle.internal.os.OperatingSystem;
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'jacoco'
+
+apply from: 'copyAdditionalJctfCommonFiles.gradle'
+
+repositories {
+    mavenCentral()
+}
+
+// Custom source set for example tests and generated tests.
+sourceSets {
+    test {
+        java {
+            srcDirs = [
+                'src/test/java',
+                'build/generated/test/java',
+            ]
+        }
+    }
+    debugTestResources {
+        java {
+            srcDirs = ['src/test/debugTestResources']
+        }
+        output.resourcesDir = 'build/classes/debugTestResources'
+    }
+    examples {
+        java {
+            srcDirs = ['src/test/examples']
+        }
+        output.resourcesDir = 'build/classes/examples'
+    }
+    examplesAndroidN {
+        java {
+            srcDirs = ['src/test/examplesAndroidN']
+        }
+        output.resourcesDir = 'build/classes/examplesAndroidN'
+    }
+    examplesAndroidO {
+        java {
+            srcDirs = ['src/test/examplesAndroidO']
+        }
+        output.resourcesDir = 'build/classes/examplesAndroidO'
+    }
+    jctfCommon {
+        java {
+            srcDirs = [
+                'third_party/jctf/Harness/src',
+                'third_party/jctf/LibTests/src/com/google/jctf/test/categories',
+                'third_party/jctf/LibTests/src/com/google/jctf/test/helper',
+                'third_party/jctf/LibTests/src/com/google/jctf/testHelpers',
+                'third_party/jctf/LibTests/src/org',
+                'build/additionalJctfCommonFiles'
+            ]
+        }
+        resources {
+            srcDirs = ['third_party/jctf/LibTests/resources']
+        }
+    }
+    jctfTests {
+        java {
+            srcDirs = [
+                'third_party/jctf/LibTests/src/com/google/jctf/test/lib',
+                // 'third_party/jctf/VMTests/src',
+            ]
+        }
+    }
+}
+
+dependencies {
+    compile 'net.sf.jopt-simple:jopt-simple:4.6'
+    compile group: 'com.google.guava', name: 'guava', version: '19.0'
+    compile group: 'org.apache.commons', name: 'commons-compress', version: '1.12'
+    compile group: 'org.ow2.asm', name: 'asm', version: '5.1'
+    compile group: 'org.ow2.asm', name: 'asm-commons', version: '5.1'
+    compile group: 'org.ow2.asm', name: 'asm-tree', version: '5.1'
+    compile group: 'org.ow2.asm', name: 'asm-util', version: '5.1'
+    testCompile sourceSets.examples.output
+    testCompile 'junit:junit:4.12'
+    testCompile group: 'org.smali', name: 'smali', version: '2.2b4'
+    testCompile files('third_party/jasmin/jasmin-2.4.jar')
+    testCompile files('third_party/jdwp-tests/apache-harmony-jdwp-tests-host.jar')
+    jctfCommonCompile 'junit:junit:4.12'
+    jctfTestsCompile 'junit:junit:4.12'
+    jctfTestsCompile sourceSets.jctfCommon.output
+    examplesAndroidOCompile group: 'org.ow2.asm', name: 'asm', version: '5.1'
+}
+
+def osString = OperatingSystem.current().isLinux() ? "linux" : "mac"
+
+def cloudDependencies = [
+        "tests"      : [
+                "art.tar.gz"
+        ],
+        "third_party": [
+                "android_jar/lib-v14.tar.gz",
+                "android_jar/lib-v19.tar.gz",
+                "android_jar/lib-v24.tar.gz",
+                "android_jar/lib-v25.tar.gz",
+                "android_jar/lib-v26.tar.gz",
+                "proguard/proguard5.2.1.tar.gz",
+                "gradle/gradle.tar.gz",
+                "jdwp-tests.tar.gz",
+                "jasmin.tar.gz",
+                "jctf.tar.gz",
+                "android_cts_baseline.tar.gz",
+        ],
+        // All dex-vms have a fixed OS of Linux, as they are only supported on Linux, and will be run in a Docker
+        // container on other platforms where supported.
+        "tools"      : [
+                "linux/art.tar.gz",
+                "linux/art-5.1.1.tar.gz",
+                "linux/art-6.0.1.tar.gz",
+                "linux/art-7.0.0.tar.gz",
+                "linux/dalvik.tar.gz",
+                "${osString}/dx.tar.gz",
+        ]
+]
+
+cloudDependencies.each { entry ->
+    entry.value.each { entryFile ->
+        task "download_deps_${entry.key}/${entryFile}"(type: Exec) {
+            def gzFile = "${entry.key}/${entryFile}"
+            def sha1File = "${gzFile}.sha1"
+            inputs.file sha1File
+            outputs.file gzFile
+            executable "bash"
+            args "-c", "download_from_google_storage -n -b r8-deps -u -s ${sha1File}"
+        }
+    }
+}
+
+def x20Dependencies = [
+    "third_party": [
+        "gmscore/v4.tar.gz",
+        "gmscore/v5.tar.gz",
+        "gmscore/v6.tar.gz",
+        "gmscore/v7.tar.gz",
+        "gmscore/v8.tar.gz",
+        "gmscore/gmscore_v9.tar.gz",
+        "gmscore/gmscore_v10.tar.gz",
+        "youtube/youtube.android_11.47.tar.gz",
+        "youtube/youtube.android_12.10.tar.gz",
+        "proguardsettings.tar.gz",
+    ],
+]
+
+x20Dependencies.each { entry ->
+    entry.value.each { entryFile ->
+        task "download_deps_${entry.key}/${entryFile}"(type: Exec) {
+            def gzFile = "${entry.key}/${entryFile}"
+            def sha1File = "${gzFile}.sha1"
+            inputs.file sha1File
+            outputs.file gzFile
+            executable "bash"
+            args "-c", "tools/download_from_x20.py ${sha1File}"
+        }
+    }
+}
+
+task downloadDeps {
+    cloudDependencies.each { entry ->
+        entry.value.each { entryFile ->
+            dependsOn "download_deps_${entry.key}/${entryFile}"
+        }
+    }
+    if (!project.hasProperty('no_internal')) {
+        x20Dependencies.each { entry ->
+            entry.value.each { entryFile ->
+                dependsOn "download_deps_${entry.key}/${entryFile}"
+            }
+        }
+    }
+}
+
+allprojects {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+compileJctfCommonJava {
+    dependsOn 'copyAdditionalJctfCommonFiles'
+    options.compilerArgs = ['-Xlint:none']
+}
+
+compileJctfTestsJava {
+    dependsOn 'jctfCommonClasses'
+    options.compilerArgs = ['-Xlint:none']
+}
+
+task R8(type: Jar) {
+    from sourceSets.main.output
+    baseName 'r8'
+    manifest {
+        attributes 'Main-Class': 'com.android.tools.r8.R8'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps R8
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task D8(type: Jar) {
+    from sourceSets.main.output
+    baseName 'd8'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.D8'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps D8
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task CompatDx(type: Jar) {
+    from sourceSets.main.output
+    baseName 'compatdx'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.compatdx.CompatDx'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps CompatDx
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task disasm(type: Jar) {
+    from sourceSets.main.output
+    baseName 'disasm'
+    manifest {
+        attributes 'Main-Class': 'com.android.tools.r8.Disassemble'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps D8
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task bisect(type: Jar) {
+    from sourceSets.main.output
+    baseName 'bisect'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.bisect.Bisect'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps R8
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task sourceJar(type: Jar, dependsOn: classes) {
+    classifier = 'src'
+    from sourceSets.main.allSource
+}
+
+task jctfCommonJar(type: Jar) {
+    from sourceSets.jctfCommon.output
+    baseName 'jctfCommon'
+}
+
+artifacts {
+    archives sourceJar
+}
+
+task createArtTests(type: Exec) {
+    def outputDir = "build/generated/test/java/com/android/tools/r8/art"
+    def createArtTestsScript = "scripts/create-art-tests.sh"
+    inputs.file "tests/art.tar.gz"
+    inputs.file createArtTestsScript
+    outputs.dir outputDir
+    dependsOn downloadDeps
+    executable "bash"
+    args "${projectDir}/${createArtTestsScript}"
+    workingDir = projectDir
+}
+
+task createJctfTests(type: Exec) {
+    def outputDir = "build/generated/test/java/com/android/tools/r8/art"
+    def script = "scripts/create-jctf-tests.sh"
+    inputs.file script
+    outputs.dir outputDir
+    dependsOn downloadDeps
+    executable "bash"
+    args "${projectDir}/${script}"
+    workingDir = projectDir
+}
+
+compileTestJava {
+    dependsOn createArtTests
+    dependsOn createJctfTests
+}
+
+task buildDebugInfoExamplesDex {
+    def examplesDir = file("src/test/java")
+    def hostJar = "debuginfo_examples.jar"
+    def hostDexJar = "debuginfo_examples_dex.jar"
+    task "compile_debuginfo_examples"(type: JavaCompile) {
+        source = fileTree(dir: examplesDir, include: "com/android/tools/r8/debuginfo/*Test.java")
+        destinationDir = file("build/test/debuginfo_examples/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_7
+        targetCompatibility = JavaVersion.VERSION_1_7
+        options.compilerArgs += ["-Xlint:-options"]
+    }
+    task "jar_debuginfo_examples"(type: Jar, dependsOn: "compile_debuginfo_examples") {
+        archiveName = hostJar
+        destinationDir = file("build/test/")
+        from "build/test/debuginfo_examples/classes"
+        include "**/*.class"
+    }
+    task "dex_debuginfo_examples"(type: Exec,
+            dependsOn: ["jar_debuginfo_examples", "downloadDeps"]) {
+        executable file("tools/linux/dx/bin/dx");
+        args "--dex"
+        args "--output=build/test/${hostDexJar}"
+        args "build/test/${hostJar}"
+        inputs.file file("build/test/${hostJar}")
+        outputs.file file("build/test/${hostDexJar}")
+    }
+    dependsOn dex_debuginfo_examples
+}
+
+task buildDebugTestResourcesJars {
+    dependsOn downloadDeps
+    def resourcesDir = file("src/test/debugTestResources")
+    def hostJar = "debug_test_resources.jar"
+    task "compile_debugTestResources"(type: JavaCompile) {
+        source = fileTree(dir: resourcesDir, include: '**/*.java')
+        destinationDir = file("build/test/debugTestResources/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_7
+        targetCompatibility = JavaVersion.VERSION_1_7
+        options.compilerArgs += ["-g", "-Xlint:-options"]
+    }
+    task "jar_debugTestResources"(type: Jar, dependsOn: "compile_debugTestResources") {
+        archiveName = hostJar
+        destinationDir = file("build/test/")
+        from "build/test/debugTestResources/classes"
+        include "**/*.class"
+    }
+    dependsOn jar_debugTestResources
+}
+
+task buildExampleJars {
+    dependsOn downloadDeps
+    def examplesDir = file("src/test/examples")
+    def proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.sh"
+    task "compile_examples"(type: JavaCompile) {
+        source = fileTree(dir: examplesDir, include: '**/*.java')
+        destinationDir = file("build/test/examples/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_7
+        targetCompatibility = JavaVersion.VERSION_1_7
+        options.compilerArgs += ["-Xlint:-options"]
+    }
+    examplesDir.eachDir { dir ->
+        def name = dir.getName();
+        def exampleOutputDir = file("build/test/examples");
+        def jarName = "${name}.jar"
+        dependsOn "jar_example_${name}"
+        // The "throwing" test verifies debugging/stack info on the post-proguarded output.
+        def proguardConfigPath = "${dir}/proguard.cfg"
+        if (new File(proguardConfigPath).exists()) {
+            task "pre_proguard_example_${name}"(type: Jar, dependsOn: "compile_examples") {
+                archiveName = "${name}_pre_proguard.jar"
+                destinationDir = exampleOutputDir
+                from "build/test/examples/classes"
+                include "**/" + name + "/**/*.class"
+            }
+            def jarPath = files(tasks.getByPath("pre_proguard_example_${name}")).files.first();
+            def proguardJarPath = "${exampleOutputDir}/${jarName}"
+            def proguardMapPath = "${exampleOutputDir}/${name}/${name}.map"
+            task "jar_example_${name}"(type: Exec, dependsOn: "pre_proguard_example_${name}") {
+                inputs.files tasks.getByPath("pre_proguard_example_${name}")
+                inputs.file  proguardConfigPath
+                // Enable these to get stdout and stderr redirected to files...
+                // standardOutput = new FileOutputStream('proguard.stdout')
+                // errorOutput = new FileOutputStream('proguard.stderr')
+                executable "bash"
+                args "-c", "${proguardScript} '-verbose -dontwarn java.** -injars ${jarPath}" +
+                        " -outjars ${proguardJarPath}" +
+                        " -include ${proguardConfigPath}" +
+                        " -printmapping ${proguardMapPath}'"
+                outputs.file proguardJarPath
+            }
+        } else {
+            task "jar_example_${name}"(type: Jar, dependsOn: "compile_examples") {
+                archiveName = jarName
+                destinationDir = exampleOutputDir
+                from "build/test/examples/classes"
+                include "**/" + name + "/**/*.class"
+            }
+        }
+    }
+}
+
+task buildExampleAndroidNJars {
+    dependsOn downloadDeps
+    def examplesDir = file("src/test/examplesAndroidN")
+    task "compile_examplesAndroidN"(type: JavaCompile) {
+        source = fileTree(dir: examplesDir, include: '**/*.java')
+        destinationDir = file("build/test/examplesAndroidN/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        options.compilerArgs += ["-Xlint:-options"]
+    }
+    examplesDir.eachDir { dir ->
+        def name = dir.getName();
+        def exampleOutputDir = file("build/test/examplesAndroidN");
+        def jarName = "${name}.jar"
+        dependsOn "jar_examplesAndroidN_${name}"
+        task "jar_examplesAndroidN_${name}"(type: Jar, dependsOn: "compile_examplesAndroidN") {
+            archiveName = jarName
+            destinationDir = exampleOutputDir
+            from "build/test/examplesAndroidN/classes"
+            include "**/" + name + "/**/*.class"
+        }
+    }
+}
+
+
+task buildExampleAndroidOJars {
+    dependsOn downloadDeps
+    def examplesDir = file("src/test/examplesAndroidO")
+    // NOTE: we want to enable a scenario when test needs to reference some
+    // classes generated by legacy (1.6) Java compiler to test some specific
+    // behaviour. To do so we compile all the java files located in sub-directory
+    // called 'legacy' with Java 1.6, then compile the rest of the files with
+    // Java 1.8 and a reference to previously generated 1.6 classes.
+
+    // Compiling all classes in dirs 'legacy' with old Java version.
+    task "compile_examplesAndroidO_Legacy"(type: JavaCompile) {
+        source = fileTree(dir: examplesDir, include: '**/legacy/**/*.java')
+        destinationDir = file("build/test/examplesAndroidOLegacy/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_6
+        targetCompatibility = JavaVersion.VERSION_1_6
+        options.compilerArgs += ["-Xlint:-options", "-parameters"]
+    }
+    // Compiling the rest of the files as Java 1.8 code.
+    task "compile_examplesAndroidO"(type: JavaCompile) {
+        dependsOn "compile_examplesAndroidO_Legacy"
+        source = fileTree(dir: examplesDir, include: '**/*.java', exclude: '**/legacy/**/*.java')
+        destinationDir = file("build/test/examplesAndroidO/classes")
+        classpath = sourceSets.main.compileClasspath
+        classpath += files("build/test/examplesAndroidOLegacy/classes")
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        options.compilerArgs += ["-Xlint:-options", "-parameters"]
+    }
+    examplesDir.eachDir { dir ->
+        def name = dir.getName();
+        def destinationDir = file("build/test/examplesAndroidO/classes");
+        if (file("src/test/examplesAndroidO/" + name + "/TestGenerator.java").isFile()) {
+            task "generate_examplesAndroidO_${name}"(type: JavaExec,
+                    dependsOn: "compile_examplesAndroidO") {
+                main = name + ".TestGenerator"
+                classpath = files(destinationDir, sourceSets.main.compileClasspath)
+                args destinationDir
+            }
+        } else {
+            task "generate_examplesAndroidO_${name}" () {}
+        }
+    }
+    examplesDir.eachDir { dir ->
+        def name = dir.getName();
+        def exampleOutputDir = file("build/test/examplesAndroidO");
+        def jarName = "${name}.jar"
+        dependsOn "jar_examplesAndroidO_${name}"
+        task "jar_examplesAndroidO_${name}"(type: Jar, dependsOn: ["compile_examplesAndroidO",
+                "generate_examplesAndroidO_${name}"]) {
+            archiveName = jarName
+            destinationDir = exampleOutputDir
+            from "build/test/examplesAndroidO/classes"        // Java 1.8 classes
+            from "build/test/examplesAndroidOLegacy/classes"  // Java 1.6 classes
+            include "**/" + name + "/**/*.class"
+            // Do not include generator into the test runtime jar, it is not useful.
+            // Otherwise, shrinking will need ASM jars.
+            exclude "**/TestGenerator*"
+        }
+    }
+}
+
+task buildExamples {
+    if (OperatingSystem.current().isMacOsX()) {
+        logger.lifecycle("WARNING: Testing (including building examples) is only partially supported on Mac OS.")
+    } else if (!OperatingSystem.current().isLinux()) {
+      logger.lifecycle("WARNING: Testing (including building examples) is not supported on your platform. " +
+          "It is fully supported on Linux and partially supported on Mac OS")
+      return;
+    }
+    dependsOn buildDebugTestResourcesJars
+    dependsOn buildExampleJars
+    dependsOn buildExampleAndroidNJars
+    dependsOn buildExampleAndroidOJars
+    def examplesDir = file("src/test/examples")
+    examplesDir.eachDir { dir ->
+        def name = dir.getName();
+        dependsOn "dex_example_${name}"
+        def exampleOutputDir = file("build/test/examples/" + name);
+        def dexPath = file("${exampleOutputDir}")
+        def debug = (name == "throwing")
+        if (!dexPath.exists()) {
+            dexPath.mkdirs()
+        }
+        task "dex_example_${name}"(type: dx.Dx, dependsOn: "jar_example_${name}") {
+            source = files(tasks.getByPath("jar_example_${name}")).asFileTree
+            destination = dexPath
+            debug = debug
+        }
+    }
+}
+
+task buildSmali {
+    def smaliDir = file("src/test/smali")
+    smaliDir.eachDirRecurse() { dir ->
+        def name = dir.getName();
+        def relativeDir = smaliDir.toPath().relativize(dir.toPath());
+        def smaliOutputDir = file("build/test/smali/" + relativeDir);
+        smaliOutputDir.mkdirs()
+        outputs.dir smaliOutputDir
+        def taskName = "smali_build_${relativeDir.toString().replace('/', '_')}"
+        def smaliFiles = fileTree(dir: dir, include: '*.smali')
+        def javaFiles = fileTree(dir: dir, include: '*.java')
+        def destDir = smaliOutputDir;
+        def destFile = destDir.toPath().resolve("${name}.dex").toFile()
+        def intermediateFileName = "${name}-intermediate.dex";
+        def intermediateFile = destDir.toPath().resolve(intermediateFileName).toFile()
+        if (javaFiles.empty) {
+            if (!smaliFiles.empty) {
+                dependsOn "${taskName}_smali"
+                task "${taskName}_smali"(type: smali.Smali) {
+                    source = smaliFiles
+                    destination = destFile
+                }
+            }
+        } else {
+            dependsOn "${taskName}_dexmerger"
+            task "${taskName}_smali"(type: smali.Smali) {
+                source = smaliFiles
+                destination = intermediateFile
+            }
+            task "${taskName}_java"(type: JavaCompile) {
+                source = javaFiles
+                destinationDir destDir
+                classpath = sourceSets.main.compileClasspath
+                sourceCompatibility = JavaVersion.VERSION_1_7
+                targetCompatibility = JavaVersion.VERSION_1_7
+                options.compilerArgs += ["-Xlint:-options"]
+            }
+            task "${taskName}_jar"(type: Jar, dependsOn: "${taskName}_java") {
+                archiveName = "Test.jar"
+                destinationDir = destDir
+                from fileTree(dir: destDir, include: 'Test.class')
+            }
+            task "${taskName}_dx"(type: dx.Dx, dependsOn: "${taskName}_jar") {
+                source = fileTree(dir: destDir, include: 'Test.jar')
+                destination = destDir
+            }
+            task "${taskName}_dexmerger"(
+                    type: dx.DexMerger, dependsOn: ["${taskName}_dx", "${taskName}_smali"]) {
+                source = fileTree(dir: destDir, include: ["classes.dex", intermediateFileName])
+                destination = destFile
+            }
+        }
+    }
+}
+
+tasks.withType(Test) {
+    def userDefinedCoresPerFork = System.getenv('R8_GRADLE_CORES_PER_FORK')
+    def coresPerFork = userDefinedCoresPerFork ? userDefinedCoresPerFork.toInteger() : 3
+    // See https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.Test.html.
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(coresPerFork) ?: 1
+    forkEvery = 0
+    // Use the Concurrent Mark Sweep GC (CMS) to keep memory usage at a resonable level.
+    jvmArgs = ["-XX:+UseConcMarkSweepGC"]
+}
+
+task buildPreNJdwpTestsJar(type: Jar) {
+    baseName = 'jdwp-tests-preN'
+    from zipTree('third_party/jdwp-tests/apache-harmony-jdwp-tests-host.jar')
+    // Exclude the classes containing java8
+    exclude 'org/apache/harmony/jpda/tests/jdwp/InterfaceType/*.class'
+    exclude 'org/apache/harmony/jpda/tests/jdwp/ObjectReference/InvokeMethodDefault*.class'
+    includeEmptyDirs = false
+}
+
+test {
+    testLogging.exceptionFormat = 'full'
+    if (project.hasProperty('print_test_stdout')) {
+        testLogging.showStandardStreams = true
+    }
+    if (project.hasProperty('dex_vm')) {
+        println "Running with non default vm: " + project.property('dex_vm')
+        systemProperty 'dex_vm', project.property('dex_vm')
+        if (project.property('dex_vm') == '5.1.1' || project.property('dex_vm') == '6.0.1') {
+            // R8 and D8 compute the dex file version number based on the input.
+            // Jack generates dex files with version 37 which art 5.1.1 and 6.0.1 will not run.
+            // Therefore we skip the jack generated art tests with those art versions.
+            exclude "com/android/tools/r8/art/jack/**"
+        }
+    }
+    if (project.hasProperty('one_line_per_test')) {
+        beforeTest { desc ->
+            println "Start executing test ${desc.name} [${desc.className}]"
+        }
+        afterTest { desc, result ->
+            println "Done executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+        }
+    }
+    if (project.hasProperty('no_internal')) {
+        exclude "com/android/tools/r8/internal/**"
+    }
+    if (project.hasProperty('only_internal')) {
+        include "com/android/tools/r8/internal/**"
+    }
+    if (project.hasProperty('tool')) {
+        if (project.property('tool') == 'r8') {
+            exclude "com/android/tools/r8/art/*/d8/**"
+        } else {
+            assert(project.property('tool') == 'd8')
+            exclude "com/android/tools/r8/art/*/r8/**"
+        }
+    }
+    if (!project.hasProperty('all_tests')) {
+        exclude "com/android/tools/r8/art/dx/**"
+        exclude "com/android/tools/r8/art/jack/**"
+    }
+    // TODO(tamaskenez) enable jctf on all_tests when consolidated
+    if (!project.hasProperty('jctf') && !project.hasProperty('only_jctf')) {
+        exclude "com/android/tools/r8/art/jctf/**"
+    }
+    if (project.hasProperty('only_jctf')) {
+        include "com/android/tools/r8/art/jctf/**"
+    }
+    if (project.hasProperty('jctf_compile_only')) {
+        println "JCTF: compiling only"
+        systemProperty 'jctf_compile_only', '1'
+    }
+
+    if (OperatingSystem.current().isLinux() || OperatingSystem.current().isMacOsX()) {
+        if (OperatingSystem.current().isMacOsX()) {
+            logger.lifecycle("WARNING: Testing in only partially supported on Mac OS. " +
+                "Art only runs on Linux and tests requiring Art runs in a Docker container, which must be present. " +
+                "See tools/docker/README.md for details.")
+        }
+        dependsOn downloadDeps
+        dependsOn buildExamples
+        dependsOn buildSmali
+        dependsOn jctfCommonJar
+        dependsOn jctfTestsClasses
+        dependsOn buildDebugInfoExamplesDex
+        dependsOn buildPreNJdwpTestsJar
+    } else {
+        logger.lifecycle("WARNING: Testing in not supported on your platform. Testing is only fully supported on " +
+            "Linux and partially supported on Mac OS. Art does not run on other platforms.")
+    }
+}
+
+// The Art tests we use for R8 are pre-build and downloaded from Google Cloud Storage.
+//
+// To build and upload a new set of the Art tests for use with R8 follow these steps:
+//
+// First of all an Android checkout is required. Currently it must be located
+// in $HOME/android/master.
+//
+// TODO(ricow): simplify this
+//
+// Before: update the checked in art, see scripts/update-host-art.sh
+//
+// 1. Get an android checkout in $HOME/android/master and apply the patch from
+//    https://android-review.googlesource.com/#/c/294187/
+//
+// 2. run the following commands in the Android checkout directory:
+//
+//    source build/envsetup.sh
+//    lunch aosp_angler-userdebug
+//    make -j30 test-art-host
+//
+// 3. In the R8 project root directory, make sure we have a clean state before starting:
+//    tools/gradle.py downloadDeps
+//    tools/gradle.py clean
+//    rm -rf tests/art
+//
+// 4. Now build in the R8 checkout (-P hack to not generate dirs when not running this target)
+//    Make sure you have smali on your path, there is a build binary in the out directory of
+//    the android checkout:
+//
+//    tools/gradle.py -Pandroid_source buildArtTests
+//
+// 4a. If any failures are produced in step 4, figure out what went wrong and add an entry in
+//     skippedTests with an explanation. Rerun from step 3.
+//
+// 5. Run the tests:
+//    tools/gradle.py clean
+//    tools/test.py
+//
+// 5a. If any more tests fail, either fix the issue or add them to the toBeTriaged list (note that
+//     you need to change "_" to "-" from stdout). Rerun from step 3 if anything was added to
+//     toBeTriaged.
+//
+// 6. To upload a new version to Google Cloud Storage
+//    cd tests
+//    upload_to_google_storage.py -a --bucket r8-deps art
+
+enum DexTool {
+    JACK,
+    DX
+}
+
+def androidCheckoutDir = file("${System.env.HOME}/android/master")
+def androidCheckoutJack = file("${androidCheckoutDir}/out/host/linux-x86/bin/jack");
+def androidCheckoutJackServer = file("${androidCheckoutDir}/out/host/linux-x86/bin/jack-admin");
+
+def artTestDir = file("${androidCheckoutDir}/art/test")
+
+if (project.hasProperty('android_source')) {
+    task buildArtTests {
+        outputs.upToDateWhen { false }
+        def toBeTriaged = [
+                "903-hello-tagging",
+                "904-object-allocation",
+                "905-object-free",
+                "906-iterate-heap",
+                "907-get-loaded-classes",
+                "908-gc-start-finish",
+                "954-invoke-polymorphic-verifier",
+                "955-methodhandles-smali",
+                "596-monitor-inflation",
+        ]
+        def skippedTests = toBeTriaged + [
+                // This test produces no jar.
+                "000-nop",
+                // This does not build, as it tests the error when the application exceeds more
+                // than 65536 methods
+                "089-many-methods",
+                // Requires some jack beta jar
+                "956-methodhandles",
+        ]
+
+        def skippedTestsDx = [
+                // Tests with custom build scripts, where javac is not passed the options
+                // -source 1.7 -target 1.7.
+                "462-checker-inlining-across-dex-files",
+                "556-invoke-super",
+                "569-checker-pattern-replacement",
+                // These tests use jack even when --build-with-javac-dx is specified.
+                "004-JniTest",
+                "048-reflect-v8",
+                "146-bad-interface",
+                "563-checker-invoke-super",
+                "580-checker-string-fact-intrinsics",  // java.lang.StringFactory
+                "604-hot-static-interface",
+                "957-methodhandle-transforms",
+                "958-methodhandle-emulated-stackframe",
+                "959-invoke-polymorphic-accessors",
+                "961-default-iface-resolution-gen",
+                "962-iface-static",
+                "963-default-range-smali",
+                "964-default-iface-init-gen",
+                "965-default-verify",
+                "966-default-conflict",
+                "967-default-ame",
+                "968-default-partial-compile-gen",
+                "969-iface-super",
+                "970-iface-super-resolution-gen",
+                "971-iface-super",
+                // These tests does not build with --build-with-javac-dx
+                "004-NativeAllocations", // Javac error
+                "031-class-attributes",
+                "138-duplicate-classes-check",
+                "157-void-class", // Javac error
+                "580-checker-string-factory-intrinsics",
+                "612-jit-dex-cache",
+                "613-inlining-dex-cache",
+                "900-hello-plugin",  // --experimental agents
+                "901-hello-ti-agent",  // --experimental agents
+                "902-hello-transformation",  // --experimental agents
+                "909-attach-agent",  // --experimental agents
+                "946-obsolete-throw", // -source 1.7 -target 1.7, but use lambda
+                "950-redefine-intrinsic", // -source 1.7 -target 1.7, but use method references
+                "951-threaded-obsolete", // -source 1.7 -target 1.7, but use lambda
+                "960-default-smali",  // --experimental default-methods
+                // These tests force the build to use jack
+                "953-invoke-polymorphic-compiler",
+                "958-methodhandle-stackframe",
+        ]
+
+        def artTestBuildDir = file("${projectDir}/tests/art")
+
+        if (androidCheckoutDir.exists()) {
+            dependsOn downloadDeps
+            artTestBuildDir.mkdirs()
+            // Ensure Jack server is running.
+            "${androidCheckoutJackServer} start-server".execute()
+            artTestDir.eachDir { dir ->
+                def name = dir.getName();
+                def markerFile = dir.toPath().resolve("info.txt").toFile();
+                if (markerFile.exists() && !(name in skippedTests)) {
+                    if (!(name in skippedTestsDx)) {
+                        dependsOn buildArtTest(androidCheckoutDir, artTestBuildDir, dir, DexTool.DX);
+                    }
+                    dependsOn buildArtTest(androidCheckoutDir, artTestBuildDir, dir, DexTool.JACK);
+                }
+            }
+        }
+        doFirst {
+            if (!androidCheckoutDir.exists()) {
+                throw new InvalidUserDataException(
+                        "This task requires an Android checkout in ${androidCheckoutDir}");
+            } else if (!androidCheckoutJack.exists() ||
+                    !androidCheckoutJackServer.exists()) {
+                throw new InvalidUserDataException(
+                        "This task requires that tools for host testing have been build in the " +
+                                "Android checkout in ${androidCheckoutDir}");
+            }
+        }
+        doLast {
+            copy {
+                from file("${androidCheckoutDir}/out/host/linux-x86/nativetest64")
+                into file("${artTestBuildDir}/lib64")
+                include 'lib*.so'
+            }
+            copy {
+                from file("${androidCheckoutDir}/out/host/linux-x86/lib64")
+                into file("${artTestBuildDir}/lib64")
+                include 'libart.so'
+                include 'libbacktrace.so'
+                include 'libbase.so'
+                include 'libc++.so'
+                include 'libcutils.so'
+                include 'liblz4.so'
+                include 'liblzma.so'
+                include 'libnativebridge.so'
+                include 'libnativeloader.so'
+                include 'libsigchain.so'
+                include 'libunwind.so'
+                include 'libziparchive.so'
+            }
+            copy {
+                from file("${androidCheckoutDir}/out/host/linux-x86/nativetest")
+                into file("${artTestBuildDir}/lib")
+                include 'lib*.so'
+            }
+            copy {
+                from file("${androidCheckoutDir}/out/host/linux-x86/lib")
+                into file("${artTestBuildDir}/lib")
+                include 'libart.so'
+                include 'libbacktrace.so'
+                include 'libbase.so'
+                include 'libc++.so'
+                include 'libcutils.so'
+                include 'liblz4.so'
+                include 'liblzma.so'
+                include 'libnativebridge.so'
+                include 'libnativeloader.so'
+                include 'libsigchain.so'
+                include 'libunwind.so'
+                include 'libziparchive.so'
+            }
+        }
+    }
+}
+
+def buildArtTest(androidCheckoutDir, artTestBuildDir, dir, dexTool) {
+    def artTestDir = file("${androidCheckoutDir}/art/test")
+    def artRunTestScript = file("${artTestDir}/run-test")
+    def dxExecutable = new File("tools/linux/dx/bin/dx");
+    def dexMergerExecutable = new File("tools/linux/dx/bin/dexmerger");
+    def dexToolName = dexTool == DexTool.DX ? "dx" : "jack"
+
+    def name = dir.getName();
+    def buildTask = "build_art_test_${dexToolName}_${name}"
+    def sanitizeTask = "sanitize_art_test_${dexToolName}_${name}"
+    def copyCheckTask = "copy_check_art_test_${dexToolName}_${name}"
+    def smaliToDexTask = "smali_to_dex_${dexToolName}_${name}"
+
+    def buildInputs = fileTree(dir: dir, include: '**/*')
+    def testDir = file("${artTestBuildDir}/${dexToolName}/${name}")
+    def outputJar = testDir.toPath().resolve("${name}.jar").toFile()
+    testDir.mkdirs()
+    if (dexTool == DexTool.DX) {
+        task "$buildTask"(type: Exec) {
+            outputs.upToDateWhen { false }
+            inputs.file buildInputs
+            executable "${artRunTestScript}"
+            args "--host"
+            args "--build-only"
+            args "--build-with-javac-dx"
+            args "--output-path", "${testDir}"
+            args "${name}"
+            environment DX: "${dxExecutable.absolutePath}"
+            environment DXMERGER: "${dexMergerExecutable.absolutePath}"
+            outputs.file outputJar
+        }
+    } else {
+        assert dexTool == DexTool.JACK
+        def javaLibs = "${androidCheckoutDir}/out/host/common/obj/JAVA_LIBRARIES"
+        def jackClasspath = "${javaLibs}/core-libart-hostdex_intermediates/classes.jack:" +
+                "${javaLibs}/core-oj-hostdex_intermediates/classes.jack"
+        task "$buildTask"(type: Exec) {
+            outputs.upToDateWhen { false }
+            inputs.file buildInputs
+            executable "${artRunTestScript}"
+            args "--host"
+            args "--build-only"
+            args "--output-path", "${testDir}"
+            args "${name}"
+            environment JACK: "${androidCheckoutDir}/out/host/linux-x86/bin/jack"
+            environment JACK_CLASSPATH: jackClasspath
+            environment DXMERGER: "${dexMergerExecutable.absolutePath}"
+            environment ANDROID_BUILD_TOP: "${androidCheckoutDir}"
+            outputs.file outputJar
+        }
+    }
+    task "${sanitizeTask}"(type: Exec, dependsOn: buildTask) {
+        outputs.upToDateWhen { false }
+        executable "/bin/bash"
+        args "-c"
+        args "rm -rf ${testDir}/smali_*.dex ${testDir}/*-ex.dex ${testDir}/*-ex.jar" +
+                " ${testDir}/classes-ex ${testDir}/check"
+    }
+
+    task "${smaliToDexTask}"(type: Exec) {
+        workingDir "${testDir}/smali"
+        executable "/bin/bash"
+        args "-c", "smali -o out.dex *.smali"
+    }
+
+    task "${copyCheckTask}"(type: Copy, dependsOn: sanitizeTask) {
+        def smali_dir = file("${dir}/smali")
+        outputs.upToDateWhen { false }
+        if (smali_dir.exists() && dexTool == DexTool.DX) {
+            dependsOn smaliToDexTask
+        }
+        from("${artTestDir}/${name}") {
+            include 'check'
+        }
+        into testDir
+    }
+
+    return copyCheckTask
+}
+
+task javadocD8(type: Javadoc) {
+  classpath = sourceSets.main.compileClasspath
+  source = sourceSets.main.allJava
+  include '**/com/android/tools/r8/BaseCommand.java'
+  include '**/com/android/tools/r8/BaseOutput.java'
+  include '**/com/android/tools/r8/CompilationException.java'
+  include '**/com/android/tools/r8/CompilationMode.java'
+  include '**/com/android/tools/r8/D8.java'
+  include '**/com/android/tools/r8/D8Command.java'
+  include '**/com/android/tools/r8/D8Output.java'
+  include '**/com/android/tools/r8/Resource.java'
+}

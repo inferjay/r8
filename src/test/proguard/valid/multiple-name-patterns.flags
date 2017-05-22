@@ -1,0 +1,6 @@
+-keep class
+    com.company.hello.**,
+    com.company.world.**
+    extends some.library.Class {
+  protected java.lang.Object[][] getContents();
+}

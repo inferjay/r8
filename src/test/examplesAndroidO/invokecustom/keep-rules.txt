@@ -1,0 +1,17 @@
+# Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# Keep the application entry point and the target methods of invoke-custom because these methods
+# can not be known at compile time. Get rid of everything that is not reachable from there.
+-keep public class invokecustom.InvokeCustom {
+  public static void main(...);
+}
+
+-keepclassmembers  class * {
+  *** targetMethodTest*(...);
+}
+
+# allow access modification to enable minification
+-allowaccessmodification
+

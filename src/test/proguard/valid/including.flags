@@ -1,0 +1,10 @@
+-include empty.flags
+@empty.flags
+-include sub/sub-empty.flags
+@sub/sub-empty.flags
+-basedirectory sub
+-include sub-including.flags
+@sub-including.flags
+-basedirectory ..
+-include sub/sub-including.flags
+@sub/sub-including.flags
