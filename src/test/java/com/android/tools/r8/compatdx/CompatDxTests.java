@@ -100,6 +100,11 @@ public class CompatDxTests {
     runDexer(MainDexListTests.getTwoLargeClassesAppPath().toString());
   }
 
+  @Test
+  public void keepClassesTest() throws IOException {
+    runDexerWithOutput("out.zip", "--keep-classes", EXAMPLE_JAR_FILE1);
+  }
+
   private void runDexer(String... args) throws IOException {
     runDexerWithOutput("", args);
   }
@@ -108,12 +113,24 @@ public class CompatDxTests {
     runDexerWithOutput(null, args);
   }
 
+  private Path getOutputD8() {
+    return temp.getRoot().toPath().resolve("d8-out");
+  }
+
+  private Path getOutputDX() {
+    return temp.getRoot().toPath().resolve("dx-out");
+  }
+
   private void runDexerWithOutput(String out, String... args) throws IOException {
     Path d8Out = null;
     Path dxOut = null;
     if (out != null) {
-      d8Out = temp.newFolder("d8-out").toPath().resolve(out);
-      dxOut = temp.newFolder("dx-out").toPath().resolve(out);
+      Path baseD8 = getOutputD8();
+      Path baseDX = getOutputDX();
+      Files.createDirectory(baseD8);
+      Files.createDirectory(baseDX);
+      d8Out = baseD8.resolve(out);
+      dxOut = baseDX.resolve(out);
       assertNotEquals(d8Out, dxOut);
     }
 
@@ -166,7 +183,8 @@ public class CompatDxTests {
       assertTrue("Expected dx output to contain " + entry, dxContent.contains(entry));
     }
     for (String entry : dxContent) {
-      if (FileUtils.isDexFile(Paths.get(entry))) {
+      Path path = Paths.get(entry);
+      if (FileUtils.isDexFile(path) || FileUtils.isClassFile(path)) {
         assertTrue("Expected d8 output to contain " + entry, d8Content.contains(entry));
       }
     }

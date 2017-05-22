@@ -4,6 +4,7 @@
 package com.android.tools.r8.compatdx;
 
 import static com.android.tools.r8.utils.FileUtils.isApkFile;
+import static com.android.tools.r8.utils.FileUtils.isArchive;
 import static com.android.tools.r8.utils.FileUtils.isClassFile;
 import static com.android.tools.r8.utils.FileUtils.isDexFile;
 import static com.android.tools.r8.utils.FileUtils.isJarFile;
@@ -14,6 +15,7 @@ import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.D8;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.D8Output;
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.compatdx.CompatDx.DxCompatOptions.DxUsageMessage;
 import com.android.tools.r8.compatdx.CompatDx.DxCompatOptions.PositionInfo;
 import com.android.tools.r8.dex.Constants;
@@ -23,6 +25,7 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +38,10 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -224,8 +231,10 @@ public class CompatDx {
             .accepts("main-dex-list", "File listing classes that must be in the main dex file")
             .withRequiredArg()
             .describedAs(FILE_ARG);
-        multiDex = parser.accepts("multi-dex", "Allow generation of multi-dex")
-            .requiredIf(noStrict, minimalMainDex, mainDexList, maxIndexNumber);
+        multiDex =
+            parser
+                .accepts("multi-dex", "Allow generation of multi-dex")
+                .requiredIf(minimalMainDex, mainDexList, maxIndexNumber);
         minApiLevel = parser
             .accepts("min-sdk-version", "Minimum Android API level compatibility.")
             .withRequiredArg().ofType(Integer.class);
@@ -254,8 +263,8 @@ public class CompatDx {
             positions = PositionInfo.LINES;
             break;
           default:
-            // Should be checked by parser.
-            throw new DxParseError(spec.parser);
+            positions = PositionInfo.IMPORTANT;
+            break;
         }
       } else {
         positions = PositionInfo.LINES;
@@ -274,7 +283,7 @@ public class CompatDx {
       verboseDump = options.has(spec.verboseDump);
       noFiles = options.has(spec.noFiles);
       coreLibrary = options.has(spec.coreLibrary);
-      numThreads = options.valueOf(spec.numThreads);
+      numThreads = lastIntOf(options.valuesOf(spec.numThreads));
       incremental = options.has(spec.incremental);
       forceJumbo = options.has(spec.forceJumbo);
       noWarning = options.has(spec.noWarning);
@@ -293,6 +302,11 @@ public class CompatDx {
       Spec spec = new Spec();
       return new DxCompatOptions(spec.parser.parse(args), spec);
     }
+
+    private static int lastIntOf(List<Integer> values) {
+      assert !values.isEmpty();
+      return values.get(values.size() - 1);
+    }
   }
 
   public static void main(String[] args) throws IOException {
@@ -309,6 +323,7 @@ public class CompatDx {
   }
 
   private static void run(String[] args) throws DxUsageMessage, IOException, CompilationException {
+    System.out.println("CompatDx " + String.join(" ", args));
     DxCompatOptions dexArgs = DxCompatOptions.parse(args);
     if (dexArgs.help) {
       printHelpOn(System.out);
@@ -360,10 +375,6 @@ public class CompatDx {
       throw new Unimplemented("dump-to file not yet supported");
     }
 
-    if (dexArgs.keepClasses) {
-      throw new Unimplemented("keeping classes in jar not yet supported");
-    }
-
     if (dexArgs.positions != PositionInfo.NONE) {
       mode = CompilationMode.DEBUG;
     }
@@ -377,11 +388,15 @@ public class CompatDx {
     }
 
     if (dexArgs.forceJumbo) {
-      throw new Unimplemented("force jumbo not yet supported");
+      System.out.println(
+          "Warning: no support for forcing jumbo-strings.\n"
+              + "Strings will only use jumbo-string indexing if necessary.\n"
+              + "Make sure that any dex merger subsequently used "
+              + "supports correct handling of jumbo-strings (eg, D8/R8 does).");
     }
 
     if (dexArgs.noOptimize) {
-      System.out.println("Warning: no support for not optimizing yet");
+      System.out.println("Warning: no support for not optimizing");
     }
 
     if (dexArgs.optimizeList != null) {
@@ -406,6 +421,8 @@ public class CompatDx {
 
     if (dexArgs.noStrict) {
       System.out.println("Warning: conservative main-dex list not yet supported");
+    } else {
+      System.out.println("Warning: strict name checking not yet supported");
     }
 
     if (dexArgs.minimalMainDex) {
@@ -452,7 +469,15 @@ public class CompatDx {
       }
     }
 
-    result.write(output);
+    if (dexArgs.keepClasses) {
+      if (!isArchive(output)) {
+        throw new DxCompatOptions.DxUsageMessage(
+            "Output must be an archive when --keep-classes is set.");
+      }
+      writeZipWithClasses(inputs, result, output);
+    } else {
+      result.write(output);
+    }
   }
 
   static void printHelpOn(PrintStream sink) throws IOException {
@@ -483,5 +508,48 @@ public class CompatDx {
     for (File file : directory.listFiles()) {
       processPath(file, files);
     }
+  }
+
+  private static void writeZipWithClasses(List<Path> inputs, D8Output output, Path path)
+      throws IOException {
+    try (Closer closer = Closer.create()) {
+      try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(path))) {
+        // For each input archive file, add all class files within.
+        for (Path input : inputs) {
+          if (isArchive(input)) {
+            try (ZipInputStream in = new ZipInputStream(Files.newInputStream(input))) {
+              ZipEntry entry;
+              while ((entry = in.getNextEntry()) != null) {
+                if (isClassFile(Paths.get(entry.getName()))) {
+                  addEntry(entry.getName(), in, out);
+                }
+              }
+            } catch (ZipException e) {
+              throw new CompilationError(
+                  "Zip error while reading '" + input + "': " + e.getMessage(), e);
+            }
+          }
+        }
+        // Add dex files.
+        List<Resource> dexProgramSources = output.getDexResources();
+        for (int i = 0; i < dexProgramSources.size(); i++) {
+          addEntry(getDexFileName(i), dexProgramSources.get(i).getStream(closer), out);
+        }
+      }
+    }
+  }
+
+  private static void addEntry(String name, InputStream in, ZipOutputStream out)
+      throws IOException {
+    ZipEntry zipEntry = new ZipEntry(name);
+    byte[] bytes = ByteStreams.toByteArray(in);
+    zipEntry.setSize(bytes.length);
+    out.putNextEntry(zipEntry);
+    out.write(bytes);
+    out.closeEntry();
+  }
+
+  private static String getDexFileName(int index) {
+    return index == 0 ? "classes.dex" : "classes" + (index + 1) + ".dex";
   }
 }
