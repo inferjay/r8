@@ -56,7 +56,6 @@ third_party/android_cts_baseline
 third_party/android_cts_baseline.tar.gz
 src/test/jack/ub-jack
 gradle-app.setting
-gradle/
 gradlew
 gradlew.bat
 #*#
