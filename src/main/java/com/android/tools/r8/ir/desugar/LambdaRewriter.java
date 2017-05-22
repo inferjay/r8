@@ -50,7 +50,7 @@ public class LambdaRewriter {
   private static final String METAFACTORY_METHOD_NAME = "metafactory";
   private static final String METAFACTORY_ALT_METHOD_NAME = "altMetafactory";
 
-  static final String LAMBDA_CLASS_NAME_PREFIX = "-$Lambda$";
+  static final String LAMBDA_CLASS_NAME_PREFIX = "-$$Lambda$";
   static final String EXPECTED_LAMBDA_METHOD_PREFIX = "lambda$";
   static final DexType[] EMPTY_TYPE_ARRAY = new DexType[0];
   static final String LAMBDA_INSTANCE_FIELD_NAME = "INSTANCE";
