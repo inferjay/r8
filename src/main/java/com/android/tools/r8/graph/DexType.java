@@ -8,6 +8,7 @@ import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -29,7 +30,6 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
   public final DexString descriptor;
   private String toStringCache = null;
   private int hierarchyLevel = UNKNOWN_LEVEL;
-
   private Set<DexType> directSubtypes = NO_DIRECT_SUBTYPE;
 
   DexType(DexString descriptor) {
@@ -340,16 +340,35 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
     }
   }
 
-  public DexType toBaseType(DexItemFactory dexItemFactory) {
+  private int getNumberOfLeadingSquareBrackets() {
     int leadingSquareBrackets = 0;
     while (descriptor.content[leadingSquareBrackets] == '[') {
       leadingSquareBrackets++;
     }
+    return leadingSquareBrackets;
+  }
+
+  public DexType toBaseType(DexItemFactory dexItemFactory) {
+    int leadingSquareBrackets = getNumberOfLeadingSquareBrackets();
     if (leadingSquareBrackets == 0) {
       return this;
     }
     DexString newDesc = dexItemFactory.createString(descriptor.size - leadingSquareBrackets,
         Arrays.copyOfRange(descriptor.content, leadingSquareBrackets, descriptor.content.length));
+    return dexItemFactory.createType(newDesc);
+  }
+
+  public DexType replaceBaseType(DexType newBase, DexItemFactory dexItemFactory) {
+    assert this.isArrayType();
+    assert !newBase.isArrayType();
+    int leadingSquareBrackets = getNumberOfLeadingSquareBrackets();
+    byte[] content = new byte[newBase.descriptor.content.length + leadingSquareBrackets];
+    Arrays.fill(content, 0, leadingSquareBrackets, (byte) '[');
+    for (int i = 0; i < newBase.descriptor.content.length; i++) {
+      content[leadingSquareBrackets + i] = newBase.descriptor.content[i];
+    }
+    DexString newDesc = dexItemFactory
+        .createString(newBase.descriptor.size + leadingSquareBrackets, content);
     return dexItemFactory.createType(newDesc);
   }
 
@@ -408,6 +427,15 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
     } else {
       return packagePart ? descriptor.substring(1, lastSeparator)
           : descriptor.substring(lastSeparator + 1, descriptor.length() - 1);
+    }
+  }
+
+  public DexType getSingleSubtype() {
+    assert hierarchyLevel != UNKNOWN_LEVEL;
+    if (directSubtypes.size() == 1) {
+      return Iterables.getFirst(directSubtypes, null);
+    } else {
+      return null;
     }
   }
 

@@ -26,7 +26,9 @@ import com.android.tools.r8.utils.InternalOptions;
 
 public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
-  public enum CompilationState {
+  public enum CompilationState
+
+  {
     NOT_PROCESSED,
     PROCESSED_NOT_INLINING_CANDIDATE,
     // Code only contains instructions that access public entities.
@@ -56,6 +58,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     this.annotations = annotations;
     this.parameterAnnotations = parameterAnnotations;
     this.code = code;
+    assert code == null || !accessFlags.isAbstract();
   }
 
   public boolean isProcessed() {
@@ -67,10 +70,10 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
       // This will probably never happen but never inline a class initializer.
       return false;
     }
-    if (alwaysInline && (compilationState != CompilationState.NOT_PROCESSED)) {
+    if (alwaysInline) {
       // Only inline constructor iff holder classes are equal.
       if (!accessFlags.isStatic() && accessFlags.isConstructor()) {
-         return container.method.getHolder() == method.getHolder();
+        return container.method.getHolder() == method.getHolder();
       }
       return true;
     }
@@ -78,7 +81,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
       case PROCESSED_INLINING_CANDIDATE_PUBLIC:
         return true;
       case PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE:
-         return container.method.getHolder().isSamePackage(method.getHolder());
+        return container.method.getHolder().isSamePackage(method.getHolder());
       // TODO(bak): Expand check for package private access:
       case PROCESSED_INLINING_CANDIDATE_PRIVATE:
         return container.method.getHolder() == method.getHolder();
@@ -232,12 +235,15 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
   public DexEncodedMethod toEmptyThrowingMethod() {
     Instruction insn[] = {new Const(0, 0), new Throw(0)};
-    code = generateCodeFromTemplate(1, 0, insn);
-    return this;
+    DexCode code = generateCodeFromTemplate(1, 0, insn);
+    assert !accessFlags.isAbstract();
+    Builder builder = builder(this);
+    builder.setCode(code);
+    return builder.build();
   }
 
   public DexEncodedMethod toMethodThatLogsError(DexItemFactory itemFactory) {
-    Signature signature = MethodSignature.fromDexMethod(this.method);
+    Signature signature = MethodSignature.fromDexMethod(method);
     // TODO(herhut): Construct this out of parts to enable reuse, maybe even using descriptors.
     DexString message = itemFactory.createString(
         "Shaking error: Missing method in " + method.holder.toSourceString() + ": "
@@ -263,8 +269,29 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
         new InvokeStatic(2, initMethod, 0, 1, 0, 0, 0),
         new Throw(0)
     };
-    code = generateCodeFromTemplate(2, 2, insn);
-    return this;
+    DexCode code = generateCodeFromTemplate(2, 2, insn);
+    Builder builder = builder(this);
+    builder.setCode(code);
+    return builder.build();
+  }
+
+  public DexEncodedMethod toTypeSubstitutedMethod(DexMethod method) {
+    if (this.method == method) {
+      return this;
+    }
+    Builder builder = builder(this);
+    builder.setMethod(method);
+    return builder.build();
+  }
+
+  public DexEncodedMethod toRenamedMethod(DexString name, DexItemFactory factory) {
+    if (method.name == name) {
+      return this;
+    }
+    DexMethod newMethod = factory.createMethod(method.holder, method.proto, name);
+    Builder builder = builder(this);
+    builder.setMethod(newMethod);
+    return builder.build();
   }
 
   public String codeToString() {
@@ -290,6 +317,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
   }
 
   public static class OptimizationInfo {
+
     private int returnedArgument = -1;
     private boolean neverReturnsNull = false;
     private boolean returnsConstant = false;
@@ -298,6 +326,14 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
     private OptimizationInfo() {
       // Intentionally left empty.
+    }
+
+    private OptimizationInfo(OptimizationInfo template) {
+      returnedArgument = template.returnedArgument;
+      neverReturnsNull = template.neverReturnsNull;
+      returnsConstant = template.returnsConstant;
+      returnedConstant = template.returnedConstant;
+      forceInline = template.forceInline;
     }
 
     public boolean returnsArgument() {
@@ -345,12 +381,23 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     private void markForceInline() {
       forceInline = true;
     }
+
+    public OptimizationInfo copy() {
+      return new OptimizationInfo(this);
+    }
   }
 
   private static class DefaultOptimizationInfo extends OptimizationInfo {
-    public static final OptimizationInfo DEFAULT = new DefaultOptimizationInfo();
 
-    private DefaultOptimizationInfo() {}
+    static final OptimizationInfo DEFAULT = new DefaultOptimizationInfo();
+
+    private DefaultOptimizationInfo() {
+    }
+
+    @Override
+    public OptimizationInfo copy() {
+      return this;
+    }
   }
 
   synchronized private OptimizationInfo ensureMutableOI() {
@@ -378,5 +425,63 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
   public OptimizationInfo getOptimizationInfo() {
     return optimizationInfo;
+  }
+
+  private static Builder builder(DexEncodedMethod from) {
+    return new Builder(from);
+  }
+
+  private static class Builder {
+
+    private DexMethod method;
+    private DexAccessFlags accessFlags;
+    private DexAnnotationSet annotations;
+    private DexAnnotationSetRefList parameterAnnotations;
+    private Code code;
+    private CompilationState compilationState = CompilationState.NOT_PROCESSED;
+    private OptimizationInfo optimizationInfo = DefaultOptimizationInfo.DEFAULT;
+
+    private Builder(DexEncodedMethod from) {
+      // Copy all the mutable state of a DexEncodedMethod here.
+      method = from.method;
+      accessFlags = new DexAccessFlags(from.accessFlags.get());
+      annotations = from.annotations;
+      parameterAnnotations = from.parameterAnnotations;
+      code = from.code;
+      compilationState = from.compilationState;
+      optimizationInfo = from.optimizationInfo.copy();
+    }
+
+    public void setMethod(DexMethod method) {
+      this.method = method;
+    }
+
+    public void setAccessFlags(DexAccessFlags accessFlags) {
+      this.accessFlags = accessFlags;
+    }
+
+    public void setAnnotations(DexAnnotationSet annotations) {
+      this.annotations = annotations;
+    }
+
+    public void setParameterAnnotations(DexAnnotationSetRefList parameterAnnotations) {
+      this.parameterAnnotations = parameterAnnotations;
+    }
+
+    public void setCode(Code code) {
+      this.code = code;
+    }
+
+    public DexEncodedMethod build() {
+      assert method != null;
+      assert accessFlags != null;
+      assert annotations != null;
+      assert parameterAnnotations != null;
+      DexEncodedMethod result =
+          new DexEncodedMethod(method, accessFlags, annotations, parameterAnnotations, code);
+      result.compilationState = compilationState;
+      result.optimizationInfo = optimizationInfo;
+      return result;
+    }
   }
 }

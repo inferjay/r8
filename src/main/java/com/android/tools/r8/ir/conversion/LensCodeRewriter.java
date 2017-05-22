@@ -17,8 +17,10 @@ import com.android.tools.r8.graph.DexValue.DexValueMethodHandle;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.CheckCast;
+import com.android.tools.r8.ir.code.ConstClass;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.InstanceGet;
+import com.android.tools.r8.ir.code.InstanceOf;
 import com.android.tools.r8.ir.code.InstancePut;
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionListIterator;
@@ -26,6 +28,8 @@ import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.Invoke.Type;
 import com.android.tools.r8.ir.code.InvokeCustom;
 import com.android.tools.r8.ir.code.InvokeMethod;
+import com.android.tools.r8.ir.code.InvokeNewArray;
+import com.android.tools.r8.ir.code.NewArrayEmpty;
 import com.android.tools.r8.ir.code.StaticGet;
 import com.android.tools.r8.ir.code.StaticPut;
 import com.android.tools.r8.ir.code.Value;
@@ -41,6 +45,14 @@ public class LensCodeRewriter {
   public LensCodeRewriter(GraphLense graphLense, AppInfoWithSubtyping appInfo) {
     this.graphLense = graphLense;
     this.appInfo = appInfo;
+  }
+
+  private Value makeOutValue(Instruction insn, IRCode code) {
+    if (insn.outValue() == null) {
+      return null;
+    } else {
+      return new Value(code.valueNumberGenerator.next(), -1, insn.outType(), insn.getDebugInfo());
+    }
   }
 
   /**
@@ -84,9 +96,10 @@ public class LensCodeRewriter {
             continue;
           }
           DexMethod actualTarget = graphLense.lookupMethod(invokedMethod, method);
-          if (actualTarget != invokedMethod) {
+          Invoke.Type invokeType = getInvokeType(invoke, actualTarget);
+          if (actualTarget != invokedMethod || invoke.getType() != invokeType) {
             Invoke newInvoke = Invoke
-                .create(getInvokeType(invoke, actualTarget), actualTarget, null,
+                .create(invokeType, actualTarget, null,
                     invoke.outValue(), invoke.inValues());
             iterator.replaceCurrentInstruction(newInvoke);
             // Fix up the return type if needed.
@@ -98,7 +111,7 @@ public class LensCodeRewriter {
               CheckCast cast = new CheckCast(
                   newValue,
                   newInvoke.outValue(),
-                  invokedMethod.proto.returnType);
+                  graphLense.lookupType(invokedMethod.proto.returnType, method));
               iterator.add(cast);
               // If the current block has catch handlers split the check cast into its own block.
               if (newInvoke.getBlock().hasCatchHandlers()) {
@@ -143,6 +156,45 @@ public class LensCodeRewriter {
             StaticPut newStaticPut =
                 new StaticPut(staticPut.getType(), staticPut.inValue(), actualField);
             iterator.replaceCurrentInstruction(newStaticPut);
+          }
+        } else if (current.isCheckCast()) {
+          CheckCast checkCast = current.asCheckCast();
+          DexType newType = graphLense.lookupType(checkCast.getType(), method);
+          if (newType != checkCast.getType()) {
+            CheckCast newCheckCast =
+                new CheckCast(makeOutValue(checkCast, code), checkCast.object(), newType);
+            iterator.replaceCurrentInstruction(newCheckCast);
+          }
+        } else if (current.isConstClass()) {
+          ConstClass constClass = current.asConstClass();
+          DexType newType = graphLense.lookupType(constClass.getValue(), method);
+          if (newType != constClass.getValue()) {
+            ConstClass newConstClass = new ConstClass(makeOutValue(constClass, code), newType);
+            iterator.replaceCurrentInstruction(newConstClass);
+          }
+        } else if (current.isInstanceOf()) {
+          InstanceOf instanceOf = current.asInstanceOf();
+          DexType newType = graphLense.lookupType(instanceOf.type(), method);
+          if (newType != instanceOf.type()) {
+            InstanceOf newInstanceOf = new InstanceOf(makeOutValue(instanceOf, code),
+                instanceOf.value(), newType);
+            iterator.replaceCurrentInstruction(newInstanceOf);
+          }
+        } else if (current.isInvokeNewArray()) {
+          InvokeNewArray newArray = current.asInvokeNewArray();
+          DexType newType = graphLense.lookupType(newArray.getArrayType(), method);
+          if (newType != newArray.getArrayType()) {
+            InvokeNewArray newNewArray = new InvokeNewArray(newType, makeOutValue(newArray, code),
+                newArray.inValues());
+            iterator.replaceCurrentInstruction(newNewArray);
+          }
+        } else if (current.isNewArrayEmpty()) {
+          NewArrayEmpty newArrayEmpty = current.asNewArrayEmpty();
+          DexType newType = graphLense.lookupType(newArrayEmpty.type, method);
+          if (newType != newArrayEmpty.type) {
+            NewArrayEmpty newNewArray = new NewArrayEmpty(makeOutValue(newArrayEmpty, code),
+                newArrayEmpty.size(), newType);
+            iterator.replaceCurrentInstruction(newNewArray);
           }
         }
       }

@@ -28,6 +28,11 @@ public class DexLibraryClass extends DexClass {
   }
 
   @Override
+  public String toSourceString() {
+    return type.toSourceString() + "(library class)";
+  }
+
+  @Override
   public void addDependencies(MixedSectionCollection collector) {
     // Should never happen but does not harm.
     assert false;

@@ -334,4 +334,17 @@ public class AppInfo {
   public AppInfoWithLiveness withLiveness() {
     return null;
   }
+
+  public List<DexClass> getSuperTypeClasses(DexType type) {
+    List<DexClass> result = new ArrayList<>();
+    do {
+      DexClass clazz = definitionFor(type);
+      if (clazz == null) {
+        break;
+      }
+      result.add(clazz);
+      type = clazz.superType;
+    } while (type != null);
+    return result;
+  }
 }

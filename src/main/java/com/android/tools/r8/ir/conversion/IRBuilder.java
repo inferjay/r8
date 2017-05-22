@@ -219,7 +219,6 @@ public class IRBuilder {
     this.options = options;
   }
 
-
   private void addToWorklist(BasicBlock block, int firstInstructionIndex) {
     // TODO(ager): Filter out the ones that are already in the worklist, mark bit in block?
     if (!block.isFilled()) {

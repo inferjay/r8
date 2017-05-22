@@ -42,7 +42,7 @@ public class Minifier {
     timing.begin("MinifyClasses");
     Map<DexType, DexString> classRenaming =
         new ClassNameMinifier(
-                appInfo, rootSet, options.packagePrefix, options.classObfuscationDictionary)
+            appInfo, rootSet, options.packagePrefix, options.classObfuscationDictionary)
             .computeRenaming();
     timing.end();
     timing.begin("MinifyMethods");

@@ -7,6 +7,7 @@ import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.DominatorTree;
 import com.android.tools.r8.ir.code.IRCode;
@@ -18,6 +19,8 @@ import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.CallGraph;
+import com.android.tools.r8.ir.conversion.LensCodeRewriter;
+import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.utils.InternalOptions;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -32,6 +35,7 @@ public class Inliner {
   private static final int INLINING_INSTRUCTION_LIMIT = 5;
 
   protected final AppInfoWithSubtyping appInfo;
+  private final GraphLense graphLense;
   private final InternalOptions options;
 
   // State for inlining methods which are known to be called twice.
@@ -40,9 +44,9 @@ public class Inliner {
   public final Set<DexEncodedMethod> doubleInlineSelectedTargets = Sets.newIdentityHashSet();
   public final Map<DexEncodedMethod, DexEncodedMethod> doubleInlineeCandidates = new HashMap<>();
 
-  public Inliner(
-      AppInfoWithSubtyping appInfo, InternalOptions options) {
+  public Inliner(AppInfoWithSubtyping appInfo, GraphLense graphLense, InternalOptions options) {
     this.appInfo = appInfo;
+    this.graphLense = graphLense;
     this.options = options;
   }
 
@@ -110,6 +114,7 @@ public class Inliner {
   }
 
   static public class InlineAction {
+
     public final DexEncodedMethod target;
     public final Invoke invoke;
     public final boolean forceInline;
@@ -127,14 +132,21 @@ public class Inliner {
       this.forceInline = target.getOptimizationInfo().forceInline();
     }
 
-    public IRCode buildIR(ValueNumberGenerator generator, InternalOptions options) {
-      assert target.isProcessed();
-      assert target.getCode().isDexCode();
-      return target.buildIR(generator, options);
+    public IRCode buildIR(ValueNumberGenerator generator, AppInfoWithSubtyping appInfo,
+        GraphLense graphLense, InternalOptions options) {
+      if (target.isProcessed()) {
+        assert target.getCode().isDexCode();
+        return target.buildIR(generator, options);
+      } else {
+        assert target.getCode().isJarCode();
+        IRCode code = target.getCode().asJarCode().buildIR(target, generator, options);
+        new LensCodeRewriter(graphLense, appInfo).rewrite(code, target);
+        return code;
+      }
     }
   }
 
- private int numberOfInstructions(IRCode code) {
+  private int numberOfInstructions(IRCode code) {
     int numOfInstructions = 0;
     for (BasicBlock block : code.blocks) {
       numOfInstructions += block.getInstructions().size();
@@ -167,7 +179,9 @@ public class Inliner {
     while (iterator.hasNext()) {
       instruction = iterator.next();
       if (instruction.inValues().contains(unInitializedObject)) {
-        return instruction.isInvokeDirect();
+        return instruction.isInvokeDirect()
+            && appInfo.dexItemFactory
+            .isConstructor(instruction.asInvokeDirect().getInvokedMethod());
       }
     }
     assert false : "Execution should never reach this point";
@@ -208,14 +222,30 @@ public class Inliner {
           InvokeMethod invoke = current.asInvokeMethod();
           InlineAction result = invoke.computeInlining(oracle);
           if (result != null) {
-            IRCode inlinee = result.buildIR(code.valueNumberGenerator, options);
+            DexEncodedMethod target = appInfo.lookup(invoke.getType(), invoke.getInvokedMethod());
+            assert target != null;
+            boolean forceInline = target.getOptimizationInfo().forceInline();
+            if (!target.isProcessed() && !forceInline) {
+              // Do not inline code that was not processed unless we have to force inline.
+              continue;
+            }
+            IRCode inlinee = result
+                .buildIR(code.valueNumberGenerator, appInfo, graphLense, options);
             if (inlinee != null) {
               // TODO(sgjesse): Get rid of this additional check by improved inlining.
               if (block.hasCatchHandlers() && inlinee.getNormalExitBlock() == null) {
                 continue;
               }
+              // If this code did not go through the full pipeline, apply inlining to make sure
+              // that force inline targets get processed.
+              if (!target.isProcessed()) {
+                assert forceInline;
+                if (Log.ENABLED) {
+                  Log.verbose(getClass(), "Forcing extra inline on " + target.toSourceString());
+                }
+                performInlining(target, inlinee, callGraph);
+              }
               // Make sure constructor inlining is legal.
-              DexEncodedMethod target = appInfo.lookup(invoke.getType(), invoke.getInvokedMethod());
               if (target.accessFlags.isConstructor() && !legalConstructorInline(method, inlinee)) {
                 continue;
               }

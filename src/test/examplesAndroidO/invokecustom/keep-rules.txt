@@ -8,7 +8,7 @@
   public static void main(...);
 }
 
--keepclassmembers  class * {
+-keepclasseswithmembers  class * {
   *** targetMethodTest*(...);
 }
 

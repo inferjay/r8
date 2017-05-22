@@ -8,11 +8,11 @@ import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.UseRegistry;
 
-class InvokeSingleTargetExtractor extends UseRegistry {
+public class InvokeSingleTargetExtractor extends UseRegistry {
   private InvokeKind kind = InvokeKind.NONE;
   private DexMethod target;
 
-  InvokeSingleTargetExtractor() {
+  public InvokeSingleTargetExtractor() {
   }
 
   private boolean setTarget(DexMethod target, InvokeKind kind) {

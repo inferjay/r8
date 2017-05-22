@@ -10,6 +10,10 @@ public abstract class GraphLense {
 
   public static class Builder {
 
+    private Builder() {
+
+    }
+
     private final Map<DexType, DexType> typeMap = new IdentityHashMap<>();
     private final Map<DexMethod, DexMethod> methodMap = new IdentityHashMap<>();
     private final Map<DexField, DexField> fieldMap = new IdentityHashMap<>();
@@ -26,14 +30,18 @@ public abstract class GraphLense {
       fieldMap.put(from, to);
     }
 
-    public GraphLense build() {
-      return build(new IdentityGraphLense());
+    public GraphLense build(DexItemFactory dexItemFactory) {
+      return build(new IdentityGraphLense(), dexItemFactory);
     }
 
-    public GraphLense build(GraphLense previousLense) {
-      return new NestedGraphLense(typeMap, methodMap, fieldMap, previousLense);
+    public GraphLense build(GraphLense previousLense, DexItemFactory dexItemFactory) {
+      return new NestedGraphLense(typeMap, methodMap, fieldMap, previousLense, dexItemFactory);
     }
 
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public abstract DexType lookupType(DexType type, DexEncodedMethod context);
@@ -78,21 +86,38 @@ public abstract class GraphLense {
   private static class NestedGraphLense extends GraphLense {
 
     private final GraphLense previousLense;
+    private final DexItemFactory dexItemFactory;
 
     private final Map<DexType, DexType> typeMap;
+    private final Map<DexType, DexType> arrayTypeCache = new IdentityHashMap<>();
     private final Map<DexMethod, DexMethod> methodMap;
     private final Map<DexField, DexField> fieldMap;
 
     private NestedGraphLense(Map<DexType, DexType> typeMap, Map<DexMethod, DexMethod> methodMap,
-        Map<DexField, DexField> fieldMap, GraphLense previousLense) {
+        Map<DexField, DexField> fieldMap, GraphLense previousLense, DexItemFactory dexItemFactory) {
       this.typeMap = typeMap;
       this.methodMap = methodMap;
       this.fieldMap = fieldMap;
       this.previousLense = previousLense;
+      this.dexItemFactory = dexItemFactory;
     }
 
     @Override
     public DexType lookupType(DexType type, DexEncodedMethod context) {
+      if (type.isArrayType()) {
+        DexType result = arrayTypeCache.get(type);
+        if (result == null) {
+          DexType baseType = type.toBaseType(dexItemFactory);
+          DexType newType = lookupType(baseType, context);
+          if (baseType == newType) {
+            result = type;
+          } else {
+            result = type.replaceBaseType(newType, dexItemFactory);
+          }
+          arrayTypeCache.put(type, result);
+        }
+        return result;
+      }
       DexType previous = previousLense.lookupType(type, context);
       return typeMap.getOrDefault(previous, previous);
     }

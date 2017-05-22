@@ -349,7 +349,7 @@ public class Enqueuer {
       }
       // We also need to add the corresponding <clinit> to the set of live methods, as otherwise
       // static field initialization (and other class-load-time sideeffects) will not happen.
-      DexEncodedMethod clinit = holder.getClassInitializer(appInfo.dexItemFactory);
+      DexEncodedMethod clinit = holder.getClassInitializer();
       if (clinit != null) {
         markDirectStaticOrConstructorMethodAsLive(clinit, KeepReason.reachableFromLiveType(type));
       }

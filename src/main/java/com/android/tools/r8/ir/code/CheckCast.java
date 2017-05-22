@@ -26,6 +26,14 @@ public class CheckCast extends Instruction {
     this.type = type;
   }
 
+  public DexType getType() {
+    return type;
+  }
+
+  public Value object() {
+    return inValues().get(0);
+  }
+
   @Override
   public void buildDex(DexBuilder builder) {
     // The check cast instruction in dex doesn't write a new register. Therefore,

@@ -79,6 +79,10 @@ public class DexAccessFlags {
     set(Constants.ACC_PUBLIC);
   }
 
+  public void unsetPublic() {
+    unset(Constants.ACC_PUBLIC);
+  }
+
   public boolean isPrivate() {
     return isSet(Constants.ACC_PRIVATE);
   }
@@ -99,6 +103,10 @@ public class DexAccessFlags {
     set(Constants.ACC_PROTECTED);
   }
 
+  public void unsetProtected() {
+    unset(Constants.ACC_PROTECTED);
+  }
+
   public boolean isStatic() {
     return isSet(Constants.ACC_STATIC);
   }
@@ -113,6 +121,10 @@ public class DexAccessFlags {
 
   public void setFinal() {
     set(Constants.ACC_FINAL);
+  }
+
+  public void unsetFinal() {
+    unset(Constants.ACC_FINAL);
   }
 
   public boolean isSynchronized() {
@@ -237,6 +249,10 @@ public class DexAccessFlags {
 
   public void setConstructor() {
     set(Constants.ACC_CONSTRUCTOR);
+  }
+
+  public void unsetConstructor() {
+    unset(Constants.ACC_CONSTRUCTOR);
   }
 
   public boolean isDeclaredSynchronized() {
