@@ -6,6 +6,7 @@ package com.android.tools.r8.graph;
 
 import static com.android.tools.r8.utils.FileUtils.DEFAULT_DEX_FILENAME;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.utils.InternalResource;
@@ -56,17 +57,17 @@ public final class LazyClassFileLoader implements DexClassPromise {
 
   @Override
   public boolean isProgramClass() {
-    return resource.kind == InternalResource.Kind.PROGRAM;
+    return resource.getKind() == Resource.Kind.PROGRAM;
   }
 
   @Override
   public boolean isClasspathClass() {
-    return resource.kind == InternalResource.Kind.CLASSPATH;
+    return resource.getKind() == Resource.Kind.CLASSPATH;
   }
 
   @Override
   public boolean isLibraryClass() {
-    return resource.kind == InternalResource.Kind.LIBRARY;
+    return resource.getKind() == Resource.Kind.LIBRARY;
   }
 
   // Loads the class from the resource. Synchronized on `this` to avoid
@@ -80,7 +81,7 @@ public final class LazyClassFileLoader implements DexClassPromise {
 
     try (Closer closer = Closer.create()) {
       JarClassFileReader reader = new JarClassFileReader(this.reader, this::addClass);
-      reader.read(DEFAULT_DEX_FILENAME, resource.kind, resource.getStream(closer));
+      reader.read(DEFAULT_DEX_FILENAME, resource.getKind(), resource.getStream(closer));
     } catch (IOException e) {
       throw new CompilationError("Failed to load class: " + resource.getClassDescriptor(), e);
     }

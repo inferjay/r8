@@ -7,6 +7,7 @@ import static org.objectweb.asm.ClassReader.SKIP_FRAMES;
 import static org.objectweb.asm.Opcodes.ACC_DEPRECATED;
 import static org.objectweb.asm.Opcodes.ASM5;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexValue.DexValueAnnotation;
@@ -58,7 +59,7 @@ public class JarClassFileReader {
     this.classConsumer = classConsumer;
   }
 
-  public void read(String file, InternalResource.Kind kind, InputStream input) throws IOException {
+  public void read(String file, Resource.Kind kind, InputStream input) throws IOException {
     ClassReader reader = new ClassReader(input);
     reader.accept(new CreateDexClassVisitor(
         file, kind, reader.b, application, classConsumer), SKIP_FRAMES);
@@ -92,7 +93,7 @@ public class JarClassFileReader {
 
   private static class CreateDexClassVisitor extends ClassVisitor {
     private final String file;
-    private final InternalResource.Kind kind;
+    private final Resource.Kind kind;
     private final JarApplicationReader application;
     private final Consumer<DexClass> classConsumer;
     private final ReparseContext context = new ReparseContext();
@@ -115,7 +116,7 @@ public class JarClassFileReader {
 
     public CreateDexClassVisitor(
         String file,
-        InternalResource.Kind kind,
+        Resource.Kind kind,
         byte[] classCache,
         JarApplicationReader application,
         Consumer<DexClass> classConsumer) {
@@ -259,7 +260,7 @@ public class JarClassFileReader {
           instanceFields.toArray(new DexEncodedField[instanceFields.size()]),
           directMethods.toArray(new DexEncodedMethod[directMethods.size()]),
           virtualMethods.toArray(new DexEncodedMethod[virtualMethods.size()]));
-      if (kind == InternalResource.Kind.PROGRAM) {
+      if (kind == Resource.Kind.PROGRAM) {
         context.owner = clazz.asProgramClass();
       }
       classConsumer.accept(clazz);
@@ -497,7 +498,7 @@ public class JarClassFileReader {
       Code code = null;
       if (!flags.isAbstract()
           && !flags.isNative()
-          && parent.kind == InternalResource.Kind.PROGRAM) {
+          && parent.kind == Resource.Kind.PROGRAM) {
         code = new JarCode(method, parent.context, parent.application);
       }
       DexAnnotationSetRefList parameterAnnotationSets;

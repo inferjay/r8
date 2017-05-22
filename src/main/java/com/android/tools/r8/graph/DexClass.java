@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
@@ -180,7 +181,7 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
   }
 
   /** Get a class factory for a particular resource kind */
-  public static Factory factoryForResourceKind(InternalResource.Kind kind) {
+  public static Factory factoryForResourceKind(Resource.Kind kind) {
     switch (kind) {
       case PROGRAM:
         return DexProgramClass::new;

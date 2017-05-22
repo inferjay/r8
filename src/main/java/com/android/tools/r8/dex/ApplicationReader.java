@@ -10,6 +10,7 @@ import static com.android.tools.r8.dex.Constants.ANDROID_O_DEX_VERSION;
 import static com.android.tools.r8.dex.Constants.DEFAULT_ANDROID_API;
 import static com.android.tools.r8.utils.FileUtils.DEFAULT_DEX_FILENAME;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexItemFactory;
@@ -87,20 +88,20 @@ public class ApplicationReader {
     JarClassFileReader reader = new JarClassFileReader(
         application, builder::addClassIgnoringLibraryDuplicates);
     for (InternalResource input : inputApp.getClassProgramResources()) {
-      reader.read(DEFAULT_DEX_FILENAME, InternalResource.Kind.PROGRAM, input.getStream(closer));
+      reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.PROGRAM, input.getStream(closer));
     }
     for (InternalResource input : inputApp.getClassClasspathResources()) {
       if (options.lazyClasspathLoading && input.getClassDescriptor() != null) {
         addLazyLoader(application, builder, input);
       } else {
-        reader.read(DEFAULT_DEX_FILENAME, InternalResource.Kind.CLASSPATH, input.getStream(closer));
+        reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.CLASSPATH, input.getStream(closer));
       }
     }
     for (InternalResource input : inputApp.getClassLibraryResources()) {
       if (options.lazyLibraryLoading && input.getClassDescriptor() != null) {
         addLazyLoader(application, builder, input);
       } else {
-        reader.read(DEFAULT_DEX_FILENAME, InternalResource.Kind.LIBRARY, input.getStream(closer));
+        reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.LIBRARY, input.getStream(closer));
       }
     }
   }
@@ -129,16 +130,16 @@ public class ApplicationReader {
       for (InternalResource input : dexProgramSources) {
         DexFile file = new DexFile(input.getStream(closer));
         computedMinApiLevel = verifyOrComputeMinApiLevel(computedMinApiLevel, file);
-        fileReaders.add(new DexFileReader(file, InternalResource.Kind.PROGRAM, itemFactory));
+        fileReaders.add(new DexFileReader(file, Resource.Kind.PROGRAM, itemFactory));
       }
       for (InternalResource input : dexClasspathSources) {
         DexFile file = new DexFile(input.getStream(closer));
-        fileReaders.add(new DexFileReader(file, InternalResource.Kind.CLASSPATH, itemFactory));
+        fileReaders.add(new DexFileReader(file, Resource.Kind.CLASSPATH, itemFactory));
       }
       for (InternalResource input : dexLibrarySources) {
         DexFile file = new DexFile(input.getStream(closer));
         computedMinApiLevel = verifyOrComputeMinApiLevel(computedMinApiLevel, file);
-        fileReaders.add(new DexFileReader(file, InternalResource.Kind.LIBRARY, itemFactory));
+        fileReaders.add(new DexFileReader(file, Resource.Kind.LIBRARY, itemFactory));
       }
       options.minApiLevel = computedMinApiLevel;
       for (DexFileReader reader : fileReaders) {

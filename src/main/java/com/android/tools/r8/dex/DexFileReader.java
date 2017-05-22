@@ -8,6 +8,7 @@ import static com.android.tools.r8.utils.EncodedValueUtils.parseFloat;
 import static com.android.tools.r8.utils.EncodedValueUtils.parseSigned;
 import static com.android.tools.r8.utils.EncodedValueUtils.parseUnsigned;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.code.InstructionFactory;
 import com.android.tools.r8.graph.Descriptor;
@@ -68,12 +69,12 @@ public class DexFileReader {
   private DexFile file;
   private final Segment[] segments;
   private int[] stringIDs;
-  private final InternalResource.Kind fileKind;
+  private final Resource.Kind fileKind;
 
   public static Segment[] parseMapFrom(Path file) throws IOException {
     DexFileReader reader =
         new DexFileReader(
-            new DexFile(file.toString()), InternalResource.Kind.PROGRAM, new DexItemFactory());
+            new DexFile(file.toString()), Resource.Kind.PROGRAM, new DexItemFactory());
     return reader.parseMap();
   }
 
@@ -99,7 +100,7 @@ public class DexFileReader {
   private final DexItemFactory dexItemFactory;
 
   public DexFileReader(
-      DexFile file, InternalResource.Kind fileKind, DexItemFactory dexItemFactory) {
+      DexFile file, Resource.Kind fileKind, DexItemFactory dexItemFactory) {
     this.file = file;
     this.dexItemFactory = dexItemFactory;
     file.setByteOrder();
@@ -113,7 +114,7 @@ public class DexFileReader {
   }
 
   void addCodeItemsTo() {
-    if (fileKind == InternalResource.Kind.LIBRARY) {
+    if (fileKind == Resource.Kind.LIBRARY) {
       // Ignore contents of library files.
       return;
     }
@@ -638,13 +639,13 @@ public class DexFileReader {
                 directMethodsSize,
                 annotationsDirectory.methods,
                 annotationsDirectory.parameters,
-                fileKind != InternalResource.Kind.PROGRAM);
+                fileKind != Resource.Kind.PROGRAM);
         virtualMethods =
             readMethods(
                 virtualMethodsSize,
                 annotationsDirectory.methods,
                 annotationsDirectory.parameters,
-                fileKind != InternalResource.Kind.PROGRAM);
+                fileKind != Resource.Kind.PROGRAM);
       }
       clazz = DexClass.factoryForResourceKind(fileKind).create(
           type,

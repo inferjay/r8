@@ -8,20 +8,16 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /** Represents application resources. */
-public abstract class Resource {
+public interface Resource {
 
   /** Application resource kind. */
-  public enum Kind {
+  enum Kind {
     PROGRAM, CLASSPATH, LIBRARY
   }
 
-  /** Kind of the resource. */
-  public final Kind kind;
-
-  protected Resource(Kind kind) {
-    this.kind = kind;
-  }
+  /** Get the kind of the resource. */
+  Kind getKind();
 
   /** Get the resource as a stream. */
-  public abstract InputStream getStream(Closer closer) throws IOException;
+  InputStream getStream(Closer closer) throws IOException;
 }

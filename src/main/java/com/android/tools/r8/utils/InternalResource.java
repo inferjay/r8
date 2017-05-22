@@ -18,14 +18,21 @@ import java.nio.file.Path;
  * from the javadoc for the D8 API. If we decide to expose those methods
  * later the split between Resource and InternalResource can be removed.
  */
-public abstract class InternalResource extends Resource {
+public abstract class InternalResource implements Resource {
+
+  private final Kind kind;
 
   private InternalResource(Kind kind) {
-    super(kind);
+    this.kind = kind;
   }
 
   /** Returns class descriptor if known, otherwise returns null. */
   public abstract String getClassDescriptor();
+
+  /** Get the kind of the resource. */
+  public Kind getKind() {
+    return kind;
+  }
 
   /** Create an application resource for a given file and kind. */
   public static InternalResource fromFile(Kind kind, Path file) {
