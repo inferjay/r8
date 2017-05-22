@@ -76,10 +76,10 @@ public class TreePruner {
             // However, this might extend an abstract class and we might have removed the
             // corresponding methods in this class. This might happen if we only keep this
             // class around for its constants.
-            // TODO(herhut): Find alternative for abstract final classes.
-          } else {
-            clazz.accessFlags.setAbstract();
+            // For now, we remove the final flag to still be able to mark it abstract.
+            clazz.accessFlags.unsetFinal();
           }
+          clazz.accessFlags.setAbstract();
         }
         // The class is used and must be kept. Remove the unused fields and methods from
         // the class.

@@ -20,7 +20,7 @@ import java.util.function.Function;
 public class MemberRebindingAnalysis {
   private final AppInfoWithLiveness appInfo;
   private final GraphLense lense;
-  private final GraphLense.Builder builder = new GraphLense.Builder();
+  private final GraphLense.Builder builder = GraphLense.builder();
 
   public MemberRebindingAnalysis(AppInfoWithLiveness appInfo, GraphLense lense) {
     assert lense.isContextFree();
@@ -150,6 +150,6 @@ public class MemberRebindingAnalysis {
         appInfo::lookupStaticTarget, DexClass::findStaticTarget);
     computeFieldRebinding(Sets.union(appInfo.instanceFieldsRead, appInfo.instanceFieldsWritten),
         appInfo::lookupInstanceTarget, DexClass::findInstanceTarget);
-    return builder.build(lense);
+    return builder.build(lense, appInfo.dexItemFactory);
   }
 }

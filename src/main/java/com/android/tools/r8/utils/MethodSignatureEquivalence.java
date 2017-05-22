@@ -3,13 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.utils;
 
-import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
 import com.google.common.base.Equivalence;
 
 /**
- * Implements an equivalence on {@link DexEncodedMethod} that does not take the holder into
- * account.
+ * Implements an equivalence on {@link DexMethod} that does not take the holder into account.
  *
  * <p>Useful when comparing method implementations by their signature only.
  */

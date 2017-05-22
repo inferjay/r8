@@ -203,12 +203,16 @@ public class AndroidApp {
     return proguardSeeds == null ? null : proguardSeeds.getStream(closer);
   }
 
-  /** True if the package distribution resource exists. */
+  /**
+   * True if the package distribution resource exists.
+   */
   public boolean hasPackageDistribution() {
     return packageDistribution != null;
   }
 
-  /** Get the input stream of the package distribution resource if it exists. */
+  /**
+   * Get the input stream of the package distribution resource if it exists.
+   */
   public InputStream getPackageDistribution(Closer closer) throws IOException {
     return packageDistribution == null ? null : packageDistribution.getStream(closer);
   }
@@ -407,7 +411,9 @@ public class AndroidApp {
       return addProgramFiles(Arrays.asList(files));
     }
 
-    /** Add program file resources. */
+    /**
+     * Add program file resources.
+     */
     public Builder addProgramFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
         addFile(file, Resource.Kind.PROGRAM);
@@ -422,7 +428,9 @@ public class AndroidApp {
       return addClasspathFiles(Arrays.asList(files));
     }
 
-    /** Add classpath file resources. */
+    /**
+     * Add classpath file resources.
+     */
     public Builder addClasspathFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
         addFile(file, Resource.Kind.CLASSPATH);
@@ -437,7 +445,9 @@ public class AndroidApp {
       return addLibraryFiles(Arrays.asList(files));
     }
 
-    /** Add library file resources. */
+    /**
+     * Add library file resources.
+     */
     public Builder addLibraryFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
         addFile(file, Resource.Kind.LIBRARY);
@@ -452,7 +462,9 @@ public class AndroidApp {
       return addDexProgramData(Arrays.asList(data));
     }
 
-    /** Add dex program-data. */
+    /**
+     * Add dex program-data.
+     */
     public Builder addDexProgramData(Collection<byte[]> data) {
       for (byte[] datum : data) {
         dexSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, datum));
@@ -467,7 +479,9 @@ public class AndroidApp {
       return addClassProgramData(Arrays.asList(data));
     }
 
-    /** Add Java-bytecode program data. */
+    /**
+     * Add Java-bytecode program data.
+     */
     public Builder addClassProgramData(Collection<byte[]> data) {
       for (byte[] datum : data) {
         classSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, datum));
@@ -475,36 +489,48 @@ public class AndroidApp {
       return this;
     }
 
-    /** Set proguard-map file. */
+    /**
+     * Set proguard-map file.
+     */
     public Builder setProguardMapFile(Path file) {
       proguardMap = file == null ? null : InternalResource.fromFile(null, file);
       return this;
     }
 
-    /** Set proguard-map data. */
+    /**
+     * Set proguard-map data.
+     */
     public Builder setProguardMapData(String content) {
       return setProguardMapData(content == null ? null : content.getBytes(StandardCharsets.UTF_8));
     }
 
-    /** Set proguard-map data. */
+    /**
+     * Set proguard-map data.
+     */
     public Builder setProguardMapData(byte[] content) {
       proguardMap = content == null ? null : InternalResource.fromBytes(null, content);
       return this;
     }
 
-    /** Set proguard-seeds data. */
+    /**
+     * Set proguard-seeds data.
+     */
     public Builder setProguardSeedsData(byte[] content) {
       proguardSeeds = content == null ? null : InternalResource.fromBytes(null, content);
       return this;
     }
 
-    /** Set the package-distribution file. */
+    /**
+     * Set the package-distribution file.
+     */
     public Builder setPackageDistributionFile(Path file) {
       packageDistribution = file == null ? null : InternalResource.fromFile(null, file);
       return this;
     }
 
-    /** Set the main-dex list file. */
+    /**
+     * Set the main-dex list file.
+     */
     public Builder setMainDexListFile(Path file) {
       mainDexList = file == null ? null : InternalResource.fromFile(null, file);
       return this;

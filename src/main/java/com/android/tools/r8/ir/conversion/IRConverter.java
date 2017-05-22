@@ -114,7 +114,7 @@ public class IRConverter {
     this.codeRewriter = new CodeRewriter(appInfo);
     this.outliner = new Outliner(appInfo, options);
     this.memberValuePropagation = new MemberValuePropagation(appInfo);
-    this.inliner = new Inliner(appInfo, options);
+    this.inliner = new Inliner(appInfo, graphLense, options);
     this.lambdaRewriter = new LambdaRewriter(this);
     this.interfaceMethodRewriter = enableInterfaceMethodDesugaring()
         ? new InterfaceMethodRewriter(this) : null;

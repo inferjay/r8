@@ -11,7 +11,9 @@ import com.android.tools.r8.utils.InternalResource;
 import com.google.common.base.MoreObjects;
 
 public abstract class DexClass extends DexItem implements DexClassPromise {
+
   public interface Factory {
+
     DexClass create(DexType type, Origin origin, DexAccessFlags accessFlags, DexType superType,
         DexTypeList interfaces, DexString sourceFile, DexAnnotationSet annotations,
         DexEncodedField[] staticFields, DexEncodedField[] instanceFields,
@@ -28,8 +30,8 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
   public final Origin origin;
   public final DexType type;
   public final DexAccessFlags accessFlags;
-  public final DexType superType;
-  public final DexTypeList interfaces;
+  public DexType superType;
+  public DexTypeList interfaces;
   public final DexString sourceFile;
   public DexEncodedField[] staticFields;
   public DexEncodedField[] instanceFields;
@@ -156,9 +158,9 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
     return null;
   }
 
-  public DexEncodedMethod getClassInitializer(DexItemFactory factory) {
+  public DexEncodedMethod getClassInitializer() {
     for (DexEncodedMethod method : directMethods()) {
-      if (factory.isClassConstructor(method.method)) {
+      if (method.accessFlags.isConstructor() && method.accessFlags.isStatic()) {
         return method;
       }
     }
@@ -191,5 +193,9 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
         return DexLibraryClass::new;
     }
     throw new Unreachable();
+  }
+
+  public boolean hasClassInitializer() {
+    return getClassInitializer() != null;
   }
 }

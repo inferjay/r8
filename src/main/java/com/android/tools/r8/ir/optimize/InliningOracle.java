@@ -20,10 +20,11 @@ import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
 import com.android.tools.r8.logging.Log;
 
 /**
- *  The InliningOracle contains information needed for when inlining
- *  other methods into @method.
+ * The InliningOracle contains information needed for when inlining
+ * other methods into @method.
  */
 public class InliningOracle {
+
   final Inliner inliner;
   final DexEncodedMethod method;
   final Value receiver;
@@ -208,7 +209,7 @@ public class InliningOracle {
       return true;
     }
     DexClass clazz = inliner.appInfo.definitionFor(targetHolder);
-    return (clazz != null) && (clazz.getClassInitializer(inliner.appInfo.dexItemFactory) == null);
+    return (clazz != null) && (!clazz.hasClassInitializer());
   }
 
   private boolean isDoubleInliningTarget(DexEncodedMethod candidate) {

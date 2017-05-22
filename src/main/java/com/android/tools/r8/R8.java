@@ -31,6 +31,7 @@ import com.android.tools.r8.shaking.ProguardTypeMatcher.MatchSpecificType;
 import com.android.tools.r8.shaking.ReasonPrinter;
 import com.android.tools.r8.shaking.RootSetBuilder;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
+import com.android.tools.r8.shaking.SimpleClassMerger;
 import com.android.tools.r8.shaking.TreePruner;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.CfgPrinter;
@@ -245,8 +246,16 @@ public class R8 {
 
       if (appInfo.withLiveness() != null) {
         // No-op until class merger is added.
-        appInfo = appInfo.withLiveness().rewrittenWithLense(graphLense);
         graphLense = new MemberRebindingAnalysis(appInfo.withLiveness(), graphLense).run();
+        // Class merging requires inlining.
+        if (options.inlineAccessors) {
+          timing.begin("ClassMerger");
+          graphLense = new SimpleClassMerger(application, appInfo.withLiveness(), graphLense,
+              timing).run();
+          timing.end();
+        }
+        appInfo = appInfo.withLiveness().prunedCopyFrom(application);
+        appInfo = appInfo.withLiveness().rewrittenWithLense(graphLense);
       }
 
       graphLense = new BridgeMethodAnalysis(graphLense, appInfo.withSubtyping()).run();

@@ -71,9 +71,20 @@ public class DexEncodedField extends KeyedDexItem<DexField> {
     if (accessFlags.isStatic() && accessFlags.isPublic() && accessFlags.isFinal()) {
       DexClass clazz = appInfo.definitionFor(field.getHolder());
       assert clazz != null : "Class for the field must be present";
-      return staticValue.asConstInstruction(
-          clazz.getClassInitializer(appInfo.dexItemFactory) != null, dest);
+      return staticValue.asConstInstruction(clazz.hasClassInitializer(), dest);
     }
     return null;
+  }
+
+  public DexEncodedField toRenamedField(DexString name, DexItemFactory dexItemFactory) {
+    return new DexEncodedField(dexItemFactory.createField(field.clazz, field.type, name),
+        accessFlags, annotations, staticValue);
+  }
+
+  public DexEncodedField toTypeSubstitutedField(DexField field) {
+    if (this.field == field) {
+      return this;
+    }
+    return new DexEncodedField(field, accessFlags, annotations, staticValue);
   }
 }

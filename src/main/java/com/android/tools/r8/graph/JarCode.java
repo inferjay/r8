@@ -4,6 +4,7 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.ir.code.IRCode;
+import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.JarSourceCode;
 import com.android.tools.r8.jar.JarRegisterEffectsVisitor;
@@ -79,12 +80,20 @@ public class JarCode extends Code {
 
   @Override
   public IRCode buildIR(DexEncodedMethod encodedMethod, InternalOptions options) {
-    assert clazz == encodedMethod.method.getHolder();
     triggerDelayedParsingIfNeccessary();
     JarSourceCode source = new JarSourceCode(clazz, node, application);
     IRBuilder builder = new IRBuilder(encodedMethod, source, options);
     return builder.build();
   }
+
+  public IRCode buildIR(DexEncodedMethod encodedMethod, ValueNumberGenerator generator,
+      InternalOptions options) {
+    triggerDelayedParsingIfNeccessary();
+    JarSourceCode source = new JarSourceCode(clazz, node, application);
+    IRBuilder builder = new IRBuilder(encodedMethod, source, generator, options);
+    return builder.build();
+  }
+
 
   @Override
   public void registerReachableDefinitions(UseRegistry registry) {

@@ -76,6 +76,11 @@ public class DexProgramClass extends DexClass {
   }
 
   @Override
+  public String toSourceString() {
+    return type.toSourceString();
+  }
+
+  @Override
   public boolean isProgramClass() {
     return true;
   }
