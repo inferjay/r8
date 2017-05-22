@@ -13,7 +13,7 @@ import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
 import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
 
-public class InvokeDirect extends InvokeMethod {
+public class InvokeDirect extends InvokeMethodWithReceiver {
 
   public InvokeDirect(DexMethod target, Value result, List<Value> arguments) {
     super(target, result, arguments);

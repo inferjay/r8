@@ -63,11 +63,16 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
   }
 
   public boolean isInliningCandidate(DexEncodedMethod container, boolean alwaysInline) {
+    if (container.accessFlags.isStatic() && container.accessFlags.isConstructor()) {
+      // This will probably never happen but never inline a class initializer.
+      return false;
+    }
     if (alwaysInline && (compilationState != CompilationState.NOT_PROCESSED)) {
-      // Inline iff holder classes are equal.
-      // Interestingly, alwaysInline is true for some constructors.
-      // (accessFlags.isConstructor())
-      return container.method.getHolder() == method.getHolder();
+      // Only inline constructor iff holder classes are equal.
+      if (!accessFlags.isStatic() && accessFlags.isConstructor()) {
+         return container.method.getHolder() == method.getHolder();
+      }
+      return true;
     }
     switch (compilationState) {
       case PROCESSED_INLINING_CANDIDATE_PUBLIC:

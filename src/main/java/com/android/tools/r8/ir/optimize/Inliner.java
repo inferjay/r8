@@ -8,6 +8,7 @@ import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.BasicBlock;
+import com.android.tools.r8.ir.code.DominatorTree;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionIterator;
@@ -189,6 +190,7 @@ public class Inliner {
     if (instruction_allowance < 0) {
       return;
     }
+    computeReceiverMustBeNonNull(code);
     Value receiver = receiverValue(method, code);
     InliningOracle oracle = new InliningOracle(this, method, receiver, callGraph);
 
@@ -217,14 +219,12 @@ public class Inliner {
               if (target.accessFlags.isConstructor() && !legalConstructorInline(method, inlinee)) {
                 continue;
               }
-              if (invoke.isInvokeInterface()
-                  || invoke.isInvokeVirtual()
-                  || invoke.isInvokeDirect()) {
+              DexType downcast = null;
+              if (invoke.isInvokeMethodWithReceiver()) {
                 // If the invoke has a receiver but the declared method holder is different
-                // from the computed target holder, inlining is cancelled due to verification
-                // issues.
+                // from the computed target holder, inlining requires a downcast of the receiver.
                 if (result.target.method.getHolder() != target.method.getHolder()) {
-                  continue;
+                  downcast = result.target.method.getHolder();
                 }
               }
               // Inline the inlinee code in place of the invoke instruction
@@ -232,7 +232,7 @@ public class Inliner {
               iterator.previous();
               instruction_allowance -= numberOfInstructions(inlinee);
               if (instruction_allowance >= 0 || result.forceInline) {
-                iterator.inlineInvoke(code, inlinee, blockIterator, blocksToRemove);
+                iterator.inlineInvoke(code, inlinee, blockIterator, blocksToRemove, downcast);
               }
               // If we inlined the invoke from a bridge method, it is no longer a bridge method.
               if (method.accessFlags.isBridge()) {
@@ -247,5 +247,39 @@ public class Inliner {
     oracle.finish();
     code.removeBlocks(blocksToRemove);
     assert code.isConsistentSSA();
+  }
+
+  // Determine whether the receiver of an invocation is guaranteed to be non-null based on
+  // the dominator tree. If a method call is dominated by another method call with the same
+  // receiver, the receiver most be non-null when we reach the dominated call.
+  //
+  // We bail out for exception handling. If an invoke is covered by a try block we cannot use
+  // dominance to determine that the receiver is non-null at a dominated call:
+  //
+  // Object o;
+  // try {
+  //   o.m();
+  // } catch (NullPointerException e) {
+  //   o.f();  // Dominated by other call with receiver o, but o is null.
+  // }
+  //
+  private void computeReceiverMustBeNonNull(IRCode code) {
+    DominatorTree dominatorTree = new DominatorTree(code);
+    InstructionIterator it = code.instructionIterator();
+    while (it.hasNext()) {
+      Instruction instruction = it.next();
+      if (instruction.isInvokeMethodWithReceiver()) {
+        Value receiverValue = instruction.inValues().get(0);
+        for (Instruction user : receiverValue.uniqueUsers()) {
+          if (user.isInvokeMethodWithReceiver() &&
+              user.inValues().get(0) == receiverValue &&
+              !user.getBlock().hasCatchHandlers() &&
+              dominatorTree.strictlyDominatedBy(instruction.getBlock(), user.getBlock())) {
+            instruction.asInvokeMethodWithReceiver().setIsDominatedByCallWithSameReceiver();
+            break;
+          }
+        }
+      }
+    }
   }
 }

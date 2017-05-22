@@ -716,6 +716,14 @@ public abstract class Instruction {
     return null;
   }
 
+  public boolean isInvokeMethodWithReceiver() {
+    return false;
+  }
+
+  public InvokeMethodWithReceiver asInvokeMethodWithReceiver() {
+    return null;
+  }
+
   public boolean isInvokeNewArray() {
     return false;
   }

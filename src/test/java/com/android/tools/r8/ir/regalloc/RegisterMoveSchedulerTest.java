@@ -6,6 +6,7 @@ package com.android.tools.r8.ir.regalloc;
 import static org.junit.Assert.assertEquals;
 
 import com.android.tools.r8.errors.Unimplemented;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Instruction;
@@ -100,7 +101,7 @@ public class RegisterMoveSchedulerTest {
     @Override
     public BasicBlock inlineInvoke(
         IRCode code, IRCode inlinee, ListIterator<BasicBlock> blockIterator,
-        List<BasicBlock> blocksToRemove) {
+        List<BasicBlock> blocksToRemove, DexType downcast) {
       throw new Unimplemented();
     }
   }

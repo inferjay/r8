@@ -278,7 +278,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(instruction -> instruction.isInvoke());
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert blocksToRemove.isEmpty();
       }
     }
@@ -295,7 +295,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(instruction -> instruction.isInvoke());
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert blocksToRemove.isEmpty();
       }
     }
@@ -754,7 +754,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(Instruction::isInvoke);
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert !blocksToRemove.isEmpty();
       }
     }
@@ -775,7 +775,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(Instruction::isInvoke);
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert !blocksToRemove.isEmpty();
       }
     }
@@ -908,7 +908,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(Instruction::isInvoke);
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert !blocksToRemove.isEmpty();
       }
     }
@@ -929,7 +929,7 @@ public class InlineTest extends SmaliTestBase {
       Instruction invoke = iterator.nextUntil(Instruction::isInvoke);
       if (invoke != null) {
         iterator.previous();
-        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove);
+        iterator.inlineInvoke(test.code, inlinee.next(), blocksIterator, blocksToRemove, null);
         assert !blocksToRemove.isEmpty();
       }
     }

@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.InvokeDirect;
 import com.android.tools.r8.ir.code.InvokeInterface;
 import com.android.tools.r8.ir.code.InvokeMethod;
+import com.android.tools.r8.ir.code.InvokeMethodWithReceiver;
 import com.android.tools.r8.ir.code.InvokePolymorphic;
 import com.android.tools.r8.ir.code.InvokeStatic;
 import com.android.tools.r8.ir.code.InvokeSuper;
@@ -101,8 +102,8 @@ public class InliningOracle {
     return candidate;
   }
 
-  public InlineAction computeForInvokeWithReceiver(InvokeMethod invoke) {
-    boolean receiverIsNeverNull = invoke.arguments().get(0).isNeverNull();
+  public InlineAction computeForInvokeWithReceiver(InvokeMethodWithReceiver invoke) {
+    boolean receiverIsNeverNull = invoke.receiverIsNeverNull();
     if (!receiverIsNeverNull) {
       if (info != null) {
         info.exclude(invoke, "receiver for candidate can be null");
@@ -152,11 +153,7 @@ public class InliningOracle {
       return null;
     }
 
-    boolean doubleInlineTarget =
-        callGraph.hasDoubleCallSite(target)
-            && target.getCode().isDexCode()
-            && (target.getCode().asDexCode().instructions.length
-                <= 10); // 10 is found from measuring.
+    boolean doubleInlineTarget = isDoubleInliningTarget(target);
     // Determine if this should be inlined no matter how big it is.
     boolean forceInline =
         fromBridgeMethod | callGraph.hasSingleCallSite(target) | doubleInlineTarget;
@@ -214,17 +211,20 @@ public class InliningOracle {
     return (clazz != null) && (clazz.getClassInitializer(inliner.appInfo.dexItemFactory) == null);
   }
 
+  private boolean isDoubleInliningTarget(DexEncodedMethod candidate) {
+    // 10 is found from measuring.
+    return callGraph.hasDoubleCallSite(candidate)
+        && candidate.getCode().isDexCode()
+        && (candidate.getCode().asDexCode().instructions.length <= 10);
+  }
+
   public InlineAction computeForInvokeStatic(InvokeStatic invoke) {
     DexEncodedMethod candidate = validateCandidate(invoke);
     if (candidate == null) {
       return null;
     }
     boolean fromBridgeMethod = candidate.getOptimizationInfo().forceInline();
-    boolean doubleInlineTarget =
-        callGraph.hasDoubleCallSite(candidate)
-            && candidate.getCode().isDexCode()
-            && (candidate.getCode().asDexCode().instructions.length
-                <= 10); // 10 is found from measuring.
+    boolean doubleInlineTarget = isDoubleInliningTarget(candidate);
     // Determine if this should be inlined no matter how big it is.
     boolean forceInline =
         fromBridgeMethod | callGraph.hasSingleCallSite(candidate) | doubleInlineTarget;

@@ -12,7 +12,7 @@ import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
 import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
 
-public class InvokeVirtual extends InvokeMethod {
+public class InvokeVirtual extends InvokeMethodWithReceiver {
 
   public InvokeVirtual(DexMethod target, Value result, List<Value> arguments) {
     super(target, result, arguments);

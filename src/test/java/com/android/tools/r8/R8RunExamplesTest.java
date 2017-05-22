@@ -98,6 +98,7 @@ public class R8RunExamplesTest {
         {"memberrebinding3.Test", null},
         {"minification.Minification", null},
         {"enclosingmethod.Main", null},
+        {"interfaceinlining.Main", null},
     };
 
     List<String[]> fullTestList = new ArrayList<>(tests.length * 2);

@@ -12,7 +12,7 @@ import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
 import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
 
-public class InvokeInterface extends InvokeMethod {
+public class InvokeInterface extends InvokeMethodWithReceiver {
 
   public InvokeInterface(DexMethod target, Value result, List<Value> arguments) {
     super(target, result, arguments);
@@ -79,5 +79,4 @@ public class InvokeInterface extends InvokeMethod {
   public InlineAction computeInlining(InliningOracle decider) {
     return decider.computeForInvokeInterface(this);
   }
-
 }

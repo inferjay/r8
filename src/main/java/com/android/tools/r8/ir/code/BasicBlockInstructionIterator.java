@@ -4,6 +4,7 @@
 
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.graph.DexType;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -306,7 +307,7 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
 
   public BasicBlock inlineInvoke(
       IRCode code, IRCode inlinee, ListIterator<BasicBlock> blocksIterator,
-      List<BasicBlock> blocksToRemove) {
+      List<BasicBlock> blocksToRemove, DexType downcast) {
     assert blocksToRemove != null;
     boolean inlineeCanThrow = canThrow(inlinee);
     BasicBlock invokeBlock = split(1, code, blocksIterator);
@@ -318,13 +319,30 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
     BasicBlock invokePredecessor = invokeBlock.getPredecessors().get(0);
     BasicBlock invokeSuccessor = invokeBlock.getSuccessors().get(0);
 
+    CheckCast castInstruction = null;
     // Map all argument values, and remove the arguments instructions in the inlinee.
     List<Value> arguments = inlinee.collectArguments();
     assert invoke.inValues().size() == arguments.size();
     for (int i = 0; i < invoke.inValues().size(); i++) {
-      arguments.get(i).replaceUsers(invoke.inValues().get(i));
+      if ((i == 0) && (downcast != null)) {
+        Value invokeValue = invoke.inValues().get(0);
+        Value receiverValue = arguments.get(0);
+        Value value = new Value(code.valueNumberGenerator.next(), -1, MoveType.OBJECT, null);
+        castInstruction = new CheckCast(value, invokeValue, downcast);
+        receiverValue.replaceUsers(value);
+      } else {
+        arguments.get(i).replaceUsers(invoke.inValues().get(i));
+      }
     }
     removeArgumentInstructions(inlinee);
+    if (castInstruction != null) {
+      // Splice in the check cast operation.
+      inlinee.blocks.getFirst().listIterator().split(inlinee);
+      BasicBlock newBlock = inlinee.blocks.getFirst();
+      assert newBlock.getInstructions().size() == 1;
+      newBlock.getInstructions().addFirst(castInstruction);
+      castInstruction.setBlock(newBlock);
+    }
 
     // The inline entry is the first block now the argument instructions are gone.
     BasicBlock inlineEntry = inlinee.blocks.getFirst();

@@ -4,6 +4,7 @@
 
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.graph.DexType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -154,6 +155,7 @@ public interface InstructionListIterator extends ListIterator<Instruction> {
    * iterating using <code>blockIterator</code> after then method returns the blocks in this list
    * must be skipped when iterating with the active <code>blockIterator</code> and ultimately
    * removed.
+   * @param downcast tells the inliner to issue a check cast opertion.
    * @return the basic block with the instructions right after the inlining. This can be a block
    * which can also be in the <code>blocksToRemove</code> list.
    */
@@ -163,14 +165,14 @@ public interface InstructionListIterator extends ListIterator<Instruction> {
   // TODO(sgjesse): Maybe find a better place for this method.
   // TODO(sgjesse): Support inlinee with throwing instructions for invokes with existing handlers.
   BasicBlock inlineInvoke(IRCode code, IRCode inlinee, ListIterator<BasicBlock> blockIterator,
-      List<BasicBlock> blocksToRemove);
+      List<BasicBlock> blocksToRemove, DexType downcast);
 
   /**
-   * See {@link #inlineInvoke(IRCode, IRCode, ListIterator, List<BasicBlock>)}.
+   * See {@link #inlineInvoke(IRCode, IRCode, ListIterator<BasicBlock>, List<BasicBlock>, DexType)}.
    */
   default BasicBlock inlineInvoke(IRCode code, IRCode inlinee) {
     List<BasicBlock> blocksToRemove = new ArrayList<>();
-    BasicBlock result = inlineInvoke(code, inlinee, null, blocksToRemove);
+    BasicBlock result = inlineInvoke(code, inlinee, null, blocksToRemove, null);
     code.removeBlocks(blocksToRemove);
     return result;
   }

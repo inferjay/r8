@@ -46,5 +46,5 @@ public abstract class InvokeMethod extends Invoke {
     return this;
   }
 
-  abstract public InlineAction computeInlining(InliningOracle decider);
+  public abstract InlineAction computeInlining(InliningOracle decider);
 }
