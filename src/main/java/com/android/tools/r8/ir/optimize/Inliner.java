@@ -223,7 +223,10 @@ public class Inliner {
           InlineAction result = invoke.computeInlining(oracle);
           if (result != null) {
             DexEncodedMethod target = appInfo.lookup(invoke.getType(), invoke.getInvokedMethod());
-            assert target != null;
+            if (target == null) {
+              // The declared target cannot be found so skip inlining.
+              continue;
+            }
             boolean forceInline = target.getOptimizationInfo().forceInline();
             if (!target.isProcessed() && !forceInline) {
               // Do not inline code that was not processed unless we have to force inline.
