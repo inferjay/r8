@@ -78,13 +78,14 @@ public class R8RunSmaliTestsTest {
             "java.lang.NullPointerException: Attempt to read from field " +
                 "'Test Test.a' on a null object reference\n"},
         {"merge-blocks-regression", "java.lang.NullPointerException: Attempt to invoke virtual"
-            +" method 'Test Test.bW_()' on a null object reference\n"},
+            + " method 'Test Test.bW_()' on a null object reference\n"},
         {"self-is-catch-block", "100\n-1\n"},
         {"infinite-loop", ""},
         {"regression/33336471",
             "START\n0\n2\nLOOP\n1\n2\nLOOP\n2\n2\nDONE\n" +
                 "START\n0\n2\nLOOP\n1\n2\nLOOP\n2\n2\nDONE\n"},
         {"regression/33846227", ""},
+        {"illegal-invokes", "ICCE\nICCE\n"},
     });
   }
 
@@ -123,7 +124,8 @@ public class R8RunSmaliTestsTest {
         thrown.expect(Throwable.class);
       }
       output =
-          ToolHelper.checkArtOutputIdentical(originalDexFile.toString(), generated, mainClass, null);
+          ToolHelper
+              .checkArtOutputIdentical(originalDexFile.toString(), generated, mainClass, null);
     }
     assertEquals(expectedOutput, output);
   }
