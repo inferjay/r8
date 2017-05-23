@@ -248,7 +248,7 @@ public class R8 {
         // No-op until class merger is added.
         graphLense = new MemberRebindingAnalysis(appInfo.withLiveness(), graphLense).run();
         // Class merging requires inlining.
-        if (options.inlineAccessors) {
+        if (!options.skipClassMerging && options.inlineAccessors) {
           timing.begin("ClassMerger");
           graphLense = new SimpleClassMerger(application, appInfo.withLiveness(), graphLense,
               timing).run();

@@ -33,6 +33,7 @@ public class InternalOptions {
   // Skipping optimizations.
   public boolean skipDebugInfoOpt = false;
   public boolean skipDebugLineNumberOpt = false;
+  public boolean skipClassMerging = true;
 
   public boolean lazyClasspathLoading = false;
   public boolean lazyLibraryLoading = false;
