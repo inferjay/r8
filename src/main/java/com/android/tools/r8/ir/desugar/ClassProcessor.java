@@ -115,7 +115,7 @@ final class ClassProcessor {
     // by this class as well as its superclasses.
     DexClass current = clazz;
     while (true) {
-      for (DexType type : clazz.interfaces.values) {
+      for (DexType type : current.interfaces.values) {
         helper.merge(getOrCreateInterfaceInfo(type));
       }
 
@@ -139,7 +139,7 @@ final class ClassProcessor {
     current = clazz;
     while (true) {
       // Hide candidates by virtual method of the class.
-      hideCandidates(clazz.virtualMethods, candidates, toBeImplemented);
+      hideCandidates(current.virtualMethods, candidates, toBeImplemented);
       if (candidates.isEmpty()) {
         return toBeImplemented;
       }
