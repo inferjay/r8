@@ -6,6 +6,7 @@ package com.android.tools.r8.internal;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
@@ -25,7 +26,8 @@ public class YouTubeTreeShakeJarVerificationTest extends YouTubeCompilationBase 
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     int maxSize = 16000000;
     AndroidApp app = runAndCheckVerification(
-        CompilerUnderTest.R8, BASE + APK, null, BASE + PG_CONF, BASE + DEPLOY_JAR);
+        CompilerUnderTest.R8, CompilationMode.RELEASE,
+        BASE + APK, null, BASE + PG_CONF, BASE + DEPLOY_JAR);
     int bytes = 0;
     try (Closer closer = Closer.create()) {
       for (InternalResource dex : app.getDexProgramResources()) {

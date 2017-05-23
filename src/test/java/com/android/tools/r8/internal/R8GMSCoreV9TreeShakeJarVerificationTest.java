@@ -4,6 +4,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -14,6 +15,7 @@ public class R8GMSCoreV9TreeShakeJarVerificationTest extends R8GMSCoreTreeShakeJ
   @Test
   public void buildAndTreeShakeFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    buildAndTreeShakeFromDeployJar(GMSCORE_V9_DIR, true, GMSCORE_V9_MAX_SIZE);
+    buildAndTreeShakeFromDeployJar(
+        CompilationMode.RELEASE, GMSCORE_V9_DIR, true, GMSCORE_V9_MAX_SIZE);
   }
 }

@@ -11,14 +11,14 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
-public class D8GMSCoreV9DeployJarVerificationTest extends GMSCoreDeployJarVerificationTest {
+public class D8GMSCoreV10DeployJarVerificationTest extends GMSCoreDeployJarVerificationTest {
 
   @Test
   public void buildDebugFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     buildFromDeployJar(
         CompilerUnderTest.D8, CompilationMode.DEBUG,
-        GMSCoreCompilationTestBase.GMSCORE_V9_DIR, true);
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
   }
 
   @Test
@@ -26,6 +26,6 @@ public class D8GMSCoreV9DeployJarVerificationTest extends GMSCoreDeployJarVerifi
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     buildFromDeployJar(
         CompilerUnderTest.D8, CompilationMode.RELEASE,
-        GMSCoreCompilationTestBase.GMSCORE_V9_DIR, true);
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
   }
 }

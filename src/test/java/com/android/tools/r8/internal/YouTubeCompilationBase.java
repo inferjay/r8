@@ -4,7 +4,7 @@
 package com.android.tools.r8.internal;
 
 public abstract class YouTubeCompilationBase extends CompilationTestBase {
-  static final String BASE = "third_party/youtube/youtube.android_11.47/";
+  static final String BASE = "third_party/youtube/youtube.android_12.17/";
   static final String APK = "YouTubeRelease_unsigned.apk";
   static final String DEPLOY_JAR = "YouTubeRelease_deploy.jar";
   static final String PG_JAR = "YouTubeRelease_proguard.jar";

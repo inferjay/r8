@@ -36,17 +36,19 @@ public abstract class CompilationTestBase {
 
   public AndroidApp runAndCheckVerification(
       CompilerUnderTest compiler,
+      CompilationMode mode,
       String referenceApk,
       String pgMap,
       String pgConf,
       String... inputs)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     return runAndCheckVerification(
-        compiler, referenceApk, pgMap, pgConf, Arrays.asList(inputs));
+        compiler, mode, referenceApk, pgMap, pgConf, Arrays.asList(inputs));
   }
 
   public AndroidApp runAndCheckVerification(
       CompilerUnderTest compiler,
+      CompilationMode mode,
       String referenceApk,
       String pgMap,
       String pgConf,
@@ -63,6 +65,7 @@ public abstract class CompilationTestBase {
       if (pgConf != null) {
         builder.addProguardConfigurationFiles(Paths.get(pgConf));
       }
+      builder.setMode(mode);
       outputApp = ToolHelper.runR8(builder.build());
     } else {
       assert compiler == CompilerUnderTest.D8;
@@ -70,7 +73,7 @@ public abstract class CompilationTestBase {
           ToolHelper.runD8(
               D8Command.builder()
                   .addProgramFiles(ListUtils.map(inputs, Paths::get))
-                  .setMode(CompilationMode.DEBUG)
+                  .setMode(mode)
                   .build());
     }
     Path out = temp.getRoot().toPath().resolve("all.zip");

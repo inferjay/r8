@@ -5,6 +5,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
@@ -17,6 +18,8 @@ public class R8GMSCoreV10DeployJarVerificationTest extends GMSCoreDeployJarVerif
   public void buildFromDeployJar()
       // TODO(tamaskenez): set hasReference = true when we have the noshrink file for V10
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    buildFromDeployJar(CompilerUnderTest.R8, GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
+    buildFromDeployJar(
+        CompilerUnderTest.R8, CompilationMode.RELEASE,
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
   }
 }

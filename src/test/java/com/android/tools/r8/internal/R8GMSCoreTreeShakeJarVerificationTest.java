@@ -6,6 +6,7 @@ package com.android.tools.r8.internal;
 import static junit.framework.TestCase.assertTrue;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
@@ -18,10 +19,12 @@ import java.util.concurrent.ExecutionException;
 
 public class R8GMSCoreTreeShakeJarVerificationTest extends GMSCoreCompilationTestBase {
 
-  public void buildAndTreeShakeFromDeployJar(String base, boolean hasReference, int maxSize)
+  public void buildAndTreeShakeFromDeployJar(
+      CompilationMode mode, String base, boolean hasReference, int maxSize)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     AndroidApp app = runAndCheckVerification(
         CompilerUnderTest.R8,
+        mode,
         hasReference ? base + REFERENCE_APK : null,
         null,
         base + PG_CONF,
