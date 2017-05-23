@@ -283,7 +283,7 @@ public class MainDexListTests {
                 code);
         IRCode ir = code.buildIR(method, options);
         RegisterAllocator allocator = new LinearScanRegisterAllocator(ir);
-        method.setCode(ir, allocator);
+        method.setCode(ir, allocator, factory);
         virtualMethods[i] = method;
       }
       builder.addClassPromise(
