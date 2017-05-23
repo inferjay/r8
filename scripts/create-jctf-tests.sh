@@ -26,7 +26,7 @@ function generate_test() {
 // Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-package com.android.tools.r8.art.jctf.${compilerUnderTest}.${relativePackage};
+package com.android.tools.r8.jctf.${compilerUnderTest}.${relativePackage};
 
 import org.junit.Test;
 import com.android.tools.r8.R8RunArtTestsTest;
@@ -57,14 +57,14 @@ EOF
 }
 
 JCTFROOT="third_party/jctf"
-DESTINATIONDIR="build/generated/test/java/com/android/tools/r8/art"
+DESTINATIONDIR="build/generated/test/java/com/android/tools/r8/jctf"
 
 if [ ! -e $JCTFROOT ]; then
   echo "Missing jctf tests in $JCTFROOT."
   exit
 fi
 
-for d in $DESTINATIONDIR/jctf/r8 $DESTINATIONDIR/jctf/d8; do
+for d in $DESTINATIONDIR/r8 $DESTINATIONDIR/d8; do
   rm -rf $d
   mkdir -p $d
 done
@@ -86,10 +86,10 @@ grep -r "@Test" "$TESTDIR" --include=*.java -l | while read -r line; do
   RELATIVE_PACKAGE=$(expr "$PACKAGE" : ".*\.java\.\(.*$\)")
 
   generate_test $PACKAGE.$TESTNAME $TESTCLASSNAME \
-    "$DESTINATIONDIR/jctf/r8/$RELATIVE_TEST_PATH" r8 \
+    "$DESTINATIONDIR/r8/$RELATIVE_TEST_PATH" r8 \
     $CLASSFILE $RELATIVE_PACKAGE
   generate_test $PACKAGE.$TESTNAME $TESTCLASSNAME \
-    "$DESTINATIONDIR/jctf/d8/$RELATIVE_TEST_PATH" d8 \
+    "$DESTINATIONDIR/d8/$RELATIVE_TEST_PATH" d8 \
     $CLASSFILE $RELATIVE_PACKAGE
 done
 
