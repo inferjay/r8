@@ -5,15 +5,25 @@ package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.CompilationMode;
+import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
-public class R8GMSCoreV4VerificationTest extends GMSCoreCompilationTestBase {
+public class D8YouTubeDeployJarVerificationTest extends YouTubeCompilationBase {
+
   @Test
-  public void verify()
+  public void buildDebugFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    runR8AndCheckVerification(CompilationMode.RELEASE, GMSCORE_V4_DIR);
+    runAndCheckVerification(
+        CompilerUnderTest.D8, CompilationMode.DEBUG, BASE + APK, null, null, BASE + DEPLOY_JAR);
+  }
+
+  @Test
+  public void buildReleaseFromDeployJar()
+      throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
+    runAndCheckVerification(
+        CompilerUnderTest.D8, CompilationMode.RELEASE, BASE + APK, null, null, BASE + DEPLOY_JAR);
   }
 }

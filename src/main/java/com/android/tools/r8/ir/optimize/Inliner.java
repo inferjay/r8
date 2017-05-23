@@ -138,8 +138,13 @@ public class Inliner {
         assert target.getCode().isDexCode();
         return target.buildIR(generator, options);
       } else {
-        assert target.getCode().isJarCode();
-        IRCode code = target.getCode().asJarCode().buildIR(target, generator, options);
+        // Build the IR for a yet not processed method, and perform minimal IR processing.
+        IRCode code;
+        if (target.getCode().isJarCode()) {
+          code = target.getCode().asJarCode().buildIR(target, generator, options);
+        } else {
+          code = target.getCode().asDexCode().buildIR(target, generator, options);
+        }
         new LensCodeRewriter(graphLense, appInfo).rewrite(code, target);
         return code;
       }

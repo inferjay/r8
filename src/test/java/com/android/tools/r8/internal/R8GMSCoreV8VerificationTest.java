@@ -4,6 +4,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -14,6 +15,6 @@ public class R8GMSCoreV8VerificationTest extends GMSCoreCompilationTestBase {
   @Test
   public void verify()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    runR8AndCheckVerification(GMSCORE_V8_DIR);
+    runR8AndCheckVerification(CompilationMode.RELEASE, GMSCORE_V8_DIR);
   }
 }

@@ -4,6 +4,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
@@ -13,8 +14,17 @@ import org.junit.Test;
 public class YouTubeProguardJarVerificationTest extends YouTubeCompilationBase {
 
   @Test
-  public void buildFromProguardJar()
+  public void buildDebugFromProguardJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    runAndCheckVerification(CompilerUnderTest.R8, BASE + APK, BASE + PG_MAP, null, BASE + PG_JAR);
+    runAndCheckVerification(
+        CompilerUnderTest.R8, CompilationMode.DEBUG, BASE + APK, BASE + PG_MAP, null, BASE + PG_JAR);
+  }
+
+  @Test
+  public void buildReleaseFromProguardJar()
+      throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
+    runAndCheckVerification(
+        CompilerUnderTest.R8, CompilationMode.RELEASE,
+        BASE + APK, BASE + PG_MAP, null, BASE + PG_JAR);
   }
 }

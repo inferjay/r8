@@ -4,6 +4,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
@@ -30,14 +31,16 @@ public abstract class GMSCoreCompilationTestBase extends CompilationTestBase {
   static final String DEPLOY_JAR = "GmsCore_prod_alldpi_release_all_locales_deploy.jar";
   static final String REFERENCE_APK = "noshrink_x86_GmsCore_prod_alldpi_release_unsigned.apk";
 
-  public void runR8AndCheckVerification(String version)
+  public void runR8AndCheckVerification(CompilationMode mode, String version)
       throws ProguardRuleParserException, ExecutionException, IOException, CompilationException {
-    runAndCheckVerification(CompilerUnderTest.R8, version);
+    runAndCheckVerification(CompilerUnderTest.R8, mode, version);
   }
 
-  public void runAndCheckVerification(CompilerUnderTest compiler, String version)
+  public void runAndCheckVerification(
+      CompilerUnderTest compiler, CompilationMode mode, String version)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     runAndCheckVerification(
-        compiler, version + GMSCORE_APK, null, null, Paths.get(version, GMSCORE_APK).toString());
+        compiler, mode, version + GMSCORE_APK, null, null,
+        Paths.get(version, GMSCORE_APK).toString());
   }
 }

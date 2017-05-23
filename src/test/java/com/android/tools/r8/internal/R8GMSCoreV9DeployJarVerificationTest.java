@@ -5,6 +5,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
@@ -16,6 +17,8 @@ public class R8GMSCoreV9DeployJarVerificationTest extends GMSCoreDeployJarVerifi
   @Test
   public void buildFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    buildFromDeployJar(CompilerUnderTest.R8, GMSCoreCompilationTestBase.GMSCORE_V9_DIR, true);
+    buildFromDeployJar(
+        CompilerUnderTest.R8, CompilationMode.RELEASE,
+        GMSCoreCompilationTestBase.GMSCORE_V9_DIR, true);
   }
 }

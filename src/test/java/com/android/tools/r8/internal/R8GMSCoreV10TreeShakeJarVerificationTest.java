@@ -4,6 +4,7 @@
 package com.android.tools.r8.internal;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -16,6 +17,7 @@ public class R8GMSCoreV10TreeShakeJarVerificationTest
   public void buildAndTreeShakeFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     // TODO(tamaskenez): set hasReference = true when we have the noshrink file for V10
-    buildAndTreeShakeFromDeployJar(GMSCORE_V10_DIR, false, GMSCORE_V10_MAX_SIZE);
+    buildAndTreeShakeFromDeployJar(
+        CompilationMode.RELEASE, GMSCORE_V10_DIR, false, GMSCORE_V10_MAX_SIZE);
   }
 }
