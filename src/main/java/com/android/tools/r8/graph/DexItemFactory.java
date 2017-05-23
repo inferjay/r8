@@ -4,17 +4,8 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.dex.Constants;
-import com.android.tools.r8.graph.DexDebugEvent.AdvanceLine;
-import com.android.tools.r8.graph.DexDebugEvent.AdvancePC;
-import com.android.tools.r8.graph.DexDebugEvent.Default;
-import com.android.tools.r8.graph.DexDebugEvent.EndLocal;
-import com.android.tools.r8.graph.DexDebugEvent.RestartLocal;
-import com.android.tools.r8.graph.DexDebugEvent.SetEpilogueBegin;
-import com.android.tools.r8.graph.DexDebugEvent.SetFile;
-import com.android.tools.r8.graph.DexDebugEvent.SetPrologueEnd;
 import com.android.tools.r8.graph.DexMethodHandle.MethodHandleType;
 import com.android.tools.r8.naming.NamingLens;
-import com.android.tools.r8.utils.IntHashMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,16 +24,6 @@ public class DexItemFactory {
   private final Map<DexMethod, DexMethod> methods = new HashMap<>();
   private final Map<DexCallSite, DexCallSite> callSites = new HashMap<>();
   private final Map<DexMethodHandle, DexMethodHandle> methodHandles = new HashMap<>();
-
-  // DexDebugEvent Canonicalization.
-  private final IntHashMap<AdvanceLine> advanceLines = new IntHashMap<>();
-  private final IntHashMap<AdvancePC> advancePCs = new IntHashMap<>();
-  private final IntHashMap<Default> defaults = new IntHashMap<>();
-  private final IntHashMap<EndLocal> endLocals = new IntHashMap<>();
-  private final IntHashMap<RestartLocal> restartLocals = new IntHashMap<>();
-  private final SetEpilogueBegin setEpilogueBegin = new SetEpilogueBegin();
-  private final SetPrologueEnd setPrologueEnd = new SetPrologueEnd();
-  private final Map<DexString, SetFile> setFiles = new HashMap<>();
 
   boolean sorted = false;
 
@@ -323,80 +304,6 @@ public class DexItemFactory {
     DexProto proto = createProto(shorty(returnType, parameterTypes), returnType, parameterTypes);
 
     return createMethod(clazz, proto, name);
-  }
-
-  public AdvanceLine createAdvanceLine(int delta) {
-    synchronized (advanceLines) {
-      AdvanceLine result = advanceLines.get(delta);
-      if (result == null) {
-        result = new AdvanceLine(delta);
-        advanceLines.put(delta, result);
-      }
-      return result;
-    }
-  }
-
-  public AdvancePC createAdvancePC(int delta) {
-    synchronized (advancePCs) {
-      AdvancePC result = advancePCs.get(delta);
-      if (result == null) {
-        result = new AdvancePC(delta);
-        advancePCs.put(delta, result);
-      }
-      return result;
-    }
-  }
-
-  public Default createDefault(int value) {
-    synchronized (defaults) {
-      Default result = defaults.get(value);
-      if (result == null) {
-        result = new Default(value);
-        defaults.put(value, result);
-      }
-      return result;
-    }
-  }
-
-  public EndLocal createEndLocal(int registerNum) {
-    synchronized (endLocals) {
-      EndLocal result = endLocals.get(registerNum);
-      if (result == null) {
-        result = new EndLocal(registerNum);
-        endLocals.put(registerNum, result);
-      }
-      return result;
-    }
-  }
-
-  public RestartLocal createRestartLocal(int registerNum) {
-    synchronized (restartLocals) {
-      RestartLocal result = restartLocals.get(registerNum);
-      if (result == null) {
-        result = new RestartLocal(registerNum);
-        restartLocals.put(registerNum, result);
-      }
-      return result;
-    }
-  }
-
-  public SetEpilogueBegin createSetEpilogueBegin() {
-    return setEpilogueBegin;
-  }
-
-  public SetPrologueEnd createSetPrologueEnd() {
-    return setPrologueEnd;
-  }
-
-  public SetFile createSetFile(DexString fileName) {
-    synchronized (setFiles) {
-      SetFile result = setFiles.get(fileName);
-      if (result == null) {
-        result = new SetFile(fileName);
-        setFiles.put(fileName, result);
-      }
-      return result;
-    }
   }
 
   public boolean isConstructor(DexMethod method) {
