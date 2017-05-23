@@ -23,9 +23,6 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.optimize.InvokeSingleTargetExtractor;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.FieldSignatureEquivalence;
-import com.android.tools.r8.utils.HashMapInt;
-import com.android.tools.r8.utils.IdentityHashMapInt;
-import com.android.tools.r8.utils.IntIntHashMap;
 import com.android.tools.r8.utils.MethodSignatureEquivalence;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.base.Equivalence;
@@ -33,6 +30,10 @@ import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -274,7 +275,7 @@ public class SimpleClassMerger {
     }
 
     private <T> Set<T> mergeArrays(T[] one, T[] other) {
-      Set<T> merged = new LinkedHashSet<T>();
+      Set<T> merged = new LinkedHashSet<>();
       Collections.addAll(merged, one);
       Collections.addAll(merged, other);
       return merged;
@@ -513,22 +514,26 @@ public class SimpleClassMerger {
 
   private static class CollisionDetector {
 
+    private static int NOT_FOUND = 1 << (Integer.SIZE - 1);
+
     // TODO(herhut): Maybe cache seenPositions for target classes.
-    private final Map<DexString, IntIntHashMap> seenPositions = new IdentityHashMap<>();
-    private final HashMapInt<DexProto> targetProtoCache;
-    private final HashMapInt<DexProto> sourceProtoCache;
+    private final Map<DexString, Int2IntMap> seenPositions = new IdentityHashMap<>();
+    private final Reference2IntMap<DexProto> targetProtoCache;
+    private final Reference2IntMap<DexProto> sourceProtoCache;
     private final DexType source, target;
-    private final Set<DexMethod> invokes;
+    private final Collection<DexMethod> invokes;
     private final Map<DexType, DexType> substituions;
 
-    private CollisionDetector(DexType source, DexType target, Set<DexMethod> invokes,
+    private CollisionDetector(DexType source, DexType target, Collection<DexMethod> invokes,
         Map<DexType, DexType> substitutions) {
       this.source = source;
       this.target = target;
       this.invokes = invokes;
       this.substituions = substitutions;
-      this.targetProtoCache = new IdentityHashMapInt<>(invokes.size() / 2);
-      this.sourceProtoCache = new IdentityHashMapInt<>(invokes.size() / 2);
+      this.targetProtoCache = new Reference2IntOpenHashMap<>(invokes.size() / 2);
+      this.targetProtoCache.defaultReturnValue(NOT_FOUND);
+      this.sourceProtoCache = new Reference2IntOpenHashMap<>(invokes.size() / 2);
+      this.sourceProtoCache.defaultReturnValue(NOT_FOUND);
     }
 
     boolean mayCollide() {
@@ -538,11 +543,11 @@ public class SimpleClassMerger {
         return false;
       }
       for (DexMethod method : invokes) {
-        IntIntHashMap positionsMap = seenPositions.get(method.name);
+        Int2IntMap positionsMap = seenPositions.get(method.name);
         if (positionsMap != null) {
           int arity = method.proto.parameters.values.length;
-          if (positionsMap.containsKey(arity)) {
-            int previous = positionsMap.get(arity);
+          int previous = positionsMap.get(arity);
+          if (previous != NOT_FOUND) {
             assert previous != 0;
             int positions = computePositionsFor(method.proto, source, sourceProtoCache,
                 substituions);
@@ -561,55 +566,58 @@ public class SimpleClassMerger {
         int arity = parameters.length;
         int positions = computePositionsFor(method.proto, target, targetProtoCache, substituions);
         if (positions != 0) {
-          IntIntHashMap positionsMap =
-              seenPositions.computeIfAbsent(method.name, k -> new IntIntHashMap());
+          Int2IntMap positionsMap =
+              seenPositions.computeIfAbsent(method.name, k -> {
+                Int2IntMap result = new Int2IntOpenHashMap();
+                result.defaultReturnValue(NOT_FOUND);
+                return result;
+              });
           int value = 0;
-          if (positionsMap.containsKey(arity)) {
-            value = positionsMap.get(arity);
+          int previous = positionsMap.get(arity);
+          if (previous != NOT_FOUND) {
+            value = previous;
           }
           value |= positions;
           positionsMap.put(arity, value);
         }
       }
-      int filled = 0;
-      for (IntIntHashMap pos : seenPositions.values()) {
-        filled += pos.size();
-      }
+
     }
 
     private int computePositionsFor(DexProto proto, DexType type,
-        HashMapInt<DexProto> cache, Map<DexType, DexType> substituions) {
-      if (cache.containsKey(proto)) {
-        return cache.get(proto);
+        Reference2IntMap<DexProto> cache, Map<DexType, DexType> substitutions) {
+      int result = cache.getInt(proto);
+      if (result != NOT_FOUND) {
+        return result;
       }
-      int result = 0;
-      int bits = 0;
+      result = 0;
+      int bitsUsed = 0;
       int accumulator = 0;
       for (DexType aType : proto.parameters.values) {
-        if (substituions != null) {
+        if (substitutions != null) {
           // Substitute the type with the already merged class to estimate what it will
           // look like.
-          while (substituions.containsKey(aType)) {
-            aType = substituions.get(aType);
+          while (substitutions.containsKey(aType)) {
+            aType = substitutions.get(aType);
           }
         }
         accumulator <<= 1;
-        bits++;
+        bitsUsed++;
         if (aType == type) {
           accumulator |= 1;
         }
-        // Handle overflow on 32 bit boundary.
-        if (bits == Integer.SIZE) {
+        // Handle overflow on 31 bit boundary.
+        if (bitsUsed == Integer.SIZE - 1) {
           result |= accumulator;
           accumulator = 0;
-          bits = 0;
+          bitsUsed = 0;
         }
       }
       // We also take the return type into account for potential conflicts.
       DexType returnType = proto.returnType;
-      if (substituions != null) {
-        while (substituions.containsKey(returnType)) {
-          returnType = substituions.get(returnType);
+      if (substitutions != null) {
+        while (substitutions.containsKey(returnType)) {
+          returnType = substitutions.get(returnType);
         }
       }
       accumulator <<= 1;

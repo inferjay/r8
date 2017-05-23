@@ -50,8 +50,8 @@ import com.android.tools.r8.graph.DexValue.DexValueMethodType;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.OffsetToObjectMapping;
 import com.android.tools.r8.logging.Log;
-import com.android.tools.r8.utils.IntHashMap;
-import com.android.tools.r8.utils.InternalResource;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ShortBuffer;
@@ -91,10 +91,10 @@ public class DexFileReader {
   private OffsetToObjectMapping indexedItems = new OffsetToObjectMapping();
 
   // Mapping from offset to code item;
-  private IntHashMap<DexCode> codes = new IntHashMap<>();
+  private Int2ObjectMap<DexCode> codes = new Int2ObjectOpenHashMap<>();
 
   // Mapping from offset to dex item;
-  private IntHashMap<Object> offsetMap = new IntHashMap<>();
+  private Int2ObjectMap<Object> offsetMap = new Int2ObjectOpenHashMap<>();
 
   // Factory to canonicalize certain dexitems.
   private final DexItemFactory dexItemFactory;
@@ -140,7 +140,9 @@ public class DexFileReader {
   }
 
   private DexTypeList typeListAt(int offset) {
-    if (offset == 0) return DexTypeList.empty();
+    if (offset == 0) {
+      return DexTypeList.empty();
+    }
     return (DexTypeList) cacheAt(offset, this::parseTypeList);
   }
 
@@ -358,9 +360,13 @@ public class DexFileReader {
   }
 
   private <T> Object cacheAt(int offset, Supplier<T> function) {
-    if (offset == 0) return null;  // return null for offset zero.
+    if (offset == 0) {
+      return null;  // return null for offset zero.
+    }
     Object result = offsetMap.get(offset);
-    if (result != null) return result;  // return the cached result.
+    if (result != null) {
+      return result;  // return the cached result.
+    }
     // Cache is empty so parse the structure.
     file.position(offset);
     result = function.get();
@@ -812,7 +818,7 @@ public class DexFileReader {
   private static void populateMethodHandles(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_METHOD_HANDLE_ITEM);
     reader.indexedItems.initializeMethodHandles(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setMethodHandle(i, reader.methodHandleAt(i));
     }
   }
@@ -820,7 +826,7 @@ public class DexFileReader {
   private static void populateCallSites(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_CALL_SITE_ID_ITEM);
     reader.indexedItems.initializeCallSites(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setCallSites(i, reader.callSiteAt(i));
     }
   }
@@ -828,7 +834,7 @@ public class DexFileReader {
   private static void populateTypes(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_TYPE_ID_ITEM);
     reader.indexedItems.initializeTypes(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setType(i, reader.typeAt(i));
     }
   }
@@ -836,7 +842,7 @@ public class DexFileReader {
   private static void populateFields(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_FIELD_ID_ITEM);
     reader.indexedItems.initializeFields(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setField(i, reader.fieldAt(i));
     }
   }
@@ -844,7 +850,7 @@ public class DexFileReader {
   private static void populateProtos(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_PROTO_ID_ITEM);
     reader.indexedItems.initializeProtos(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setProto(i, reader.protoAt(i));
     }
   }
@@ -852,7 +858,7 @@ public class DexFileReader {
   private static void populateMethods(DexFileReader reader) {
     Segment segment = reader.lookupSegment(Constants.TYPE_METHOD_ID_ITEM);
     reader.indexedItems.initializeMethods(segment.size);
-    for (int i = 0; i < segment.size; i++){
+    for (int i = 0; i < segment.size; i++) {
       reader.indexedItems.setMethod(i, reader.methodAt(i));
     }
   }
