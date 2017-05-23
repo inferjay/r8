@@ -35,7 +35,10 @@ public class ClassMergingTest {
             .addProgramFiles(EXAMPLE_JAR)
             .addProguardConfigurationFiles(EXAMPLE_KEEP)
             .setMinification(false)
-            .build(), o -> o.allowAccessModification = false);
+            .build(), o -> {
+          o.allowAccessModification = false;
+          o.skipClassMerging = false;
+        });
     inspector = new DexInspector(
         Paths.get(temp.getRoot().getCanonicalPath()).resolve("classes.dex"));
   }
