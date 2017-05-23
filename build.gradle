@@ -164,6 +164,16 @@ x20Dependencies.each { entry ->
     }
 }
 
+task downloadProguard {
+    cloudDependencies.each { entry ->
+        entry.value.each { entryFile ->
+            if (entryFile.contains("proguard")) {
+                dependsOn "download_deps_${entry.key}/${entryFile}"
+            }
+        }
+    }
+}
+
 task downloadDeps {
     cloudDependencies.each { entry ->
         entry.value.each { entryFile ->
@@ -362,7 +372,7 @@ task buildDebugTestResourcesJars {
 }
 
 task buildExampleJars {
-    dependsOn downloadDeps
+    dependsOn downloadProguard
     def examplesDir = file("src/test/examples")
     def proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.sh"
     task "compile_examples"(type: JavaCompile) {
