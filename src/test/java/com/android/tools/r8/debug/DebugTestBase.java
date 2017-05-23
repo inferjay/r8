@@ -4,11 +4,12 @@
 package com.android.tools.r8.debug;
 
 import com.android.tools.r8.CompilationMode;
-import com.android.tools.r8.D8;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ArtCommandBuilder;
 import com.android.tools.r8.ToolHelper.DexVm;
+import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.utils.OffOrAuto;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.nio.file.Path;
@@ -78,11 +79,14 @@ public abstract class DebugTestBase {
 
   private static final Path DEBUGGEE_JAR = Paths
       .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources.jar");
+  private static final Path DEBUGGEE_JAVA8_JAR = Paths
+      .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources_java8.jar");
 
   @ClassRule
   public static TemporaryFolder temp = new TemporaryFolder();
   private static Path jdwpDexD8 = null;
   private static Path debuggeeDexD8 = null;
+  private static Path debuggeeJava8DexD8 = null;
 
   @Rule
   public TestName testName = new TestName();
@@ -95,7 +99,7 @@ public abstract class DebugTestBase {
       Path jdwpJar = ToolHelper.getJdwpTestsJarPath(minSdk);
       Path dexOutputDir = temp.newFolder("d8-jdwp-jar").toPath();
       jdwpDexD8 = dexOutputDir.resolve("classes.dex");
-      D8.run(
+      ToolHelper.runD8(
           D8Command.builder()
               .addProgramFiles(jdwpJar)
               .setOutputPath(dexOutputDir)
@@ -106,7 +110,7 @@ public abstract class DebugTestBase {
     {
       Path dexOutputDir = temp.newFolder("d8-debuggee-jar").toPath();
       debuggeeDexD8 = dexOutputDir.resolve("classes.dex");
-      D8.run(
+      ToolHelper.runD8(
           D8Command.builder()
               .addProgramFiles(DEBUGGEE_JAR)
               .setOutputPath(dexOutputDir)
@@ -114,6 +118,25 @@ public abstract class DebugTestBase {
               .setMode(CompilationMode.DEBUG)
               .build());
     }
+    {
+      Path dexOutputDir = temp.newFolder("d8-debuggee-java8-jar").toPath();
+      debuggeeJava8DexD8 = dexOutputDir.resolve("classes.dex");
+      ToolHelper.runD8(
+          D8Command.builder()
+              .addProgramFiles(DEBUGGEE_JAVA8_JAR)
+              .setOutputPath(dexOutputDir)
+              .setMinApiLevel(minSdk)
+              .setMode(CompilationMode.DEBUG)
+              .build(),
+          options -> {
+            // Enable desugaring for preN runtimes
+            options.interfaceMethodDesugaring = OffOrAuto.Auto;
+          });
+    }
+  }
+
+  protected final boolean supportsDefaultMethod() {
+    return ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()) >= Constants.ANDROID_N_API;
   }
 
   protected final void runDebugTest(String debuggeeClass, JUnit3Wrapper.Command... commands)
@@ -123,6 +146,22 @@ public abstract class DebugTestBase {
 
   protected final void runDebugTest(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
       throws Throwable {
+    runDebugTest(debuggeeDexD8, debuggeeClass, commands);
+  }
+
+  protected final void runDebugTestJava8(String debuggeeClass, JUnit3Wrapper.Command... commands)
+      throws Throwable {
+    runDebugTestJava8(debuggeeClass, Arrays.asList(commands));
+  }
+
+  protected final void runDebugTestJava8(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
+      throws Throwable {
+    runDebugTest(debuggeeJava8DexD8, debuggeeClass, commands);
+  }
+
+  private void runDebugTest(Path debuggeeExec, String debuggeeClass,
+      List<JUnit3Wrapper.Command> commands)
+      throws Throwable {
     // Skip test due to unsupported runtime.
     Assume.assumeTrue("Skipping test " + testName.getMethodName() + " because ART is not supported",
         ToolHelper.artSupported());
@@ -131,7 +170,7 @@ public abstract class DebugTestBase {
             .getDexVm(), UNSUPPORTED_ART_VERSIONS.contains(ToolHelper.getDexVm()));
 
     // Run with ART.
-    String[] paths = new String[]{jdwpDexD8.toString(), debuggeeDexD8.toString()};
+    String[] paths = new String[]{jdwpDexD8.toString(), debuggeeExec.toString()};
     new JUnit3Wrapper(debuggeeClass, paths, commands).runBare();
   }
 
@@ -170,6 +209,10 @@ public abstract class DebugTestBase {
   private JUnit3Wrapper.Command step(byte stepDepth,
       StepFilter stepFilter) {
     return new JUnit3Wrapper.Command.StepCommand(stepDepth, stepFilter);
+  }
+
+  protected final JUnit3Wrapper.Command checkLocal(String localName) {
+    return inspect(t -> t.checkLocal(localName));
   }
 
   protected final JUnit3Wrapper.Command checkLocal(String localName, Value expectedValue) {
@@ -308,6 +351,18 @@ public abstract class DebugTestBase {
         // Capture the context of the event suspension.
         updateEventContext((EventThread) parsedEvent);
 
+        if (DEBUG_TESTS && debuggeeState.location != null) {
+          // Dump location
+          String classSig = getMirror().getClassSignature(debuggeeState.location.classID);
+          String methodName = getMirror()
+              .getMethodName(debuggeeState.location.classID, debuggeeState.location.methodID);
+          String methodSig = getMirror()
+              .getMethodSignature(debuggeeState.location.classID, debuggeeState.location.methodID);
+          System.out.println(String
+              .format("Suspended in %s#%s%s@%x", classSig, methodName, methodSig,
+                  Long.valueOf(debuggeeState.location.index)));
+        }
+
         // Handle event.
         EventHandler eh = events.get(requestID);
         assert eh != null;
@@ -344,6 +399,10 @@ public abstract class DebugTestBase {
 
       public Location getLocation() {
         return this.location;
+      }
+
+      public void checkLocal(String localName) {
+        getVariableAt(getLocation(), localName);
       }
 
       public void checkLocal(String localName, Value expectedValue) {
@@ -767,7 +826,27 @@ public abstract class DebugTestBase {
       public boolean skipLocation(VmMirror mirror, Location location) {
         // TODO(shertz) we also need to skip class loaders to act like IntelliJ.
         // Skip synthetic methods.
-        return isSyntheticMethod(mirror, location);
+        if (isLambdaMethod(mirror, location)) {
+          // Lambda methods are synthetic but we do want to stop there.
+          if (DEBUG_TESTS) {
+            System.out.println("NOT skipping lambda implementation method");
+          }
+          return false;
+        }
+        if (isInLambdaClass(mirror, location)) {
+          // Lambda classes must be skipped since they are only wrappers around lambda code.
+          if (DEBUG_TESTS) {
+            System.out.println("Skipping lambda class wrapper method");
+          }
+          return true;
+        }
+        if (isSyntheticMethod(mirror, location)) {
+          if (DEBUG_TESTS) {
+            System.out.println("Skipping synthetic method");
+          }
+          return true;
+        }
+        return false;
       }
 
       private static boolean isSyntheticMethod(VmMirror mirror, Location location) {
@@ -786,6 +865,16 @@ public abstract class DebugTestBase {
           }
         }
         return false;
+      }
+
+      private static boolean isInLambdaClass(VmMirror mirror, Location location) {
+        String classSig = mirror.getClassSignature(location.classID);
+        return classSig.contains("$$Lambda$");
+      }
+
+      private boolean isLambdaMethod(VmMirror mirror, Location location) {
+        String methodName = mirror.getMethodName(location.classID, location.methodID);
+        return methodName.startsWith("lambda$");
       }
     }
   }
