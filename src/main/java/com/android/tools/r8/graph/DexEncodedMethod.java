@@ -121,17 +121,15 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
         : code.asDexCode().buildIR(this, valueNumberGenerator, options);
   }
 
-  public void setCode(
-      IRCode ir, RegisterAllocator registerAllocator, DexItemFactory dexItemFactory) {
-    final DexBuilder builder = new DexBuilder(ir, registerAllocator, dexItemFactory);
+  public void setCode(IRCode ir, RegisterAllocator registerAllocator) {
+    final DexBuilder builder = new DexBuilder(ir, registerAllocator);
     code = builder.build(method.proto.parameters.values.length);
   }
 
   // Replaces the dex code in the method by setting code to result of compiling the IR.
   public void setCode(IRCode ir, RegisterAllocator registerAllocator,
-      DexItemFactory dexItemFactory, DexString firstJumboString) {
-    final DexBuilder builder =
-        new DexBuilder(ir, registerAllocator, dexItemFactory, firstJumboString);
+      DexString firstJumboString) {
+    final DexBuilder builder = new DexBuilder(ir, registerAllocator, firstJumboString);
     code = builder.build(method.proto.parameters.values.length);
   }
 

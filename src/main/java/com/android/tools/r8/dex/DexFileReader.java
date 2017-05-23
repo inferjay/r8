@@ -24,6 +24,7 @@ import com.android.tools.r8.graph.DexCode.Try;
 import com.android.tools.r8.graph.DexCode.TryHandler;
 import com.android.tools.r8.graph.DexCode.TryHandler.TypeAddrPair;
 import com.android.tools.r8.graph.DexDebugEvent;
+import com.android.tools.r8.graph.DexDebugEvent.SetEpilogueBegin;
 import com.android.tools.r8.graph.DexDebugInfo;
 import com.android.tools.r8.graph.DexEncodedAnnotation;
 import com.android.tools.r8.graph.DexEncodedArray;
@@ -445,10 +446,10 @@ public class DexFileReader {
     for (int head = file.getUbyte(); head != Constants.DBG_END_SEQUENCE; head = file.getUbyte()) {
       switch (head) {
         case Constants.DBG_ADVANCE_PC:
-          events.add(dexItemFactory.createAdvancePC(file.getUleb128()));
+          events.add(new DexDebugEvent.AdvancePC(file.getUleb128()));
           break;
         case Constants.DBG_ADVANCE_LINE:
-          events.add(dexItemFactory.createAdvanceLine(file.getSleb128()));
+          events.add(new DexDebugEvent.AdvanceLine(file.getSleb128()));
           break;
         case Constants.DBG_START_LOCAL: {
           int registerNum = file.getUleb128();
@@ -474,30 +475,30 @@ public class DexFileReader {
           break;
         }
         case Constants.DBG_END_LOCAL: {
-          events.add(dexItemFactory.createEndLocal(file.getUleb128()));
+          events.add(new DexDebugEvent.EndLocal(file.getUleb128()));
           break;
         }
         case Constants.DBG_RESTART_LOCAL: {
-          events.add(dexItemFactory.createRestartLocal(file.getUleb128()));
+          events.add(new DexDebugEvent.RestartLocal(file.getUleb128()));
           break;
         }
         case Constants.DBG_SET_PROLOGUE_END: {
-          events.add(dexItemFactory.createSetPrologueEnd());
+          events.add(new DexDebugEvent.SetPrologueEnd());
           break;
         }
         case Constants.DBG_SET_EPILOGUE_BEGIN: {
-          events.add(dexItemFactory.createSetEpilogueBegin());
+          events.add(new SetEpilogueBegin());
           break;
         }
         case Constants.DBG_SET_FILE: {
           int nameIdx = file.getUleb128p1();
           DexString sourceFile = nameIdx == NO_INDEX ? null : indexedItems.getString(nameIdx);
-          events.add(dexItemFactory.createSetFile(sourceFile));
+          events.add(new DexDebugEvent.SetFile(sourceFile));
           break;
         }
         default: {
           assert head >= 0x0a && head <= 0xff;
-          events.add(dexItemFactory.createDefault(head));
+          events.add(new DexDebugEvent.Default(head));
         }
       }
     }
