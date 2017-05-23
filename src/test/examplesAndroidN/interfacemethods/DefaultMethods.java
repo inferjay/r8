@@ -6,7 +6,24 @@ package interfacemethods;
 
 public class DefaultMethods {
 
+  interface I3 {
+    default int getValue() {
+      return 1;
+    }
+
+  }
+
+  static class C3 {
+    public int getValue() {
+      return 2;
+    }
+  }
+
+  static class C4 extends C3 implements I3 {
+  }
+
   public static void main(String[] args) {
     new C2().d1();
+    System.out.println(new C4().getValue());
   }
 }
