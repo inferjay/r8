@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.DexDebugEntry;
 import com.android.tools.r8.graph.DexDebugEventBuilder;
 import com.android.tools.r8.graph.DexDebugInfo;
 import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexString;
@@ -29,10 +30,13 @@ public class DebugStripper {
 
   private final ClassNameMapper classNameMapper;
   private final InternalOptions options;
+  private final DexItemFactory dexItemFactory;
 
-  public DebugStripper(ClassNameMapper classNameMapper, InternalOptions options) {
+  public DebugStripper(
+      ClassNameMapper classNameMapper, InternalOptions options, DexItemFactory dexItemFactory) {
     this.classNameMapper = classNameMapper;
     this.options = options;
+    this.dexItemFactory = dexItemFactory;
   }
 
   private String descriptorToName(String descriptor) {
@@ -68,7 +72,7 @@ public class DebugStripper {
     // Maintain line and address but only when entering or leaving a range of line numbers
     // that pertains to a different method body.
     Range currentRange = naming.topLevelRange;
-    DexDebugEventBuilder builder = new DexDebugEventBuilder(method);
+    DexDebugEventBuilder builder = new DexDebugEventBuilder(method, dexItemFactory);
     // Always start with a no-op bytecode to make sure that the start-line is manifested by
     // the Dalvik VM and the event based processing in R8. This also avoids empty bytecode
     // sequences.
