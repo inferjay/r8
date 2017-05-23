@@ -17,9 +17,10 @@ import com.android.tools.r8.naming.ClassNaming;
 import com.android.tools.r8.naming.MemberNaming;
 import com.android.tools.r8.naming.MemberNaming.Range;
 import com.android.tools.r8.naming.MemberNaming.Signature;
-import com.android.tools.r8.utils.HashMapInt;
 import com.android.tools.r8.utils.InternalOptions;
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import java.util.List;
 
 public class DebugStripper {
@@ -50,6 +51,7 @@ public class DebugStripper {
   }
 
   private static class NumberedDebugInfo {
+
     final int numberOfEntries;
     final DexDebugInfo info;
 
@@ -103,7 +105,7 @@ public class DebugStripper {
   }
 
   private void processCode(DexEncodedMethod encodedMethod, MemberNaming naming,
-      HashMapInt<DexString> nameCounts) {
+      Reference2IntMap<DexString> nameCounts) {
     if (encodedMethod.getCode() == null) {
       return;
     }
@@ -118,7 +120,7 @@ public class DebugStripper {
     if (options.skipDebugLineNumberOpt) {
       startLine = originalInfo.startLine;
     } else {
-      int nameCount = nameCounts.get(name);
+      int nameCount = nameCounts.getInt(name);
       if (nameCount == USED_ONCE) {
         isUsedOnce = true;
         startLine = 0;
@@ -132,7 +134,7 @@ public class DebugStripper {
     DexDebugInfo newInfo = numberedInfo.info;
     if (!options.skipDebugLineNumberOpt) {
       // Fix up the line information.
-      int previousCount = nameCounts.get(name);
+      int previousCount = nameCounts.getInt(name);
       nameCounts.put(name, previousCount + numberedInfo.numberOfEntries);
       // If we don't actually need line information and there are no debug entries, throw it away.
       if (newInfo != null && isUsedOnce && newInfo.events.length == 0) {
@@ -147,7 +149,7 @@ public class DebugStripper {
   }
 
   private void processMethod(DexEncodedMethod method, ClassNaming classNaming,
-      HashMapInt<DexString> nameCounts) {
+      Reference2IntMap<DexString> nameCounts) {
     MemberNaming naming = null;
     if (classNaming != null) {
       Signature renamedSignature = classNameMapper.getRenamedMethodSignature(method.method);
@@ -157,7 +159,7 @@ public class DebugStripper {
   }
 
   private void processMethods(DexEncodedMethod[] methods, ClassNaming naming,
-      HashMapInt<DexString> nameCounts) {
+      Reference2IntMap<DexString> nameCounts) {
     if (methods == null) {
       return;
     }
@@ -172,14 +174,14 @@ public class DebugStripper {
     }
     String name = descriptorToName(clazz.type.toDescriptorString());
     ClassNaming naming = classNameMapper == null ? null : classNameMapper.getClassNaming(name);
-    HashMapInt<DexString> nameCounts = new HashMapInt<>();
+    Reference2IntMap<DexString> nameCounts = new Reference2IntOpenHashMap<>();
     setIntialNameCounts(nameCounts, clazz.directMethods());
     setIntialNameCounts(nameCounts, clazz.virtualMethods());
     processMethods(clazz.directMethods(), naming, nameCounts);
     processMethods(clazz.virtualMethods(), naming, nameCounts);
   }
 
-  private void setIntialNameCounts(HashMapInt<DexString> nameCounts,
+  private void setIntialNameCounts(Reference2IntMap<DexString> nameCounts,
       DexEncodedMethod[] methods) {
     for (DexEncodedMethod method : methods) {
       if (nameCounts.containsKey(method.method.name)) {
