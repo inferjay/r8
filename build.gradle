@@ -306,7 +306,7 @@ task createArtTests(type: Exec) {
 }
 
 task createJctfTests(type: Exec) {
-    def outputDir = "build/generated/test/java/com/android/tools/r8/art"
+    def outputDir = "build/generated/test/java/com/android/tools/r8/jctf"
     def script = "scripts/create-jctf-tests.sh"
     inputs.file script
     outputs.dir outputDir
@@ -660,10 +660,10 @@ test {
     }
     // TODO(tamaskenez) enable jctf on all_tests when consolidated
     if (!project.hasProperty('jctf') && !project.hasProperty('only_jctf')) {
-        exclude "com/android/tools/r8/art/jctf/**"
+        exclude "com/android/tools/r8/jctf/**"
     }
     if (project.hasProperty('only_jctf')) {
-        include "com/android/tools/r8/art/jctf/**"
+        include "com/android/tools/r8/jctf/**"
     }
     if (project.hasProperty('jctf_compile_only')) {
         println "JCTF: compiling only"
