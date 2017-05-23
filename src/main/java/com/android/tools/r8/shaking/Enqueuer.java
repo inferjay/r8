@@ -682,6 +682,7 @@ public class Enqueuer {
     }
     superInvokeDependencies.computeIfAbsent(from, ignore -> Sets.newIdentityHashSet()).add(target);
     if (liveMethods.contains(from)) {
+      markMethodAsTargeted(target, KeepReason.invokedViaSuperFrom(from));
       markVirtualMethodAsLive(target, KeepReason.invokedViaSuperFrom(from));
     }
   }
@@ -822,6 +823,7 @@ public class Enqueuer {
             Log.verbose(getClass(), "Found super invoke constraint on `%s`.",
                 superCallTarget.method);
           }
+          markMethodAsTargeted(superCallTarget, KeepReason.invokedViaSuperFrom(method));
           markVirtualMethodAsLive(superCallTarget, KeepReason.invokedViaSuperFrom(method));
         }
       }
