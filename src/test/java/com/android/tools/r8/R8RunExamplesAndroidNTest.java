@@ -35,17 +35,11 @@ public class R8RunExamplesAndroidNTest {
   private static Map<DexVm, List<String>> failsOn =
       ImmutableMap.of(
           DexVm.ART_4_4_4,
-          ImmutableList.of(
-              // Dex version not supported
-              "staticinterfacemethods", "defaultmethods"),
+          ImmutableList.of(),
           DexVm.ART_5_1_1,
-          ImmutableList.of(
-              // Dex version not supported
-              "staticinterfacemethods", "defaultmethods"),
+          ImmutableList.of(),
           DexVm.ART_6_0_1,
-          ImmutableList.of(
-              // Dex version not supported
-              "staticinterfacemethods", "defaultmethods"),
+          ImmutableList.of(),
           DexVm.ART_7_0_0,
           ImmutableList.of(),
           DexVm.ART_DEFAULT,
@@ -61,7 +55,7 @@ public class R8RunExamplesAndroidNTest {
         "staticinterfacemethods",
         "interfacemethods",
         "StaticInterfaceMethods",
-        Constants.ANDROID_N_API,
+        Constants.ANDROID_K_API,
         options -> options.interfaceMethodDesugaring = OffOrAuto.Auto);
   }
 
@@ -80,7 +74,7 @@ public class R8RunExamplesAndroidNTest {
         "defaultmethods",
         "interfacemethods",
         "DefaultMethods",
-        Constants.ANDROID_N_API,
+        Constants.ANDROID_K_API,
         options -> options.interfaceMethodDesugaring = OffOrAuto.Auto);
   }
 
