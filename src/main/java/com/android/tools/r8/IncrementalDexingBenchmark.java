@@ -33,7 +33,7 @@ public class IncrementalDexingBenchmark {
         compile(executor);
       }
       double elapsedMs = (System.nanoTime() - start) / 1000000.0;
-      System.out.println("Runtime: " + elapsedMs + " ms");
+      System.out.println("IncrementalDexing(Runtime): " + elapsedMs + " ms");
     } finally {
       executor.shutdown();
     }
