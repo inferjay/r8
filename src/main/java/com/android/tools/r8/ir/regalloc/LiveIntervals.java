@@ -89,8 +89,12 @@ public class LiveIntervals {
     }
     // If one of the non-spilled splits uses a register that is higher than U8BIT_MAX we cannot
     // rematerialize it using a ConstNumber instruction and we use spill moves instead of
-    // rematerialization.
-    int max = registerAllocator.realRegisterNumberFromAllocated(getMaxNonSpilledRegister());
+    // rematerialization. We use this check both before and after we have computed the set
+    // of unused registers. We therefore have to be careful to use the same max number for
+    // these computations. We use the unadjusted real register number to make sure that
+    // isRematerializable for the same intervals does not change from one phase of
+    // compilation to the next.
+    int max = registerAllocator.unadjustedRealRegisterFromAllocated(getMaxNonSpilledRegister());
     return max < Constants.U8BIT_MAX;
   }
 
