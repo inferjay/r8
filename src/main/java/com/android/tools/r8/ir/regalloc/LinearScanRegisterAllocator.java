@@ -470,7 +470,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     return realRegisterNumberFromAllocated(intervalsRegister);
   }
 
-  int realRegisterNumberFromAllocated(int allocated) {
+  int unadjustedRealRegisterFromAllocated(int allocated) {
     assert allocated != NO_REGISTER;
     assert allocated >= 0;
     int register;
@@ -484,6 +484,11 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       // For everything else use the lower numbers.
       register = allocated - numberOfArgumentRegisters - NUMBER_OF_SENTINEL_REGISTERS;
     }
+    return register;
+  }
+
+  int realRegisterNumberFromAllocated(int allocated) {
+    int register = unadjustedRealRegisterFromAllocated(allocated);
     // Adjust for spill registers that turn out to be unused because the value can be
     // rematerialized instead of spilled.
     if (unusedRegisters != null) {
