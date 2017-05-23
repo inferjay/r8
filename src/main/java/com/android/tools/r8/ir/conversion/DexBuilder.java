@@ -74,6 +74,8 @@ public class DexBuilder {
   // The register allocator providing register assignments for the code to build.
   private final RegisterAllocator registerAllocator;
 
+  private final DexItemFactory dexItemFactory;
+
   // List of information about switch payloads that have to be created at the end of the
   // dex code.
   private final List<SwitchPayloadInfo> switchPayloadInfos = new ArrayList<>();
@@ -105,19 +107,24 @@ public class DexBuilder {
 
   BasicBlock nextBlock;
 
-  public DexBuilder(IRCode ir, RegisterAllocator registerAllocator) {
+  public DexBuilder(IRCode ir, RegisterAllocator registerAllocator, DexItemFactory dexItemFactory) {
     assert ir != null;
     assert registerAllocator != null;
+    assert dexItemFactory != null;
     this.ir = ir;
     this.registerAllocator = registerAllocator;
+    this.dexItemFactory = dexItemFactory;
     this.firstJumboString = null;
   }
 
-  public DexBuilder(IRCode ir, RegisterAllocator registerAllocator, DexString firstJumboString) {
+  public DexBuilder(IRCode ir, RegisterAllocator registerAllocator,
+      DexItemFactory dexItemFactory, DexString firstJumboString) {
     assert ir != null;
     assert registerAllocator != null;
+    assert dexItemFactory != null;
     this.ir = ir;
     this.registerAllocator = registerAllocator;
+    this.dexItemFactory = dexItemFactory;
     this.firstJumboString = firstJumboString;
   }
 
@@ -184,7 +191,8 @@ public class DexBuilder {
     } while (!ifsNeedingRewrite.isEmpty());
 
     // Build instructions.
-    DexDebugEventBuilder debugEventBuilder = new DexDebugEventBuilder(ir.method.method);
+    DexDebugEventBuilder debugEventBuilder =
+        new DexDebugEventBuilder(ir.method.method, dexItemFactory);
     List<Instruction> dexInstructions = new ArrayList<>(numberOfInstructions);
     int instructionOffset = 0;
     InstructionIterator instructionIterator = ir.instructionIterator();

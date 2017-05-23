@@ -109,7 +109,8 @@ public class R8 {
     if (!options.skipDebugInfoOpt && (application.getProguardMap() != null)) {
       try {
         timing.begin("DebugStripper");
-        DebugStripper stripper = new DebugStripper(application.getProguardMap(), options);
+        DebugStripper stripper =
+            new DebugStripper(application.getProguardMap(), options, appInfo.dexItemFactory);
         application.classes().forEach(stripper::processClass);
       } finally {
         timing.end();
