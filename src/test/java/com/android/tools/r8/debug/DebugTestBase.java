@@ -62,8 +62,13 @@ public abstract class DebugTestBase {
   public static final StepFilter INTELLIJ_FILTER = new StepFilter.IntelliJStepFilter();
   private static final StepFilter DEFAULT_FILTER = NO_FILTER;
 
+  enum RuntimeKind {
+    JAVA,
+    ART
+  }
+
   // Set to true to run tests with java
-  private static final boolean RUN_DEBUGGEE_WITH_JAVA = false;
+  private static final RuntimeKind RUNTIME_KIND = RuntimeKind.ART;
 
   // Set to true to enable verbose logs
   private static final boolean DEBUG_TESTS = false;
@@ -77,6 +82,8 @@ public abstract class DebugTestBase {
       DexVm.ART_5_1_1,
       DexVm.ART_6_0_1);
 
+  private static final Path JDWP_JAR = ToolHelper
+      .getJdwpTestsJarPath(ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()));
   private static final Path DEBUGGEE_JAR = Paths
       .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources.jar");
   private static final Path DEBUGGEE_JAVA8_JAR = Paths
@@ -96,12 +103,11 @@ public abstract class DebugTestBase {
     // Convert jar to dex with d8 with debug info
     int minSdk = ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm());
     {
-      Path jdwpJar = ToolHelper.getJdwpTestsJarPath(minSdk);
       Path dexOutputDir = temp.newFolder("d8-jdwp-jar").toPath();
       jdwpDexD8 = dexOutputDir.resolve("classes.dex");
       ToolHelper.runD8(
           D8Command.builder()
-              .addProgramFiles(jdwpJar)
+              .addProgramFiles(JDWP_JAR)
               .setOutputPath(dexOutputDir)
               .setMinApiLevel(minSdk)
               .setMode(CompilationMode.DEBUG)
@@ -136,7 +142,12 @@ public abstract class DebugTestBase {
   }
 
   protected final boolean supportsDefaultMethod() {
-    return ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()) >= Constants.ANDROID_N_API;
+    return RUNTIME_KIND == RuntimeKind.JAVA ||
+        ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()) >= Constants.ANDROID_N_API;
+  }
+
+  protected final boolean isRunningJava() {
+    return RUNTIME_KIND == RuntimeKind.JAVA;
   }
 
   protected final void runDebugTest(String debuggeeClass, JUnit3Wrapper.Command... commands)
@@ -146,7 +157,7 @@ public abstract class DebugTestBase {
 
   protected final void runDebugTest(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
       throws Throwable {
-    runDebugTest(debuggeeDexD8, debuggeeClass, commands);
+    runDebugTest(false, debuggeeClass, commands);
   }
 
   protected final void runDebugTestJava8(String debuggeeClass, JUnit3Wrapper.Command... commands)
@@ -156,10 +167,10 @@ public abstract class DebugTestBase {
 
   protected final void runDebugTestJava8(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
       throws Throwable {
-    runDebugTest(debuggeeJava8DexD8, debuggeeClass, commands);
+    runDebugTest(true, debuggeeClass, commands);
   }
 
-  private void runDebugTest(Path debuggeeExec, String debuggeeClass,
+  private void runDebugTest(boolean useJava8, String debuggeeClass,
       List<JUnit3Wrapper.Command> commands)
       throws Throwable {
     // Skip test due to unsupported runtime.
@@ -169,8 +180,18 @@ public abstract class DebugTestBase {
         "Skipping failing test " + testName.getMethodName() + " for runtime " + ToolHelper
             .getDexVm(), UNSUPPORTED_ART_VERSIONS.contains(ToolHelper.getDexVm()));
 
-    // Run with ART.
-    String[] paths = new String[]{jdwpDexD8.toString(), debuggeeExec.toString()};
+    String[] paths;
+    if (RUNTIME_KIND == RuntimeKind.JAVA) {
+      paths = new String[] {
+          JDWP_JAR.toString(),
+          useJava8 ? DEBUGGEE_JAVA8_JAR.toString() : DEBUGGEE_JAR.toString()
+      };
+    } else {
+      paths = new String[] {
+          jdwpDexD8.toString(),
+          useJava8 ? debuggeeJava8DexD8.toString() : debuggeeDexD8.toString()
+      };
+    }
     new JUnit3Wrapper(debuggeeClass, paths, commands).runBare();
   }
 
@@ -368,6 +389,35 @@ public abstract class DebugTestBase {
         assert eh != null;
         eh.handle(this);
       }
+    }
+
+    @Override
+    protected JPDATestOptions createTestOptions() {
+      // Override properties to run debuggee with ART/Dalvik.
+      class ArtTestOptions extends JPDATestOptions {
+
+        ArtTestOptions(String[] debuggeePath) {
+          // Set debuggee command-line.
+          if (RUNTIME_KIND == RuntimeKind.ART) {
+            ArtCommandBuilder artCommandBuilder = new ArtCommandBuilder(ToolHelper.getDexVm());
+            if (ToolHelper.getDexVm().isNewerThan(DexVm.ART_5_1_1)) {
+              artCommandBuilder.appendArtOption("-Xcompiler-option");
+              artCommandBuilder.appendArtOption("--debuggable");
+              artCommandBuilder.appendArtOption("-Xcompiler-option");
+              artCommandBuilder.appendArtOption("--compiler-filter=interpret-only");
+            }
+            setProperty("jpda.settings.debuggeeJavaPath", artCommandBuilder.build());
+          }
+
+          // Set debuggee classpath
+          String debuggeeClassPath = String.join(File.pathSeparator, debuggeePath);
+          setProperty("jpda.settings.debuggeeClasspath", debuggeeClassPath);
+
+          // Set verbosity
+          setProperty("jpda.settings.verbose", Boolean.toString(DEBUG_TESTS));
+        }
+      }
+      return new ArtTestOptions(debuggeePath);
     }
 
     //
@@ -723,39 +773,6 @@ public abstract class DebugTestBase {
 
         // Resume now
         testBase.resume();
-      }
-    }
-
-    @Override
-    protected JPDATestOptions createTestOptions() {
-      if (RUN_DEBUGGEE_WITH_JAVA) {
-        return super.createTestOptions();
-      } else {
-        // Override properties to run debuggee with ART/Dalvik.
-        class ArtTestOptions extends JPDATestOptions {
-
-          ArtTestOptions(String[] debuggeePath) {
-            // Set debuggee command-line.
-            if (!RUN_DEBUGGEE_WITH_JAVA) {
-              ArtCommandBuilder artCommandBuilder = new ArtCommandBuilder(ToolHelper.getDexVm());
-              if (ToolHelper.getDexVm().isNewerThan(DexVm.ART_5_1_1)) {
-                artCommandBuilder.appendArtOption("-Xcompiler-option");
-                artCommandBuilder.appendArtOption("--debuggable");
-                artCommandBuilder.appendArtOption("-Xcompiler-option");
-                artCommandBuilder.appendArtOption("--compiler-filter=interpret-only");
-              }
-              setProperty("jpda.settings.debuggeeJavaPath", artCommandBuilder.build());
-
-              // Set debuggee classpath
-              String debuggeeClassPath = String.join(File.pathSeparator, debuggeePath);
-              setProperty("jpda.settings.debuggeeClasspath", debuggeeClassPath);
-            }
-
-            // Set verbosity
-            setProperty("jpda.settings.verbose", Boolean.toString(DEBUG_TESTS));
-          }
-        }
-        return new ArtTestOptions(debuggeePath);
       }
     }
   }
