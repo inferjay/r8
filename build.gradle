@@ -29,6 +29,12 @@ sourceSets {
         }
         output.resourcesDir = 'build/classes/debugTestResources'
     }
+    debugTestResourcesJava8 {
+        java {
+            srcDirs = ['src/test/debugTestResourcesJava8']
+        }
+        output.resourcesDir = 'build/classes/debugTestResourcesJava8'
+    }
     examples {
         java {
             srcDirs = ['src/test/examples']
@@ -351,7 +357,6 @@ task buildDebugInfoExamplesDex {
 }
 
 task buildDebugTestResourcesJars {
-    dependsOn downloadDeps
     def resourcesDir = file("src/test/debugTestResources")
     def hostJar = "debug_test_resources.jar"
     task "compile_debugTestResources"(type: JavaCompile) {
@@ -368,7 +373,25 @@ task buildDebugTestResourcesJars {
         from "build/test/debugTestResources/classes"
         include "**/*.class"
     }
+    def java8ResourcesDir = file("src/test/debugTestResourcesJava8")
+    def java8HostJar = "debug_test_resources_java8.jar"
+    task "compile_debugTestResourcesJava8"(type: JavaCompile) {
+        source = fileTree(dir: java8ResourcesDir, include: '**/*.java')
+        destinationDir = file("build/test/debugTestResourcesJava8/classes")
+        classpath = sourceSets.main.compileClasspath
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        options.compilerArgs += ["-g", "-Xlint:-options"]
+    }
+    task "jar_debugTestResourcesJava8"(type: Jar, dependsOn: "compile_debugTestResourcesJava8") {
+        archiveName = java8HostJar
+        destinationDir = file("build/test/")
+        from "build/test/debugTestResourcesJava8/classes"
+        include "**/*.class"
+    }
+    dependsOn downloadDeps
     dependsOn jar_debugTestResources
+    dependsOn jar_debugTestResourcesJava8
 }
 
 task buildExampleJars {
