@@ -263,11 +263,16 @@ public class DexAccessFlags {
     set(Constants.ACC_DECLARED_SYNCHRONIZED);
   }
 
-  public void promoteToPublic() {
+  public void promoteNonPrivateToPublic() {
     if (!isPrivate()) {
       flags &= ~Constants.ACC_PROTECTED;
       flags |= Constants.ACC_PUBLIC;
     }
+  }
+
+  public void promoteToPublic() {
+    flags &= ~Constants.ACC_PROTECTED & ~Constants.ACC_PRIVATE;
+    flags |= Constants.ACC_PUBLIC;
   }
 
   private boolean isSet(int flag) {

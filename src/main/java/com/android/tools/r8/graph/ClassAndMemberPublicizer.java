@@ -7,7 +7,7 @@ public abstract class ClassAndMemberPublicizer {
 
   private static void publicizeAllMethods(DexEncodedMethod[] methods) {
     for (DexEncodedMethod method : methods) {
-      method.accessFlags.promoteToPublic();
+      method.accessFlags.promoteNonPrivateToPublic();
     }
   }
 
