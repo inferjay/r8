@@ -38,6 +38,13 @@ def get_sha1(filename):
       sha1.update(chunk)
   return sha1.hexdigest()
 
+def makedirs_if_needed(path):
+  try:
+    os.makedirs(path)
+  except OSError:
+    if not os.path.isdir(path):
+        raise
+
 class TempDir(object):
  def __init__(self, prefix=''):
    self._temp_dir = None

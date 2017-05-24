@@ -239,6 +239,20 @@ task CompatDx(type: Jar) {
     }
 }
 
+task D8Logger(type: Jar) {
+    from sourceSets.main.output
+    baseName 'd8logger'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.D8Logger'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps D8Logger
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
 task disasm(type: Jar) {
     from sourceSets.main.output
     baseName 'disasm'
