@@ -429,7 +429,46 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   private boolean performAllocation(ArgumentReuseMode mode) {
     boolean result = performAllocationWithoutMoveInsertion(mode);
     insertMoves();
+    if (mode == ArgumentReuseMode.DISALLOW_ARGUMENT_REUSE) {
+      // Now that we know the max register number we can compute whether it is safe to use
+      // argument registers in place. If it is, we redo move insertion to get rid of the moves
+      // caused by splitting of the argument registers.
+      if (unsplitArguments()) {
+        removeSpillAndPhiMoves();
+        insertMoves();
+      }
+    }
     return result;
+  }
+
+  // When argument register reuse is disallowed, we split argument values to make sure that
+  // we can get the argument into low enough registers at uses that require low numbers. After
+  // register allocation we can check if it is safe to just use the argument register itself
+  // for all uses and thereby avoid moving argument values around.
+  private boolean unsplitArguments() {
+    boolean argumentRegisterUnsplit = false;
+    Value current = preArgumentSentinelValue;
+    while (current != null) {
+      LiveIntervals intervals = current.getLiveIntervals();
+      assert intervals.getRegisterLimit() == Constants.U16BIT_MAX;
+      boolean canUseArgumentRegister = true;
+      for (LiveIntervals child : intervals.getSplitChildren()) {
+        if (child.getRegisterLimit() < registersUsed()) {
+          canUseArgumentRegister = false;
+          break;
+        }
+      }
+      if (canUseArgumentRegister) {
+        argumentRegisterUnsplit = true;
+        for (LiveIntervals child : intervals.getSplitChildren()) {
+          child.clearRegisterAssignment();
+          child.setRegister(intervals.getRegister());
+          child.setSpilled(false);
+        }
+      }
+      current = current.getNextConsecutive();
+    }
+    return argumentRegisterUnsplit;
   }
 
   private void removeSpillAndPhiMoves() {
