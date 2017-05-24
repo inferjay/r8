@@ -17,7 +17,8 @@ public class InstructionEquivalence extends Equivalence<Instruction> {
 
   @Override
   protected boolean doEquivalent(Instruction a, Instruction b) {
-    return a.identicalAfterRegisterAllocation(b, allocator);
+    return a.identicalAfterRegisterAllocation(b, allocator)
+        && a.getBlock().getCatchHandlers().equals(b.getBlock().getCatchHandlers());
   }
 
   @Override
@@ -32,6 +33,7 @@ public class InstructionEquivalence extends Equivalence<Instruction> {
         hash += allocator.getRegisterForValue(inValue, instruction.getNumber());
       }
     }
+    hash = hash * 37 + instruction.getBlock().getCatchHandlers().hashCode();
     return hash;
   }
 }

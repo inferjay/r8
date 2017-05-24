@@ -86,6 +86,7 @@ public class R8RunExamplesTest {
         {"throwing.Throwing", "Throwing"},
         {"trivial.Trivial", null},
         {"trycatch.TryCatch", "Success!"},
+        {"nestedtrycatches.NestedTryCatches", "EXCEPTION: PRIMARY"},
         {"trycatchmany.TryCatchMany", "Success!"},
         {"invokeempty.InvokeEmpty", "AB"},
         {"regress.Regress", null},
