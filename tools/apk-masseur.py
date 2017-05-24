@@ -24,6 +24,10 @@ def parse_options():
   parser.add_option('--keystore',
                     help='keystore file (default ~/.android/app.keystore)',
                     default=None)
+  parser.add_option('--install',
+                    help='install the generated apk with adb options -t -r -d',
+                    default=False,
+                    action='store_true')
   (options, args) = parser.parse_args()
   if len(args) != 1:
     parser.error('Expected <apk> argument, got: ' + ' '.join(args))
@@ -102,6 +106,10 @@ def main():
     aligned_apk = align(signed_apk, temp)
     print 'Writing result to', options.out
     shutil.copyfile(aligned_apk, options.out)
+    if options.install:
+      cmd = ['adb', 'install', '-t', '-r', '-d', options.out]
+      utils.PrintCmd(cmd)
+      subprocess.check_call(cmd)
   return 0
 
 if __name__ == '__main__':
