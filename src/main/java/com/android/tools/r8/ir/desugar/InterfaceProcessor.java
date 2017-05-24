@@ -121,6 +121,8 @@ final class InterfaceProcessor {
     companionClassFlags.unsetInterface();
     companionClassFlags.setFinal();
     companionClassFlags.setSynthetic();
+    // Companion class must be public so moved methods can be called from anywhere.
+    companionClassFlags.setPublic();
 
     // Create companion class.
     DexType companionClassType = rewriter.getCompanionClassType(iface.type);
