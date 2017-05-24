@@ -295,13 +295,12 @@ artifacts {
 
 task createArtTests(type: Exec) {
     def outputDir = "build/generated/test/java/com/android/tools/r8/art"
-    def createArtTestsScript = "scripts/create-art-tests.sh"
+    def createArtTestsScript = "tools/create_art_tests.py"
     inputs.file "tests/art.tar.gz"
     inputs.file createArtTestsScript
     outputs.dir outputDir
     dependsOn downloadDeps
-    executable "bash"
-    args "${projectDir}/${createArtTestsScript}"
+    commandLine "${createArtTestsScript}"
     workingDir = projectDir
 }
 
