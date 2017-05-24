@@ -11,23 +11,28 @@ import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalResource;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class YouTubeTreeShakeJarVerificationTest extends YouTubeCompilationBase {
 
   @Test
-  @Ignore("b/35656577")
   public void buildAndTreeShakeFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
-    int maxSize = 16000000;
+    int maxSize = 20000000;
     AndroidApp app = runAndCheckVerification(
-        CompilerUnderTest.R8, CompilationMode.RELEASE,
-        BASE + APK, null, BASE + PG_CONF, BASE + DEPLOY_JAR);
+        CompilerUnderTest.R8,
+        CompilationMode.RELEASE,
+        BASE + APK,
+        null,
+        BASE + PG_CONF,
+        // Don't pass any inputs. The input will be read from the -injars in the Proguard
+        // configuration file.
+        ImmutableList.of());
     int bytes = 0;
     try (Closer closer = Closer.create()) {
       for (InternalResource dex : app.getDexProgramResources()) {
