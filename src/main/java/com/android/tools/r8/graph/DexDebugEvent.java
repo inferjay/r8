@@ -41,7 +41,7 @@ abstract public class DexDebugEvent extends DexItem {
       writer.putUleb128(delta);
     }
 
-    public AdvancePC(int delta) {
+    AdvancePC(int delta) {
       this.delta = delta;
     }
 
@@ -68,7 +68,7 @@ abstract public class DexDebugEvent extends DexItem {
 
   public static class SetPrologueEnd extends DexDebugEvent {
 
-    public SetPrologueEnd() {
+    SetPrologueEnd() {
     }
 
     public void writeOn(DebugBytecodeWriter writer, ObjectToOffsetMapping mapping) {
@@ -96,7 +96,7 @@ abstract public class DexDebugEvent extends DexItem {
 
   public static class SetEpilogueBegin extends DexDebugEvent {
 
-    public SetEpilogueBegin() {
+    SetEpilogueBegin() {
     }
 
     public void writeOn(DebugBytecodeWriter writer, ObjectToOffsetMapping mapping) {
@@ -124,7 +124,7 @@ abstract public class DexDebugEvent extends DexItem {
 
     final int delta;
 
-    public AdvanceLine(int delta) {
+    AdvanceLine(int delta) {
       this.delta = delta;
     }
 
@@ -233,7 +233,7 @@ abstract public class DexDebugEvent extends DexItem {
 
     final int registerNum;
 
-    public EndLocal(int registerNum) {
+    EndLocal(int registerNum) {
       this.registerNum = registerNum;
     }
 
@@ -265,7 +265,7 @@ abstract public class DexDebugEvent extends DexItem {
 
     final int registerNum;
 
-    public RestartLocal(int registerNum) {
+    RestartLocal(int registerNum) {
       this.registerNum = registerNum;
     }
 
@@ -297,7 +297,7 @@ abstract public class DexDebugEvent extends DexItem {
 
     final DexString fileName;
 
-    public SetFile(DexString fileName) {
+    SetFile(DexString fileName) {
       this.fileName = fileName;
     }
 
@@ -334,7 +334,7 @@ abstract public class DexDebugEvent extends DexItem {
 
     final int value;
 
-    public Default(int value) {
+    Default(int value) {
       assert (value >= Constants.DBG_FIRST_SPECIAL) && (value <= Constants.DBG_LAST_SPECIAL);
       this.value = value;
     }

@@ -40,6 +40,8 @@ public class DexDebugEventBuilder {
 
   private final DexMethod method;
 
+  private final DexItemFactory dexItemFactory;
+
   // Previous and current position info to delay emitting position changes.
   private final PositionState previous;
   private final PositionState current;
@@ -59,8 +61,9 @@ public class DexDebugEventBuilder {
 
   private int startLine = NO_LINE_INFO;
 
-  public DexDebugEventBuilder(DexMethod method) {
+  public DexDebugEventBuilder(DexMethod method, DexItemFactory dexItemFactory) {
     this.method = method;
+    this.dexItemFactory = dexItemFactory;
     arguments = new ArrayList<>(method.proto.parameters.values.length);
     current = new PositionState();
     previous = new PositionState();
@@ -147,16 +150,16 @@ public class DexDebugEventBuilder {
     assert pcDelta >= 0;
     if (current.file != previous.file) {
       assert current.file == null || !current.file.equals(previous.file);
-      events.add(new SetFile(current.file));
+      events.add(dexItemFactory.createSetFile(current.file));
     }
     if (lineDelta < Constants.DBG_LINE_BASE
         || lineDelta - Constants.DBG_LINE_BASE >= Constants.DBG_LINE_RANGE) {
-      events.add(new AdvanceLine(lineDelta));
+      events.add(dexItemFactory.createAdvanceLine(lineDelta));
       // TODO(herhut): To be super clever, encode only the part that is above limit.
       lineDelta = 0;
     }
     if (pcDelta >= Constants.DBG_ADDRESS_RANGE) {
-      events.add(new AdvancePC(pcDelta));
+      events.add(dexItemFactory.createAdvancePC(pcDelta));
       pcDelta = 0;
     }
     // TODO(herhut): Maybe only write this one if needed (would differ from DEX).
@@ -164,7 +167,7 @@ public class DexDebugEventBuilder {
         0x0a + (lineDelta - Constants.DBG_LINE_BASE) + Constants.DBG_LINE_RANGE * pcDelta;
     assert specialOpcode >= 0x0a;
     assert specialOpcode <= 0xff;
-    events.add(new Default(specialOpcode));
+    events.add(dexItemFactory.createDefault(specialOpcode));
     previous.pc = current.pc;
     previous.line = current.line;
     previous.file = current.file;
@@ -178,7 +181,7 @@ public class DexDebugEventBuilder {
     SortedSet<Integer> positionRegisters = new TreeSet<>(current.locals.keySet());
     for (Integer register : currentRegisters) {
       if (!positionRegisters.contains(register)) {
-        events.add(new EndLocal(register));
+        events.add(dexItemFactory.createEndLocal(register));
         openLocals.put(register, null);
       }
     }
@@ -188,7 +191,7 @@ public class DexDebugEventBuilder {
       if (currentLocal != positionLocal) {
         openLocals.put(register, positionLocal);
         if (currentLocal == null && lastKnownLocals.get(register) == positionLocal) {
-          events.add(new RestartLocal(register));
+          events.add(dexItemFactory.createRestartLocal(register));
         } else {
           events.add(new StartLocal(register, positionLocal));
           lastKnownLocals.put(register, positionLocal);
