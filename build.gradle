@@ -300,7 +300,7 @@ task createArtTests(type: Exec) {
     inputs.file createArtTestsScript
     outputs.dir outputDir
     dependsOn downloadDeps
-    commandLine "${createArtTestsScript}"
+    commandLine "python", createArtTestsScript
     workingDir = projectDir
 }
 
