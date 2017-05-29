@@ -257,6 +257,12 @@ public class Inliner {
               if (target.accessFlags.isConstructor() && !legalConstructorInline(method, inlinee)) {
                 continue;
               }
+              // Ensure the container is compatible with the target.
+             if (!forceInline
+                 && !result.target.isPublicInlining()
+                 && (method.method.getHolder() != result.target.method.getHolder())) {
+                continue;
+              }
               DexType downcast = null;
               if (invoke.isInvokeMethodWithReceiver()) {
                 // If the invoke has a receiver but the declared method holder is different

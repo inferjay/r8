@@ -49,9 +49,6 @@ abstract class FieldInstruction extends Instruction {
     DexEncodedField target = info.lookupInstanceTarget(fieldHolder, field);
     DexClass fieldClass = info.definitionFor(fieldHolder);
     if ((target != null) && (fieldClass != null) && !fieldClass.isLibraryClass()) {
-      if (isInstanceGet() || isInstancePut()) {
-        return Inliner.InliningConstraint.PRIVATE;
-      }
       DexAccessFlags flags = target.accessFlags;
       if (flags.isPublic()) {
         return Inliner.InliningConstraint.ALWAYS;

@@ -3,6 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PRIVATE;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PUBLIC;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
+
 import com.android.tools.r8.code.Const;
 import com.android.tools.r8.code.ConstString;
 import com.android.tools.r8.code.ConstStringJumbo;
@@ -90,19 +95,23 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     }
   }
 
+  public boolean isPublicInlining() {
+    return compilationState == PROCESSED_INLINING_CANDIDATE_PUBLIC;
+  }
+
   public void markProcessed(InliningConstraint state) {
     switch (state) {
       case ALWAYS:
-        compilationState = CompilationState.PROCESSED_INLINING_CANDIDATE_PUBLIC;
+        compilationState = PROCESSED_INLINING_CANDIDATE_PUBLIC;
         break;
       case PACKAGE:
-        compilationState = CompilationState.PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE;
+        compilationState = PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE;
         break;
       case PRIVATE:
-        compilationState = CompilationState.PROCESSED_INLINING_CANDIDATE_PRIVATE;
+        compilationState = PROCESSED_INLINING_CANDIDATE_PRIVATE;
         break;
       case NEVER:
-        compilationState = CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
+        compilationState = PROCESSED_NOT_INLINING_CANDIDATE;
         break;
     }
   }
