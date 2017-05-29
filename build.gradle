@@ -326,12 +326,11 @@ task createArtTests(type: Exec) {
 
 task createJctfTests(type: Exec) {
     def outputDir = "build/generated/test/java/com/android/tools/r8/jctf"
-    def script = "scripts/create-jctf-tests.sh"
+    def script = "tools/create_jctf_tests.py"
     inputs.file script
     outputs.dir outputDir
     dependsOn downloadDeps
-    executable "bash"
-    args "${projectDir}/${script}"
+    commandLine "python", script
     workingDir = projectDir
 }
 
