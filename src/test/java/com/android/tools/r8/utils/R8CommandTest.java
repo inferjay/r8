@@ -37,6 +37,12 @@ public class R8CommandTest {
   public void emptyCommand() throws Throwable {
     verifyEmptyCommand(R8Command.builder().build());
     verifyEmptyCommand(parse());
+    verifyEmptyCommand(parse(""));
+    verifyEmptyCommand(parse("", ""));
+    verifyEmptyCommand(parse(" "));
+    verifyEmptyCommand(parse(" ", " "));
+    verifyEmptyCommand(parse("\t"));
+    verifyEmptyCommand(parse("\t", "\t"));
   }
 
   private void verifyEmptyCommand(R8Command command) {

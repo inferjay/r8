@@ -80,8 +80,10 @@ public class D8Command extends BaseCommand {
     Path outputPath = null;
     Builder builder = builder();
     for (int i = 0; i < args.length; i++) {
-      String arg = args[i];
-      if (arg.equals("--help")) {
+      String arg = args[i].trim();
+      if (arg.length() == 0) {
+        continue;
+      } else if (arg.equals("--help")) {
         builder.setPrintHelp(true);
       } else if (arg.equals("--version")) {
         builder.setPrintVersion(true);
