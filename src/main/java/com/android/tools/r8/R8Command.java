@@ -279,14 +279,20 @@ public class R8Command extends BaseCommand {
 
   InternalOptions getInternalOptions() {
     InternalOptions internal = new InternalOptions(proguardConfiguration.getDexItemFactory());
+    assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
+    assert !internal.skipMinification;
     internal.skipMinification = !useMinification();
+    assert internal.useTreeShaking;
     internal.useTreeShaking = useTreeShaking();
+    assert !internal.ignoreMissingClasses;
     internal.ignoreMissingClasses = ignoreMissingClasses;
 
     // TODO(zerny): Consider which other proguard options should be given flags.
+    assert internal.packagePrefix.length() == 0;
     internal.packagePrefix = proguardConfiguration.getPackagePrefix();
+    assert internal.allowAccessModification;
     internal.allowAccessModification = proguardConfiguration.getAllowAccessModification();
     for (String pattern : proguardConfiguration.getAttributesRemovalPatterns()) {
       internal.attributeRemoval.applyPattern(pattern);
@@ -294,9 +300,11 @@ public class R8Command extends BaseCommand {
     if (proguardConfiguration.isIgnoreWarnings()) {
       internal.ignoreMissingClasses = true;
     }
+    assert internal.seedsFile == null;
     if (proguardConfiguration.getSeedFile() != null) {
       internal.seedsFile = proguardConfiguration.getSeedFile();
     }
+    assert !internal.verbose;
     if (proguardConfiguration.isVerbose()) {
       internal.verbose = true;
     }

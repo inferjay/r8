@@ -133,6 +133,7 @@ public class D8Command extends BaseCommand {
   @Override
   InternalOptions getInternalOptions() {
     InternalOptions internal = new InternalOptions(new DexItemFactory());
+    assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
     internal.fillDexFiles = true;
