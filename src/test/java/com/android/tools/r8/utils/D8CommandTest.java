@@ -33,7 +33,13 @@ public class D8CommandTest {
   @Test
   public void emptyCommand() throws Throwable {
     verifyEmptyCommand(D8Command.builder().build());
-    verifyEmptyCommand(D8Command.parse(new String[]{}).build());
+    verifyEmptyCommand(parse());
+    verifyEmptyCommand(parse(""));
+    verifyEmptyCommand(parse("", ""));
+    verifyEmptyCommand(parse(" "));
+    verifyEmptyCommand(parse(" ", " "));
+    verifyEmptyCommand(parse("\t"));
+    verifyEmptyCommand(parse("\t", "\t"));
   }
 
   private void verifyEmptyCommand(D8Command command) {
