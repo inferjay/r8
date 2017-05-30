@@ -23,6 +23,7 @@ public class Test {
     System.out.println(classExtendsLibraryClass.get(2));
     PublicClass instance = new PublicClass();
     instance.aMethod();
+    PublicClass.aStaticMethod();
     ClassExtendsOtherLibraryClass classExtendsOther = new ClassExtendsOtherLibraryClass();
     System.out.println(classExtendsOther.aMethodThatReturnsOne());
     System.out.println(classExtendsOther.aMethodThatReturnsTwo());

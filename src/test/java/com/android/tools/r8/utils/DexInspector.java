@@ -886,6 +886,12 @@ public class DexInspector {
       if (instruction instanceof InvokeDirectRange) {
         return ((InvokeDirectRange) instruction).getMethod();
       }
+      if (instruction instanceof InvokeStatic) {
+        return ((InvokeStatic) instruction).getMethod();
+      }
+      if (instruction instanceof InvokeStaticRange) {
+        return ((InvokeStaticRange) instruction).getMethod();
+      }
       assert false;
       return null;
     }
