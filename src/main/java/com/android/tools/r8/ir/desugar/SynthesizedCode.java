@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-package com.android.tools.r8.ir.synthetic;
+package com.android.tools.r8.ir.desugar;
 
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.Code;
@@ -13,21 +13,12 @@ import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.SourceCode;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.utils.InternalOptions;
-import java.util.function.Consumer;
 
 public final class SynthesizedCode extends Code {
-
   private final SourceCode sourceCode;
-  private final Consumer<UseRegistry> registryCallback;
 
   public SynthesizedCode(SourceCode sourceCode) {
     this.sourceCode = sourceCode;
-    this.registryCallback = SynthesizedCode::registerReachableDefinitionsDefault;
-  }
-
-  public SynthesizedCode(SourceCode sourceCode, Consumer<UseRegistry> callback) {
-    this.sourceCode = sourceCode;
-    this.registryCallback = callback;
   }
 
   @Override
@@ -40,13 +31,9 @@ public final class SynthesizedCode extends Code {
     return toString(null);
   }
 
-  private static void registerReachableDefinitionsDefault(UseRegistry registry) {
-    throw new Unreachable();
-  }
-
   @Override
-  public void registerReachableDefinitions(UseRegistry registry) {
-    registryCallback.accept(registry);
+  public final void registerReachableDefinitions(UseRegistry registry) {
+    throw new Unreachable();
   }
 
   @Override

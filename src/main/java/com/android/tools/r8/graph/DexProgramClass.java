@@ -52,7 +52,6 @@ public class DexProgramClass extends DexClass {
     }
   }
 
-  @Override
   public void addDependencies(MixedSectionCollection collector) {
     // We only have a class data item if there are methods or fields.
     if (hasMethodsOrFields()) {
@@ -119,10 +118,5 @@ public class DexProgramClass extends DexClass {
 
   public DexEncodedArray getStaticValues() {
     return staticValues;
-  }
-
-  public void addVirtualMethod(DexEncodedMethod virtualMethod) {
-    virtualMethods = Arrays.copyOf(virtualMethods, virtualMethods.length + 1);
-    virtualMethods[virtualMethods.length - 1] = virtualMethod;
   }
 }
