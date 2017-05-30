@@ -12,8 +12,8 @@ import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexApplication.Builder;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexClassPromise;
+import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexField;
@@ -27,6 +27,7 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexTypeList;
 import com.android.tools.r8.graph.DexValue;
 import com.android.tools.r8.ir.code.Invoke;
+import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * separate lambda classes.
  */
 final class LambdaClass {
+
   final LambdaRewriter rewriter;
   final DexType type;
   final LambdaDescriptor descriptor;
@@ -370,6 +372,7 @@ final class LambdaClass {
   // be the same method as specified in lambda descriptor or a newly synthesized accessor.
   // Also provides action for ensuring accessibility of the referenced symbols.
   abstract class Target {
+
     final DexMethod callTarget;
     final Invoke.Type invokeType;
 
@@ -386,6 +389,7 @@ final class LambdaClass {
 
   // Used for targeting methods referenced directly without creating accessors.
   private final class NoAccessorMethodTarget extends Target {
+
     NoAccessorMethodTarget(Invoke.Type invokeType) {
       super(descriptor.implHandle.asMethod(), invokeType);
     }
@@ -398,6 +402,7 @@ final class LambdaClass {
 
   // Used for static private lambda$ methods. Only needs access relaxation.
   private final class StaticLambdaImplTarget extends Target {
+
     StaticLambdaImplTarget() {
       super(descriptor.implHandle.asMethod(), Invoke.Type.STATIC);
     }
@@ -420,6 +425,7 @@ final class LambdaClass {
   // Used for instance private lambda$ methods. Needs to be converted to
   // a package-private static method.
   private class InstanceLambdaImplTarget extends Target {
+
     InstanceLambdaImplTarget(DexMethod staticMethod) {
       super(staticMethod, Invoke.Type.STATIC);
     }
@@ -452,7 +458,7 @@ final class LambdaClass {
           dexCode.setDebugInfo(dexCode.debugInfoWithAdditionalFirstParameter(null));
           assert (dexCode.getDebugInfo() == null)
               || (callTarget.proto.parameters.values.length
-                  == dexCode.getDebugInfo().parameters.length);
+              == dexCode.getDebugInfo().parameters.length);
           directMethods[i] = newMethod;
           return true;
         }
@@ -464,6 +470,7 @@ final class LambdaClass {
   // Used for instance/static methods or constructors accessed via
   // synthesized accessor method. Needs accessor method to be created.
   private class ClassMethodWithAccessorTarget extends Target {
+
     ClassMethodWithAccessorTarget(DexMethod accessorMethod) {
       super(accessorMethod, Invoke.Type.STATIC);
     }

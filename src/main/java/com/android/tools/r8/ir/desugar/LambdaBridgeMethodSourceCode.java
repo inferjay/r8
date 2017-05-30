@@ -14,6 +14,7 @@ import java.util.List;
 
 // Source code representing synthesized lambda bridge method.
 final class LambdaBridgeMethodSourceCode extends SynthesizedLambdaSourceCode {
+
   private final DexMethod mainMethod;
 
   LambdaBridgeMethodSourceCode(LambdaClass lambda, DexMethod mainMethod, DexMethod bridgeMethod) {
@@ -22,7 +23,7 @@ final class LambdaBridgeMethodSourceCode extends SynthesizedLambdaSourceCode {
   }
 
   @Override
-  void prepareInstructions() {
+  protected void prepareInstructions() {
     DexType[] currentParams = proto.parameters.values;
     DexType[] enforcedParams = descriptor().enforcedProto.parameters.values;
 

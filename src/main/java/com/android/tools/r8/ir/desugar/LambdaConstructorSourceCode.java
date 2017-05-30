@@ -14,12 +14,13 @@ import java.util.Collections;
 
 // Source code representing synthesized lambda constructor.
 final class LambdaConstructorSourceCode extends SynthesizedLambdaSourceCode {
+
   LambdaConstructorSourceCode(LambdaClass lambda) {
     super(lambda, lambda.constructor);
   }
 
   @Override
-  void prepareInstructions() {
+  protected void prepareInstructions() {
     // Super constructor call (always java.lang.Object.<init>()).
     DexMethod objectInitMethod = lambda.rewriter.objectInitMethod;
     add(builder -> builder.addInvoke(Invoke.Type.DIRECT, objectInitMethod,

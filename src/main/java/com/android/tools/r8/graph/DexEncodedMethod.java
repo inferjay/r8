@@ -18,11 +18,14 @@ import com.android.tools.r8.code.Throw;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.ir.code.IRCode;
+import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
+import com.android.tools.r8.ir.synthetic.ForwardMethodSourceCode;
+import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
@@ -302,6 +305,25 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     DexMethod newMethod = factory.createMethod(method.holder, method.proto, name);
     Builder builder = builder(this);
     builder.setMethod(newMethod);
+    return builder.build();
+  }
+
+  public DexEncodedMethod toForwardingMethod(DexClass holder, DexItemFactory itemFactory) {
+    DexMethod newMethod = itemFactory.createMethod(holder.type, method.proto, method.name);
+    Builder builder = builder(this);
+    builder.setMethod(newMethod);
+    builder.setCode(new SynthesizedCode(
+        new ForwardMethodSourceCode(holder.type, method.proto, method.holder, method,
+            Invoke.Type.SUPER),
+        registry -> {
+          if (this.method.holder.isInterface()) {
+            registry.registerInvokeInterface(newMethod);
+          } else {
+            registry.registerInvokeVirtual(newMethod);
+          }
+        }));
+    builder.accessFlags.setSynthetic();
+    accessFlags.unsetFinal();
     return builder.build();
   }
 
