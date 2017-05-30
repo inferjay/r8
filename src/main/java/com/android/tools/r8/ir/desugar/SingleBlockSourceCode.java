@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-package com.android.tools.r8.ir.synthetic;
+package com.android.tools.r8.ir.desugar;
 
 import static com.android.tools.r8.ir.code.BasicBlock.ThrowingInfo.NO_THROW;
 
@@ -21,10 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public abstract class SingleBlockSourceCode implements SourceCode {
-
-  protected final DexType receiver;
-  protected final DexProto proto;
+abstract class SingleBlockSourceCode implements SourceCode {
+  final DexType receiver;
+  final DexProto proto;
 
   // The next free register, note that we always
   // assign each value a new (next available) register.
@@ -41,7 +40,7 @@ public abstract class SingleBlockSourceCode implements SourceCode {
   // Instruction constructors
   private List<Consumer<IRBuilder>> constructors = new ArrayList<>();
 
-  protected SingleBlockSourceCode(DexType receiver, DexProto proto) {
+  SingleBlockSourceCode(DexType receiver, DexProto proto) {
     assert proto != null;
     this.receiver = receiver;
     this.proto = proto;
@@ -58,45 +57,45 @@ public abstract class SingleBlockSourceCode implements SourceCode {
     }
   }
 
-  protected final void add(Consumer<IRBuilder> constructor) {
+  final void add(Consumer<IRBuilder> constructor) {
     constructors.add(constructor);
   }
 
-  protected final int nextRegister(MoveType type) {
+  final int nextRegister(MoveType type) {
     int value = nextRegister;
     nextRegister += type == MoveType.WIDE ? 2 : 1;
     return value;
   }
 
-  protected final Value getReceiverValue() {
+  final Value getReceiverValue() {
     assert receiver != null;
     assert receiverValue != null;
     return receiverValue;
   }
 
-  protected final int getReceiverRegister() {
+  final int getReceiverRegister() {
     assert receiver != null;
     assert receiverRegister >= 0;
     return receiverRegister;
   }
 
-  protected final Value getParamValue(int paramIndex) {
+  final Value getParamValue(int paramIndex) {
     assert paramIndex >= 0;
     assert paramIndex < paramValues.length;
     return paramValues[paramIndex];
   }
 
-  protected final int getParamCount() {
+  final int getParamCount() {
     return paramValues.length;
   }
 
-  protected final int getParamRegister(int paramIndex) {
+  final int getParamRegister(int paramIndex) {
     assert paramIndex >= 0;
     assert paramIndex < paramRegisters.length;
     return paramRegisters[paramIndex];
   }
 
-  protected abstract void prepareInstructions();
+  abstract void prepareInstructions();
 
   @Override
   public final boolean needsPrelude() {
