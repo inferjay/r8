@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-package com.android.tools.r8.ir.synthetic;
+package com.android.tools.r8.ir.desugar;
 
 import com.android.tools.r8.errors.Unimplemented;
 import com.android.tools.r8.graph.DexMethod;
@@ -16,13 +16,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Source code representing simple forwarding method.
-public final class ForwardMethodSourceCode extends SingleBlockSourceCode {
-
+final class ForwardMethodSourceCode extends SingleBlockSourceCode {
   private final DexType targetReceiver;
   private final DexMethod target;
   private final Invoke.Type invokeType;
 
-  public ForwardMethodSourceCode(DexType receiver, DexProto proto,
+  ForwardMethodSourceCode(DexType receiver, DexProto proto,
       DexType targetReceiver, DexMethod target, Invoke.Type invokeType) {
     super(receiver, proto);
     assert (targetReceiver == null) == (invokeType == Invoke.Type.STATIC);
@@ -32,14 +31,8 @@ public final class ForwardMethodSourceCode extends SingleBlockSourceCode {
     this.invokeType = invokeType;
     assert checkSignatures();
 
-    switch (invokeType) {
-      case STATIC:
-      case SUPER:
-      case INTERFACE:
-      case VIRTUAL:
-        break;
-      default:
-        throw new Unimplemented("Invoke type " + invokeType + " is not yet supported.");
+    if (invokeType != Invoke.Type.STATIC) {
+      throw new Unimplemented("Invoke type " + invokeType + " is not yet supported.");
     }
   }
 
@@ -72,7 +65,7 @@ public final class ForwardMethodSourceCode extends SingleBlockSourceCode {
   }
 
   @Override
-  protected void prepareInstructions() {
+  void prepareInstructions() {
     // Prepare call arguments.
     List<MoveType> argMoveTypes = new ArrayList<>();
     List<Integer> argRegisters = new ArrayList<>();

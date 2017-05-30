@@ -18,7 +18,6 @@ import java.util.List;
 
 // Source code representing synthesized accessor method.
 final class AccessorMethodSourceCode extends SynthesizedLambdaSourceCode {
-
   AccessorMethodSourceCode(LambdaClass lambda) {
     super(/* no receiver for static method */ null, lambda, lambda.target.callTarget);
     // We should never need an accessor for interface methods since
@@ -82,7 +81,7 @@ final class AccessorMethodSourceCode extends SynthesizedLambdaSourceCode {
   }
 
   @Override
-  protected void prepareInstructions() {
+  void prepareInstructions() {
     DexMethod implMethod = descriptor().implHandle.asMethod();
     DexType[] accessorParams = proto.parameters.values;
 
