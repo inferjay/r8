@@ -4,12 +4,6 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.dex.Constants;
-import com.android.tools.r8.graph.DexDebugEvent.AdvanceLine;
-import com.android.tools.r8.graph.DexDebugEvent.AdvancePC;
-import com.android.tools.r8.graph.DexDebugEvent.Default;
-import com.android.tools.r8.graph.DexDebugEvent.EndLocal;
-import com.android.tools.r8.graph.DexDebugEvent.RestartLocal;
-import com.android.tools.r8.graph.DexDebugEvent.SetFile;
 import com.android.tools.r8.graph.DexDebugEvent.StartLocal;
 import com.android.tools.r8.ir.code.DebugPosition;
 import com.google.common.collect.ImmutableMap;
@@ -182,7 +176,7 @@ public class DexDebugEventBuilder {
     for (Integer register : currentRegisters) {
       if (!positionRegisters.contains(register)) {
         events.add(dexItemFactory.createEndLocal(register));
-        openLocals.put(register, null);
+        openLocals.remove(register);
       }
     }
     for (Integer register : positionRegisters) {
