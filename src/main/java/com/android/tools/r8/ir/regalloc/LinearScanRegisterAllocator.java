@@ -555,7 +555,17 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         if (argumentInterval.getUses().size() > 1) {
           LiveIntervalsUse use = argumentInterval.firstUseWithConstraint();
           if (use != null) {
-            LiveIntervals split = argumentInterval.splitBefore(use.getPosition());
+            LiveIntervals split;
+            if (argumentInterval.getUses().size() == 2) {
+              // If there is only one real use (definition plus one real use), split before
+              // that one use.
+              split = argumentInterval.splitBefore(use.getPosition());
+            } else {
+              // If there are multiple real users, split right after the definition to make it
+              // more likely that arguments get in usable registers from the start.
+              split = argumentInterval
+                  .splitBefore(argumentInterval.getValue().definition.getNumber() + 1);
+            }
             unhandled.add(split);
           }
         }
