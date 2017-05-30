@@ -11,6 +11,8 @@ import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.Invoke;
+import com.android.tools.r8.ir.synthetic.ForwardMethodSourceCode;
+import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -22,6 +24,7 @@ import java.util.Set;
 // Default and static method interface desugaring processor for classes.
 // Adds default interface methods into the class when needed.
 final class ClassProcessor {
+
   private final InterfaceMethodRewriter rewriter;
   // Set of already processed classes.
   private final Set<DexClass> processedClasses = Sets.newIdentityHashSet();

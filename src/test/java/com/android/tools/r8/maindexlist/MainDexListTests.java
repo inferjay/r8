@@ -37,9 +37,9 @@ import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Switch.Type;
 import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.SourceCode;
-import com.android.tools.r8.ir.desugar.SynthesizedCode;
 import com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
+import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
@@ -82,6 +82,7 @@ public class MainDexListTests {
   private static final int MANY_CLASSES_COUNT = 1000;
   private static final List<String> MANY_CLASSES;
   private static final String MANY_CLASSES_APP = "many-classes.zip";
+
   static {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     for (int i = 0; i < MANY_CLASSES_COUNT; ++i) {

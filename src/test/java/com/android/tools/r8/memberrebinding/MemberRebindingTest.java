@@ -7,9 +7,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.CompilationException;
-import com.android.tools.r8.R8;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.DexInspector;
@@ -22,16 +22,12 @@ import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,23 +59,22 @@ public class MemberRebindingTest {
   private final Path programFile;
   private final Consumer<DexInspector> inspection;
   private final Consumer<DexInspector> originalInspection;
+  private final int minApiLevel;
 
   @Rule
   public TemporaryFolder temp = ToolHelper.getTemporaryFolderForTest();
 
-  public MemberRebindingTest(
-      String test, Frontend kind,
-      Consumer<DexInspector> inspection,
-      Consumer<DexInspector> originalInspection) {
-    this.kind = kind;
-    originalDex = Paths.get(ToolHelper.EXAMPLES_BUILD_DIR + test + "/classes.dex");
+  public MemberRebindingTest(TestConfiguration configuration) {
+    this.kind = configuration.kind;
+    originalDex = configuration.getDexPath();
     if (kind == Frontend.DEX) {
       this.programFile = originalDex;
     } else {
-      this.programFile = Paths.get(ToolHelper.EXAMPLES_BUILD_DIR + test + ".jar");
+      this.programFile = configuration.getJarPath();
     }
-    this.inspection = inspection;
-    this.originalInspection = originalInspection;
+    this.inspection = configuration.processedInspection;
+    this.originalInspection = configuration.originalInspection;
+    this.minApiLevel = configuration.getMinApiLevel();
   }
 
   @Before
@@ -95,6 +90,7 @@ public class MemberRebindingTest {
             .setOutputPath(Paths.get(out))
             .addProgramFiles(programFile)
             .addLibraryFiles(ListUtils.map(libs, Paths::get))
+            .setMinApiLevel(minApiLevel)
             .build(),
         options -> options.inlineAccessors = false);
   }
@@ -147,7 +143,7 @@ public class MemberRebindingTest {
     assertTrue(iterator.next().holder().is("java.util.ArrayList"));
     assertTrue(iterator.next().holder().is("java.util.ArrayList"));
     assertTrue(iterator.next().holder().is("java.util.ArrayList"));
-    assertTrue(iterator.next().holder().is("memberrebinding.subpackage.PackagePrivateClass"));
+    assertTrue(iterator.next().holder().is("memberrebinding.subpackage.PublicClass"));
     // For the next three - test that we re-bind to the lowest library class.
     assertTrue(iterator.next().holder().is("memberrebindinglib.SubClass"));
     assertTrue(iterator.next().holder().is("memberrebindinglib.SubClass"));
@@ -173,6 +169,8 @@ public class MemberRebindingTest {
       assertTrue(iterator.next().holder().is("memberrebinding2.ClassAtBottomOfChain"));
       assertTrue(iterator.next().holder().is("memberrebinding2.subpackage.PublicClass"));
     }
+    assertTrue(iterator.next().holder().is("java.lang.System"));
+    assertFalse(iterator.hasNext());
   }
 
   private static void inspectMain2(DexInspector inspector) {
@@ -186,6 +184,8 @@ public class MemberRebindingTest {
       assertTrue(iterator.next().holder().is("memberrebinding2.SuperClassOfAll"));
       assertTrue(iterator.next().holder().is("memberrebinding2.subpackage.PackagePrivateClass"));
     }
+    assertTrue(iterator.next().holder().is("java.lang.System"));
+    assertFalse(iterator.hasNext());
   }
 
   public static MethodSignature TEST =
@@ -198,6 +198,7 @@ public class MemberRebindingTest {
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
+    assertFalse(iterator.hasNext());
   }
 
   private static void inspect3(DexInspector inspector) {
@@ -207,38 +208,114 @@ public class MemberRebindingTest {
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassInMiddleOfChain"));
     assertTrue(iterator.next().holder().is("memberrebinding3.SuperClassOfAll"));
+    assertFalse(iterator.hasNext());
   }
 
-  @Parameters(name = "{0}{1}")
-  public static Collection<Object[]> data() {
-    List<String> tests =
-        ImmutableList.of("memberrebinding", "memberrebinding2", "memberrebinding3");
+  private static void inspectOriginal4(DexInspector inspector) {
+    MethodSubject main = inspector.clazz("memberrebinding4.Test").method(TEST);
+    Iterator<InvokeInstructionSubject> iterator =
+        main.iterateInstructions(InstructionSubject::isInvoke);
+    assertTrue(iterator.next().holder().is("memberrebinding4.Test$Inner"));
+    assertTrue(iterator.next().holder().is("memberrebinding4.subpackage.PublicInterface"));
+    assertFalse(iterator.hasNext());
+  }
 
-    Map<String, List<Consumer<DexInspector>>> inspections = new HashMap<>();
-    inspections.put("memberrebinding", ImmutableList.of(
-        MemberRebindingTest::inspectMain,
-        MemberRebindingTest::inspectOriginalMain));
-    inspections.put("memberrebinding2", ImmutableList.of(
-        MemberRebindingTest::inspectMain2,
-        MemberRebindingTest::inspectOriginalMain2));
-    inspections.put("memberrebinding3", ImmutableList.of(
-        MemberRebindingTest::inspect3,
-        MemberRebindingTest::inspectOriginal3));
+  private static void inspect4(DexInspector inspector) {
+    MethodSubject main = inspector.clazz("memberrebinding4.Test").method(TEST);
+    Iterator<InvokeInstructionSubject> iterator =
+        main.iterateInstructions(InstructionSubject::isInvoke);
+    assertTrue(iterator.next().holder().is("memberrebinding4.Test$Inner"));
+    assertTrue(iterator.next().holder().is("memberrebinding4.subpackage.PublicInterface"));
+    assertFalse(iterator.hasNext());
+  }
 
-    List<Object[]> testCases = new ArrayList<>();
-    Set<String> usedInspections = new HashSet<>();
+  private static class TestConfiguration {
 
-    for (String test : tests) {
-      List<Consumer<DexInspector>> inspection = inspections.get(test);
-      assert inspection != null;
-      usedInspections.add(test);
-      testCases.add(new Object[]{test, Frontend.JAR, inspection.get(0), inspection.get(1)});
-      testCases.add(new Object[]{test, Frontend.DEX, inspection.get(0), inspection.get(1)});
+    private enum AndroidVersion {
+      PRE_N,
+      N
     }
 
-    assert usedInspections.size() == inspections.size();
+    final String name;
+    final Frontend kind;
+    final AndroidVersion version;
+    final Consumer<DexInspector> originalInspection;
+    final Consumer<DexInspector> processedInspection;
 
-    return testCases;
+    private TestConfiguration(String name,
+        Frontend kind,
+        AndroidVersion version,
+        Consumer<DexInspector> originalInspection,
+        Consumer<DexInspector> processedInspection) {
+      this.name = name;
+      this.kind = kind;
+      this.version = version;
+      this.originalInspection = originalInspection;
+      this.processedInspection = processedInspection;
+    }
+
+    public static void add(ImmutableList.Builder<TestConfiguration> builder,
+        String name,
+        AndroidVersion version,
+        Consumer<DexInspector> originalInspection,
+        Consumer<DexInspector> processedInspection) {
+      if (version == AndroidVersion.PRE_N) {
+        builder.add(new TestConfiguration(name, Frontend.DEX, version, originalInspection,
+            processedInspection));
+      }
+      builder.add(new TestConfiguration(name, Frontend.JAR, version, originalInspection,
+          processedInspection));
+    }
+
+    public Path getDexPath() {
+      return getBuildPath().resolve(name).resolve("classes.dex");
+    }
+
+    public Path getJarPath() {
+      return getBuildPath().resolve(name + ".jar");
+    }
+
+    public Path getBuildPath() {
+      switch (version) {
+        case PRE_N:
+          return Paths.get(ToolHelper.EXAMPLES_BUILD_DIR);
+        case N:
+          return Paths.get(ToolHelper.EXAMPLES_ANDROID_N_BUILD_DIR);
+        default:
+          Assert.fail();
+          return null;
+      }
+    }
+
+    public int getMinApiLevel() {
+      switch (version) {
+        case PRE_N:
+          return Constants.DEFAULT_ANDROID_API;
+        case N:
+          return Constants.ANDROID_N_API;
+        default:
+          Assert.fail();
+          return -1;
+      }
+    }
+
+    public String toString() {
+      return name + " " + kind;
+    }
+  }
+
+  @Parameters(name = "{0}")
+  public static Collection<TestConfiguration> data() {
+    ImmutableList.Builder<TestConfiguration> builder = ImmutableList.builder();
+    TestConfiguration.add(builder, "memberrebinding", TestConfiguration.AndroidVersion.PRE_N,
+        MemberRebindingTest::inspectOriginalMain, MemberRebindingTest::inspectMain);
+    TestConfiguration.add(builder, "memberrebinding2", TestConfiguration.AndroidVersion.PRE_N,
+        MemberRebindingTest::inspectOriginalMain2, MemberRebindingTest::inspectMain2);
+    TestConfiguration.add(builder, "memberrebinding3", TestConfiguration.AndroidVersion.PRE_N,
+        MemberRebindingTest::inspectOriginal3, MemberRebindingTest::inspect3);
+    TestConfiguration.add(builder, "memberrebinding4", TestConfiguration.AndroidVersion.N,
+        MemberRebindingTest::inspectOriginal4, MemberRebindingTest::inspect4);
+    return builder.build();
   }
 
   @Test
