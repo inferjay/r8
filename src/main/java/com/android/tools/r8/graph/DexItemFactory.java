@@ -86,6 +86,7 @@ public class DexItemFactory {
   public DexString stringDescriptor = createString("Ljava/lang/String;");
   public DexString objectDescriptor = createString("Ljava/lang/Object;");
   public DexString classDescriptor = createString("Ljava/lang/Class;");
+  public DexString throwableDescriptor = createString("Ljava/lang/Throwable;");
   public DexString objectsDescriptor = createString("Ljava/util/Objects;");
 
   public DexString constructorMethodName = createString(Constants.INSTANCE_INITIALIZER_NAME);
@@ -94,6 +95,7 @@ public class DexItemFactory {
   public DexString thisName = createString("this");
 
   private DexString charArrayDescriptor = createString("[C");
+  public DexString throwableArrayDescriptor = createString("[Ljava/lang/Throwable;");
 
   public DexType booleanType = createType(booleanDescriptor);
   public DexType byteType = createType(byteDescriptor);
@@ -117,6 +119,7 @@ public class DexItemFactory {
 
   public DexType stringType = createType(stringDescriptor);
   public DexType objectType = createType(objectDescriptor);
+  public DexType throwableType = createType(throwableDescriptor);
 
   public StringBuildingMethods stringBuilderMethods =
       new StringBuildingMethods(createString("Ljava/lang/StringBuilder;"));
@@ -125,6 +128,7 @@ public class DexItemFactory {
   public ObjectsMethods objectsMethods = new ObjectsMethods();
   public ObjectMethods objectMethods = new ObjectMethods();
   public LongMethods longMethods = new LongMethods();
+  public ThrowableMethods throwableMethods = new ThrowableMethods();
 
   public void clearSubtypeInformation() {
     types.values().forEach(DexType::clearSubtypeInformation);
@@ -136,6 +140,18 @@ public class DexItemFactory {
     private LongMethods() {
       compare = createMethod(boxedLongDescriptor,
           createString("compare"), intDescriptor, new DexString[]{longDescriptor, longDescriptor});
+    }
+  }
+
+  public class ThrowableMethods {
+    public final DexMethod addSuppressed;
+    public final DexMethod getSuppressed;
+
+    private ThrowableMethods() {
+      addSuppressed = createMethod(throwableDescriptor,
+          createString("addSuppressed"), voidDescriptor, new DexString[] { throwableDescriptor });
+      getSuppressed = createMethod(throwableDescriptor,
+          createString("getSuppressed"), throwableArrayDescriptor, DexString.EMPTY_ARRAY);
     }
   }
 
@@ -410,16 +426,16 @@ public class DexItemFactory {
 
   private DexString shorty(DexType returnType, DexType[] parameters) {
     StringBuilder builder = new StringBuilder();
-    builder.append(returnType.toDescriptorString().charAt(0));
+    addToShorty(builder, returnType);
     for (DexType parameter : parameters) {
-      String descriptor = parameter.toDescriptorString();
-      if (descriptor.charAt(0) == '[') {
-        builder.append('L');
-      } else {
-        builder.append(descriptor.charAt(0));
-      }
+      addToShorty(builder, parameter);
     }
     return createString(builder.toString());
+  }
+
+  private void addToShorty(StringBuilder builder, DexType type) {
+    char first = type.toDescriptorString().charAt(0);
+    builder.append(first == '[' ? 'L' : first);
   }
 
   private static <S extends PresortedComparable<S>> void assignSortedIndices(Collection<S> items,

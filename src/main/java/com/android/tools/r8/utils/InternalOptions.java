@@ -54,6 +54,8 @@ public class InternalOptions {
 
   // Defines interface method rewriter behavior.
   public OffOrAuto interfaceMethodDesugaring = OffOrAuto.Off;
+  // Defines try-with-resources rewriter behavior.
+  public OffOrAuto tryWithResourcesDesugaring = OffOrAuto.Off;
 
   public boolean useTreeShaking = true;
 
@@ -251,6 +253,10 @@ public class InternalOptions {
   }
 
   public boolean canUseObjectsNonNull() {
+    return minApiLevel >= Constants.ANDROID_K_API;
+  }
+
+  public boolean canUseSuppressedExceptions() {
     return minApiLevel >= Constants.ANDROID_K_API;
   }
 

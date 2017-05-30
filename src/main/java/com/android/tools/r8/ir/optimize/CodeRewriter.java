@@ -5,7 +5,9 @@
 package com.android.tools.r8.ir.optimize;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
@@ -17,6 +19,7 @@ import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.Cmp;
 import com.android.tools.r8.ir.code.Cmp.Bias;
 import com.android.tools.r8.ir.code.ConstNumber;
+import com.android.tools.r8.ir.code.ConstType;
 import com.android.tools.r8.ir.code.DominatorTree;
 import com.android.tools.r8.ir.code.Goto;
 import com.android.tools.r8.ir.code.IRCode;
@@ -937,5 +940,89 @@ public class CodeRewriter {
       }
     }
     assert code.isConsistentSSA();
+  }
+
+  // Removes calls to Throwable.addSuppressed(Throwable) and rewrites
+  // Throwable.getSuppressed() into new Throwable[0].
+  //
+  // Note that addSuppressed() and getSuppressed() methods are final in
+  // Throwable, so these changes don't have to worry about overrides.
+  public void rewriteThrowableAddAndGetSuppressed(IRCode code) {
+    boolean removeUnneededCatchHandlers = false;
+    DexItemFactory.ThrowableMethods throwableMethods = dexItemFactory.throwableMethods;
+
+    for (BasicBlock block : code.blocks) {
+      InstructionListIterator iterator = block.listIterator();
+      while (iterator.hasNext()) {
+        Instruction current = iterator.next();
+        if (current.isInvokeMethod()) {
+          DexMethod invokedMethod = current.asInvokeMethod().getInvokedMethod();
+
+          if (matchesMethodOfThrowable(invokedMethod, throwableMethods.addSuppressed)) {
+            // Remove Throwable::addSuppressed(Throwable) call.
+            iterator.remove();
+            removeUnneededCatchHandlers = true;
+
+          } else if (matchesMethodOfThrowable(invokedMethod, throwableMethods.getSuppressed)) {
+            Value destValue = current.outValue();
+            if (destValue == null) {
+              // If the result of the call was not used we don't create
+              // an empty array and just remove the call.
+              iterator.remove();
+              removeUnneededCatchHandlers = true;
+              continue;
+            }
+
+            // Replace call to Throwable::getSuppressed() with new Throwable[0].
+
+            // First insert the constant value *before* the current instruction.
+            Value zero = new Value(code.valueNumberGenerator.next(), -1, MoveType.SINGLE, null);
+            assert iterator.hasPrevious();
+            iterator.previous();
+            iterator.add(new ConstNumber(ConstType.INT, zero, 0));
+
+            // Then replace the invoke instruction with NewArrayEmpty instruction.
+            Instruction next = iterator.next();
+            assert current == next;
+            NewArrayEmpty newArray = new NewArrayEmpty(destValue, zero,
+                dexItemFactory.createType(dexItemFactory.throwableArrayDescriptor));
+            iterator.replaceCurrentInstruction(newArray);
+
+            // NOTE: nothing needs to be changed in catch handlers since we replace
+            //       one throwable instruction with another.
+          }
+        }
+      }
+    }
+
+    // If at least one addSuppressed(...) call was removed, or we were able
+    // to remove getSuppressed() call without replacing it with a new empty array,
+    // we need to deal with possible unreachable catch handlers.
+    if (removeUnneededCatchHandlers) {
+      removeUnneededCatchHandlers(code);
+    }
+
+    assert code.isConsistentSSA();
+  }
+
+  private boolean matchesMethodOfThrowable(DexMethod invoked, DexMethod expected) {
+    return invoked.name == expected.name
+        && invoked.proto == expected.proto
+        && isSubtypeOfThrowable(invoked.holder);
+  }
+
+  private boolean isSubtypeOfThrowable(DexType type) {
+    while (type != null && type != dexItemFactory.objectType) {
+      if (type == dexItemFactory.throwableType) {
+        return true;
+      }
+      DexClass dexClass = appInfo.definitionFor(type);
+      if (dexClass == null) {
+        throw new CompilationError("Class or interface " + type.toSourceString() +
+            " required for desugaring of try-with-resources is not found.");
+      }
+      type = dexClass.superType;
+    }
+    return false;
   }
 }

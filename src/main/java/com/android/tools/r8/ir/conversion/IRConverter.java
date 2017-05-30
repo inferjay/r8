@@ -132,6 +132,16 @@ public class IRConverter {
     throw new Unreachable();
   }
 
+  private boolean enableTryWithResourcesDesugaring() {
+    switch (options.tryWithResourcesDesugaring) {
+      case Off:
+        return false;
+      case Auto:
+        return !options.canUseSuppressedExceptions();
+    }
+    throw new Unreachable();
+  }
+
   private void markLibraryMethodsReturningReceiver() {
     DexItemFactory dexItemFactory = appInfo.dexItemFactory;
     dexItemFactory.stringBuilderMethods.forEeachAppendMethod(this::markReturnsReceiver);
@@ -426,6 +436,10 @@ public class IRConverter {
     // dead code which is removed right before register allocation in performRegisterAllocation.
     DeadCodeRemover.removeDeadCode(code, codeRewriter, options);
     assert code.isConsistentSSA();
+
+    if (enableTryWithResourcesDesugaring()) {
+      codeRewriter.rewriteThrowableAddAndGetSuppressed(code);
+    }
 
     if (lambdaRewriter != null) {
       lambdaRewriter.desugarLambdas(method, code);

@@ -13,6 +13,11 @@ import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.utils.DexInspector;
+import com.android.tools.r8.utils.DexInspector.FoundClassSubject;
+import com.android.tools.r8.utils.DexInspector.FoundMethodSubject;
+import com.android.tools.r8.utils.DexInspector.InstructionSubject;
+import com.android.tools.r8.utils.DexInspector.InvokeInstructionSubject;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.google.common.collect.ImmutableList;
@@ -20,10 +25,13 @@ import com.google.common.collect.ImmutableMap;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -38,12 +46,42 @@ public abstract class RunExamplesAndroidOTest<B> {
     final String mainClass;
 
     final List<Consumer<InternalOptions>> optionConsumers = new ArrayList<>();
+    final List<Consumer<DexInspector>> dexInspectorChecks = new ArrayList<>();
     final List<UnaryOperator<B>> builderTransformations = new ArrayList<>();
 
     TestRunner(String testName, String packageName, String mainClass) {
       this.testName = testName;
       this.packageName = packageName;
       this.mainClass = mainClass;
+    }
+
+    TestRunner withDexCheck(Consumer<DexInspector> check) {
+      dexInspectorChecks.add(check);
+      return this;
+    }
+
+    TestRunner withClassCheck(Consumer<FoundClassSubject> check) {
+      withDexCheck(inspector -> inspector.forAllClasses(check));
+      return this;
+    }
+
+    TestRunner withMethodCheck(Consumer<FoundMethodSubject> check) {
+      withClassCheck(clazz -> clazz.forAllMethods(check));
+      return this;
+    }
+
+    <T extends InstructionSubject> TestRunner
+    withInstructionCheck(Predicate<InstructionSubject> filter, Consumer<T> check) {
+      withMethodCheck(method -> {
+        if (method.isAbstract()) {
+          return;
+        }
+        Iterator<T> iterator = method.iterateInstructions(filter);
+        while (iterator.hasNext()) {
+          check.accept(iterator.next());
+        }
+      });
+      return this;
     }
 
     TestRunner withOptionConsumer(Consumer<InternalOptions> consumer) {
@@ -53,6 +91,10 @@ public abstract class RunExamplesAndroidOTest<B> {
 
     TestRunner withInterfaceMethodDesugaring(OffOrAuto behavior) {
       return withOptionConsumer(o -> o.interfaceMethodDesugaring = behavior);
+    }
+
+    TestRunner withTryWithResourcesDesugaring(OffOrAuto behavior) {
+      return withOptionConsumer(o -> o.tryWithResourcesDesugaring = behavior);
     }
 
     TestRunner withBuilderTransformation(UnaryOperator<B> builderTransformation) {
@@ -84,6 +126,13 @@ public abstract class RunExamplesAndroidOTest<B> {
       boolean expectedToFail = expectedToFail(testName);
       if (expectedToFail) {
         thrown.expect(Throwable.class);
+      }
+
+      if (!dexInspectorChecks.isEmpty()) {
+        DexInspector inspector = new DexInspector(out);
+        for (Consumer<DexInspector> check : dexInspectorChecks) {
+          check.accept(inspector);
+        }
       }
 
       String output = ToolHelper.runArtNoVerificationErrors(out.toString(), qualifiedMainClass);
@@ -236,6 +285,25 @@ public abstract class RunExamplesAndroidOTest<B> {
     // to do anything to support them. The library methods to access them just have to be in
     // the system.
     test("repeat_annotations", "repeat_annotations", "RepeatAnnotations").run();
+  }
+
+  @Test
+  public void testTryWithResources() throws Throwable {
+    test("try-with-resources-simplified", "trywithresources", "TryWithResourcesNotDesugaredTests")
+        .withTryWithResourcesDesugaring(OffOrAuto.Off)
+        .run();
+  }
+
+  @Test
+  public void testTryWithResourcesDesugared() throws Throwable {
+    test("try-with-resources-simplified", "trywithresources", "TryWithResourcesDesugaredTests")
+        .withTryWithResourcesDesugaring(OffOrAuto.Auto)
+        .withInstructionCheck(InstructionSubject::isInvoke,
+            (InvokeInstructionSubject invoke) -> {
+              Assert.assertFalse(invoke.invokedMethod().name.toString().equals("addSuppressed"));
+              Assert.assertFalse(invoke.invokedMethod().name.toString().equals("getSuppressed"));
+            })
+        .run();
   }
 
   abstract TestRunner test(String testName, String packageName, String mainClass);
