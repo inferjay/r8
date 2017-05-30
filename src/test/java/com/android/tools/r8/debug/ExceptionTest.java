@@ -12,12 +12,21 @@ public class ExceptionTest extends DebugTestBase {
 
   @Test
   public void testStepOnCatch() throws Throwable {
+    int catchLine;
+    if (isRunningJava()) {
+      // Java jumps to first instruction of the catch handler, matching the source code.
+      catchLine = 11;
+    } else {
+      // ART/Dalvik jumps to 'move-exception' which initializes the local variable with the pending
+      // exception. Thus it is "attached" to the line declaring the exception in the catch handler.
+      catchLine = 10;
+    }
     runDebugTest("Exceptions",
         breakpoint("Exceptions", "catchException"),
         run(),
         checkLine(9), // line of the method call throwing the exception
         stepOver(),
-        checkLine(10), // line of the catch declaration
+        checkLine(catchLine), // line of the catch declaration
         run());
   }
 
