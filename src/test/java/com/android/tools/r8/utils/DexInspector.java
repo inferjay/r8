@@ -271,6 +271,8 @@ public class DexInspector {
     public abstract String getOriginalDescriptor();
 
     public abstract String getFinalDescriptor();
+
+    public abstract boolean isRenamed();
   }
 
   private class AbsentClassSubject extends ClassSubject {
@@ -321,6 +323,11 @@ public class DexInspector {
     @Override
     public String getFinalDescriptor() {
       return null;
+    }
+
+    @Override
+    public boolean isRenamed() {
+      return false;
     }
   }
 
@@ -456,6 +463,11 @@ public class DexInspector {
     public String getFinalDescriptor() {
       return dexClass.type.descriptor.toString();
     }
+
+    @Override
+    public boolean isRenamed() {
+      return naming == null || !getFinalDescriptor().equals(getOriginalDescriptor());
+    }
   }
 
   public abstract class MemberSubject extends Subject {
@@ -469,6 +481,8 @@ public class DexInspector {
     public abstract boolean isFinal();
 
     public abstract Signature getOriginalSignature();
+
+    public abstract Signature getFinalSignature();
   }
 
   public abstract class MethodSubject extends MemberSubject {
@@ -485,12 +499,19 @@ public class DexInspector {
         Predicate<InstructionSubject> filter) {
       return null;
     }
+
+    public abstract boolean isRenamed();
   }
 
   public class AbsentMethodSubject extends MethodSubject {
 
     @Override
     public boolean isPresent() {
+      return false;
+    }
+
+    @Override
+    public boolean isRenamed() {
       return false;
     }
 
@@ -528,6 +549,11 @@ public class DexInspector {
     public Signature getOriginalSignature() {
       return null;
     }
+
+    @Override
+    public Signature getFinalSignature() {
+      return null;
+    }
   }
 
   public class FoundMethodSubject extends MethodSubject {
@@ -543,6 +569,11 @@ public class DexInspector {
     @Override
     public boolean isPresent() {
       return true;
+    }
+
+    @Override
+    public boolean isRenamed() {
+      return clazz.naming == null || !getFinalSignature().name.equals(getOriginalSignature().name);
     }
 
     @Override
@@ -577,10 +608,15 @@ public class DexInspector {
 
     @Override
     public MethodSignature getOriginalSignature() {
-      MethodSignature signature = MemberNaming.MethodSignature.fromDexMethod(dexMethod.method);
+      MethodSignature signature = getFinalSignature();
       return clazz.naming != null ?
           (MethodSignature) clazz.naming.lookup(signature).getOriginalSignature() :
           signature;
+    }
+
+    @Override
+    public MethodSignature getFinalSignature() {
+      return MemberNaming.MethodSignature.fromDexMethod(dexMethod.method);
     }
 
     @Override
@@ -633,6 +669,11 @@ public class DexInspector {
     }
 
     @Override
+    public Signature getFinalSignature() {
+      return null;
+    }
+
+    @Override
     public DexEncodedField getField() {
       return null;
     }
@@ -679,10 +720,15 @@ public class DexInspector {
 
     @Override
     public FieldSignature getOriginalSignature() {
-      FieldSignature signature = MemberNaming.FieldSignature.fromDexField(dexField.field);
+      FieldSignature signature = getFinalSignature();
       return clazz.naming != null ?
           (FieldSignature) clazz.naming.lookup(signature).getOriginalSignature() :
           signature;
+    }
+
+    @Override
+    public FieldSignature getFinalSignature() {
+      return MemberNaming.FieldSignature.fromDexField(dexField.field);
     }
 
     @Override

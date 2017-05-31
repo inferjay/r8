@@ -210,7 +210,7 @@ public class R8 {
                 "Shrinking can't be performed because some library classes are missing.");
           }
         }
-        rootSet = new RootSetBuilder(application, options.keepRules).run(executorService);
+        rootSet = new RootSetBuilder(application, appInfo, options.keepRules).run(executorService);
         Enqueuer enqueuer = new Enqueuer(rootSet, appInfo);
         appInfo = enqueuer.run(timing);
         if (options.printSeeds) {

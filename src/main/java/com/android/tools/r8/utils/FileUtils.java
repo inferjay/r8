@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FileUtils {
@@ -72,6 +73,10 @@ public class FileUtils {
         writer.write("\n");
       }
     }
+  }
+
+  public static void writeTextFile(Path file, String... lines) throws IOException {
+    Files.write(file, Arrays.asList(lines));
   }
 
   public static Path validateOutputFile(Path path) throws CompilationException {
