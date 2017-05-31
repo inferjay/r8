@@ -8,4 +8,8 @@ abstract class PackagePrivateClass {
   public final void aMethod() {
     System.out.println("Hello, I am aMethod");
   }
+
+  public final static void aStaticMethod() {
+    System.out.println("Hello, I am aStaticMethod");
+  }
 }

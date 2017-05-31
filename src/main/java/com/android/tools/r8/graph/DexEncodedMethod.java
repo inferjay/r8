@@ -18,11 +18,14 @@ import com.android.tools.r8.code.Throw;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.ir.code.IRCode;
+import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
+import com.android.tools.r8.ir.synthetic.ForwardMethodSourceCode;
+import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
@@ -302,6 +305,38 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     DexMethod newMethod = factory.createMethod(method.holder, method.proto, name);
     Builder builder = builder(this);
     builder.setMethod(newMethod);
+    return builder.build();
+  }
+
+  public DexEncodedMethod toForwardingMethod(DexClass holder, DexItemFactory itemFactory) {
+    assert accessFlags.isPublic();
+    DexMethod newMethod = itemFactory.createMethod(holder.type, method.proto, method.name);
+    Invoke.Type type = accessFlags.isStatic() ? Invoke.Type.STATIC : Invoke.Type.SUPER;
+    Builder builder = builder(this);
+    builder.setMethod(newMethod);
+    if (accessFlags.isAbstract()) {
+      // If the forwarding target is abstract, we can just create an abstract method. While it
+      // will not actually forward, it will create the same exception when hit at runtime.
+      builder.accessFlags.setAbstract();
+    } else {
+      // Create code that forwards the call to the target.
+      builder.setCode(new SynthesizedCode(
+          new ForwardMethodSourceCode(
+              accessFlags.isStatic() ? null : holder.type,
+              method.proto,
+              accessFlags.isStatic() ? null : method.holder,
+              method,
+              type),
+          registry -> {
+            if (accessFlags.isStatic()) {
+              registry.registerInvokeStatic(method);
+            } else {
+              registry.registerInvokeSuper(method);
+            }
+          }));
+    }
+    builder.accessFlags.setSynthetic();
+    accessFlags.unsetFinal();
     return builder.build();
   }
 
