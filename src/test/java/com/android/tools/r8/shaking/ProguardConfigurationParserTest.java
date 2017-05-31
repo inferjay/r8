@@ -63,6 +63,8 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "skipnonpubliclibraryclasses.flags";
   private static final String PARSE_AND_SKIP_SINGLE_ARGUMENT =
       VALID_PROGUARD_DIR + "parse-and-skip-single-argument.flags";
+  private static final String TARGET =
+      VALID_PROGUARD_DIR + "target.flags";
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -341,6 +343,13 @@ public class ProguardConfigurationParserTest extends TestBase {
   public void parseAndskipSingleArgument() throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(PARSE_AND_SKIP_SINGLE_ARGUMENT));
+  }
+
+  @Test
+  public void parseTarget()
+      throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(TARGET));
   }
 
   @Test
