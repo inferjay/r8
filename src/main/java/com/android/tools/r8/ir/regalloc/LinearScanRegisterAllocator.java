@@ -804,6 +804,9 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   private int getSpillRegister(LiveIntervals intervals) {
+    if (intervals.isArgumentInterval()) {
+      return intervals.getSplitParent().getRegister();
+    }
     int registerNumber = nextUnusedRegisterNumber++;
     maxRegisterNumber = registerNumber;
     if (intervals.getType() == MoveType.WIDE) {
@@ -1331,9 +1334,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
             inactive.add(splitOfSplit);
           } else if (intervals.getValue().isConstant()) {
             splitRangesForSpilledConstant(splitChild, registerNumber);
+          } else if (intervals.isArgumentInterval()) {
+            splitRangesForSpilledArgument(splitChild);
           } else {
             splitRangesForSpilledInterval(splitChild, registerNumber);
-
           }
         }
       }
@@ -1341,15 +1345,30 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     active.addAll(newActive);
   }
 
-  private void splitRangesForSpilledInterval(LiveIntervals splitChild, int registerNumber) {
+  private void splitRangesForSpilledArgument(LiveIntervals spilled) {
+    assert spilled.isSpilled();
+    assert spilled.isArgumentInterval();
+    // Argument intervals are spilled to the original argument register. We don't know what
+    // that is yet, and therefore we split before the next use to make sure we get a usable
+    // register at the next use.
+    if (!spilled.getUses().isEmpty()) {
+      LiveIntervals split = spilled.splitBefore(spilled.getUses().first().getPosition());
+      unhandled.add(split);
+    }
+  }
+
+  private void splitRangesForSpilledInterval(LiveIntervals spilled, int registerNumber) {
     // Spilling a non-pinned, non-rematerializable value. We use the value in the spill
     // register for as long as possible to avoid further moves.
-    assert splitChild.isSpilled();
-    assert !splitChild.getValue().isConstant();
-    assert !splitChild.isLinked() || splitChild.isArgumentInterval();
+    assert spilled.isSpilled();
+    assert !spilled.getValue().isConstant();
+    assert !spilled.isLinked() || spilled.isArgumentInterval();
+    if (spilled.isArgumentInterval()) {
+      registerNumber = Constants.U16BIT_MAX;
+    }
     LiveIntervalsUse firstUseWithLowerLimit = null;
     boolean hasUsesBeforeFirstUseWithLowerLimit = false;
-    for (LiveIntervalsUse use : splitChild.getUses()) {
+    for (LiveIntervalsUse use : spilled.getUses()) {
       if (registerNumber > use.getLimit()) {
         firstUseWithLowerLimit = use;
         break;
@@ -1358,10 +1377,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       }
     }
     if (hasUsesBeforeFirstUseWithLowerLimit) {
-      splitChild.setSpilled(false);
+      spilled.setSpilled(false);
     }
     if (firstUseWithLowerLimit != null) {
-      LiveIntervals splitOfSplit = splitChild.splitBefore(firstUseWithLowerLimit.getPosition());
+      LiveIntervals splitOfSplit = spilled.splitBefore(firstUseWithLowerLimit.getPosition());
       unhandled.add(splitOfSplit);
     }
   }
