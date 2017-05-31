@@ -41,7 +41,9 @@ public class ProguardConfigurationParser {
       .of("forceprocessing", "dontusemixedcaseclassnames",
           "dontpreverify", "experimentalshrinkunusedprotofields",
           "filterlibraryjarswithorginalprogramjars",
-          "dontskipnonpubliclibraryclasses", "invokebasemethod");
+          "dontskipnonpubliclibraryclasses",
+          "dontskipnonpubliclibraryclassmembers",
+          "invokebasemethod");
   private static final List<String> ignoredClassDescriptorOptions = ImmutableList
       .of("isclassnamestring",
           "alwaysinline", "identifiernamestring", "whyarenotsimple");
