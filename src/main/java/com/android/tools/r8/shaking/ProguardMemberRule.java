@@ -333,6 +333,10 @@ public class ProguardMemberRule {
         result.append(getName());
         break;
       }
+      case ALL: {
+        result.append("<all>");
+        break;
+      }
       default:
         throw new Unreachable("Unknown kind of member rule");
     }

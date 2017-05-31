@@ -237,38 +237,33 @@ public class DexApplication {
       mainDexList.addAll(application.mainDexList);
     }
 
-    public synchronized void setProguardMap(ClassNameMapper proguardMap) {
+    public synchronized Builder setProguardMap(ClassNameMapper proguardMap) {
       assert this.proguardMap == null;
       this.proguardMap = proguardMap;
+      return this;
     }
 
-    public synchronized void setHighestSortingString(DexString value) {
+    public synchronized Builder setHighestSortingString(DexString value) {
       highestSortingString = value;
+      return this;
     }
 
-    // Callback from FileReader when parsing a DexCode (multi-threaded).
-    public synchronized DexCode canonicalizeCode(DexCode code) {
-      DexCode result = codeItems.get(code);
-      if (result != null) {
-        return result;
-      }
-      codeItems.put(code, code);
-      return code;
-    }
-
-    public void addClassPromise(DexClassPromise promise) {
+    public Builder addClassPromise(DexClassPromise promise) {
       addClassPromise(promise, false);
+      return this;
     }
 
-    public void addClassIgnoringLibraryDuplicates(DexClass clazz) {
+    public Builder addClassIgnoringLibraryDuplicates(DexClass clazz) {
       addClass(clazz, true);
+      return this;
     }
 
-    public void addSynthesizedClass(DexProgramClass synthesizedClass, boolean addToMainDexList) {
+    public Builder addSynthesizedClass(DexProgramClass synthesizedClass, boolean addToMainDexList) {
       addClassPromise(synthesizedClass);
       if (addToMainDexList && !mainDexList.isEmpty()) {
         mainDexList.add(synthesizedClass.type);
       }
+      return this;
     }
 
     // Callback from FileReader when parsing a DexProgramClass (multi-threaded).
@@ -365,8 +360,9 @@ public class DexApplication {
       }
     }
 
-    public void addToMainDexList(Collection<DexType> mainDexList) {
+    public Builder addToMainDexList(Collection<DexType> mainDexList) {
       this.mainDexList.addAll(mainDexList);
+      return this;
     }
 
     public DexApplication build() {

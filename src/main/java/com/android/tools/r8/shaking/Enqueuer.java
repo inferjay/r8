@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
 public class Enqueuer {
 
   private final AppInfoWithSubtyping appInfo;
-  private final RootSet rootSet;
+  private RootSet rootSet;
 
   private Map<DexType, Set<DexMethod>> virtualInvokes = Maps.newIdentityHashMap();
   private Map<DexType, Set<DexMethod>> superInvokes = Maps.newIdentityHashMap();
@@ -146,11 +146,8 @@ public class Enqueuer {
    */
   private final Map<DexType, Set<DexAnnotation>> deferredAnnotations = new IdentityHashMap<>();
 
-  public Enqueuer(RootSet rootSet, AppInfoWithSubtyping appInfo) {
+  public Enqueuer(AppInfoWithSubtyping appInfo) {
     this.appInfo = appInfo;
-    this.rootSet = rootSet;
-    // Translate the result of root-set computation into enqueuer actions.
-    enqueueRootItems(rootSet.noShrinking);
   }
 
   private void enqueueRootItems(Map<DexItem, ProguardKeepRule> items) {
@@ -708,9 +705,26 @@ public class Enqueuer {
         reachability, instantiatedTypes.getReasons());
   }
 
-  public AppInfoWithLiveness run(Timing timing) {
-    timing.begin("Grow the tree.");
+  public Set<DexType> traceMainDex(RootSet rootSet, Timing timing) {
+    this.rootSet = rootSet;
+    // Translate the result of root-set computation into enqueuer actions.
+    enqueueRootItems(rootSet.noShrinking);
+    AppInfoWithLiveness appInfo = trace(timing);
+
+    // LiveTypes is the result, just make a copy because further work will modify its content.
+    return new HashSet<>(appInfo.liveTypes);
+  }
+
+  public AppInfoWithLiveness traceApplication(RootSet rootSet, Timing timing) {
+    this.rootSet = rootSet;
+    // Translate the result of root-set computation into enqueuer actions.
+    enqueueRootItems(rootSet.noShrinking);
     appInfo.libraryClasses().forEach(this::markAllVirtualMethodsReachable);
+    return trace(timing);
+  }
+
+  private AppInfoWithLiveness trace(Timing timing) {
+    timing.begin("Grow the tree.");
     try {
       while (!workList.isEmpty()) {
         Action action = workList.poll();
@@ -944,7 +958,7 @@ public class Enqueuer {
      * Set of types that are mentioned in the program. We at least need an empty abstract classitem
      * for these.
      */
-    final Set<DexType> liveTypes;
+    public final Set<DexType> liveTypes;
     /**
      * Set of types that are actually instantiated. These cannot be abstract.
      */

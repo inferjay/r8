@@ -1,0 +1,11 @@
+Lmultidex003/Annotated2;
+Lmultidex003/Annotated3;
+Lmultidex003/Annotated;
+Lmultidex003/TestAnnotation2;
+Lmultidex003/TestAnnotation3;
+Lmultidex003/TestAnnotation;
+Lmultidex003/fakelibrary/MultiDex$V14;
+Lmultidex003/fakelibrary/MultiDex$V19;
+Lmultidex003/fakelibrary/MultiDex$V4;
+Lmultidex003/fakelibrary/MultiDex;
+Lmultidex003/fakelibrary/MultiDexApplication;

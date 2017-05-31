@@ -1,0 +1,9 @@
+Lmultidex004/-$$Lambda$MainActivity$dRBNeLGjbsJicx27QgIJsf0cF7o;
+Lmultidex004/MainActivity;
+Lmultidex004/VersionInterface;
+Lmultidex004/VersionStatic;
+Lmultidex004/fakeframeworks/Activity;
+Lmultidex004/fakeframeworks/Application;
+Lmultidex004/fakeframeworks/Context;
+Lmultidex004/fakelibrary/MultiDex;
+Lmultidex004/fakelibrary/MultiDexApplication;

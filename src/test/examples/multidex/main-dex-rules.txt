@@ -1,0 +1,28 @@
+# Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# Keep the application entry point. Get rid of everything that is not
+# reachable from there.
+-keep public class * extends **.Instrumentation {
+  <init>();
+}
+-keep public class * extends **.Application {
+  <init>();
+  void attachBaseContext(*.Context);
+}
+-keep public class * extends **.Activity {
+  <init>();
+}
+-keep public class * extends **.Service {
+  <init>();
+}
+-keep public class * extends **.ContentProvider {
+ <init>();
+}
+-keep public class * extends **.BroadcastReceiver {
+ <init>();
+}
+-keep public class * extends **.BackupAgent {
+ <init>();
+}

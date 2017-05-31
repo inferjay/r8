@@ -432,7 +432,13 @@ public class ToolHelper {
 
   public static AndroidApp runR8(R8Command command, Consumer<InternalOptions> optionsConsumer)
       throws ProguardRuleParserException, ExecutionException, IOException {
-    // TODO(zerny): Should we really be adding the android library in ToolHelper?
+    return runR8WithFullResult(command, optionsConsumer).androidApp;
+  }
+
+  public static CompilationResult runR8WithFullResult(
+        R8Command command, Consumer<InternalOptions> optionsConsumer)
+        throws ProguardRuleParserException, ExecutionException, IOException {
+   // TODO(zerny): Should we really be adding the android library in ToolHelper?
     AndroidApp app = command.getInputApp();
     if (app.getClassLibraryResources().isEmpty()) {
       app =
@@ -446,9 +452,9 @@ public class ToolHelper {
     if (optionsConsumer != null) {
       optionsConsumer.accept(options);
     }
-    AndroidApp result = R8.runForTesting(app, options);
+    CompilationResult result = R8.runForTesting(app, options);
     if (command.getOutputPath() != null) {
-      result.write(command.getOutputPath());
+      result.androidApp.write(command.getOutputPath());
     }
     return result;
   }
@@ -487,7 +493,7 @@ public class ToolHelper {
     if (optionsConsumer != null) {
       optionsConsumer.accept(options);
     }
-    AndroidApp result = D8.runForTesting(command.getInputApp(), options);
+    AndroidApp result = D8.runForTesting(command.getInputApp(), options).androidApp;
     if (command.getOutputPath() != null) {
       result.write(command.getOutputPath());
     }

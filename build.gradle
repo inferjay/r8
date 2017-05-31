@@ -561,19 +561,26 @@ task buildExamples {
     dependsOn buildExampleAndroidNJars
     dependsOn buildExampleAndroidOJars
     def examplesDir = file("src/test/examples")
+    def noDexTests = [
+        "multidex",
+        "multidex002",
+        "multidex004",
+    ]
     examplesDir.eachDir { dir ->
         def name = dir.getName();
-        dependsOn "dex_example_${name}"
-        def exampleOutputDir = file("build/test/examples/" + name);
-        def dexPath = file("${exampleOutputDir}")
-        def debug = (name == "throwing")
-        if (!dexPath.exists()) {
-            dexPath.mkdirs()
-        }
-        task "dex_example_${name}"(type: dx.Dx, dependsOn: "jar_example_${name}") {
-            source = files(tasks.getByPath("jar_example_${name}")).asFileTree
-            destination = dexPath
-            debug = debug
+        if (!(name in noDexTests)) {
+            dependsOn "dex_example_${name}"
+            def exampleOutputDir = file("build/test/examples/" + name);
+            def dexPath = file("${exampleOutputDir}")
+            def debug = (name == "throwing")
+            if (!dexPath.exists()) {
+                dexPath.mkdirs()
+            }
+            task "dex_example_${name}"(type: dx.Dx, dependsOn: "jar_example_${name}") {
+                source = files(tasks.getByPath("jar_example_${name}")).asFileTree
+                destination = dexPath
+                debug = debug
+            }
         }
     }
 }

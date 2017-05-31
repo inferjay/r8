@@ -6,6 +6,7 @@ package com.android.tools.r8;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.shaking.ProguardConfiguration;
 import com.android.tools.r8.shaking.ProguardConfigurationParser;
+import com.android.tools.r8.shaking.ProguardConfigurationRule;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
@@ -23,6 +24,7 @@ public class R8Command extends BaseCommand {
 
   public static class Builder extends BaseCommand.Builder<R8Command, Builder> {
 
+    private final List<Path> mainDexRules = new ArrayList<>();
     private final List<Path> proguardConfigFiles = new ArrayList<>();
     private Optional<Boolean> treeShaking = Optional.empty();
     private Optional<Boolean> minification = Optional.empty();
@@ -50,6 +52,18 @@ public class R8Command extends BaseCommand {
     /** Enable/disable minification. This overrides any settings in proguard configuration files. */
     public Builder setMinification(boolean useMinification) {
       minification = Optional.of(useMinification);
+      return this;
+    }
+
+    /** Add proguard configuration file resources for automatic main dex list calculation. */
+    public Builder addMainDexRules(Path... paths) {
+      Collections.addAll(mainDexRules, paths);
+      return this;
+    }
+
+    /** Add proguard configuration file resources for automatic main dex list calculation. */
+    public Builder addMainDexRules(List<Path> paths) {
+      mainDexRules.addAll(paths);
       return this;
     }
 
@@ -95,6 +109,18 @@ public class R8Command extends BaseCommand {
       }
 
       DexItemFactory factory = new DexItemFactory();
+      ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
+      if (this.mainDexRules.isEmpty()) {
+        mainDexKeepRules = ImmutableList.of();
+      } else {
+        ProguardConfigurationParser parser = new ProguardConfigurationParser(factory);
+        try {
+          parser.parse(mainDexRules);
+        } catch (ProguardRuleParserException e) {
+          throw new CompilationException(e.getMessage(), e.getCause());
+        }
+        mainDexKeepRules = parser.getConfig().getRules();
+      }
       ProguardConfiguration configuration;
       if (proguardConfigFiles.isEmpty()) {
         configuration = ProguardConfiguration.defaultConfiguration(factory);
@@ -116,6 +142,7 @@ public class R8Command extends BaseCommand {
       return new R8Command(
           getAppBuilder().build(),
           getOutputPath(),
+          mainDexKeepRules,
           configuration,
           getMode(),
           getMinApiLevel(),
@@ -134,19 +161,22 @@ public class R8Command extends BaseCommand {
       "Usage: r8 [options] <input-files>",
       " where <input-files> are any combination of dex, class, zip, jar, or apk files",
       " and options are:",
-      "  --debug             # Compile with debugging information (default enabled).",
-      "  --release           # Compile without debugging information.",
-      "  --output <file>     # Output result in <file>.",
-      "                      # <file> must be an existing directory or non-existent zip file.",
-      "  --lib <file>        # Add <file> as a library resource.",
-      "  --min-sdk-version   # Minimum Android API level compatibility.",
-      "  --pg-conf <file>    # Proguard configuration <file> (implies tree shaking/minification).",
-      "  --pg-map <file>     # Proguard map <file>.",
-      "  --no-tree-shaking   # Force disable tree shaking of unreachable classes.",
-      "  --no-minification   # Force disable minification of names.",
-      "  --version           # Print the version of r8.",
-      "  --help              # Print this message."));
+      "  --debug                 # Compile with debugging information (default enabled).",
+      "  --release               # Compile without debugging information.",
+      "  --output <file>         # Output result in <file>.",
+      "                          # <file> must be an existing directory or non-existent zip file.",
+      "  --lib <file>            # Add <file> as a library resource.",
+      "  --min-sdk-version       # Minimum Android API level compatibility.",
+      "  --pg-conf <file>        # Proguard configuration <file> (implies tree shaking/minification).",
+      "  --pg-map <file>         # Proguard map <file>.",
+      "  --no-tree-shaking       # Force disable tree shaking of unreachable classes.",
+      "  --no-minification       # Force disable minification of names.",
+      "  --multidex-rules <file> # Enable automatic classes partitioning for legacy multidex.",
+      "                          # <file> is a Proguard configuration file (with only keep rules).",
+      "  --version               # Print the version of r8.",
+      "  --help                  # Print this message."));
 
+  private final ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
   private final ProguardConfiguration proguardConfiguration;
   private final boolean useTreeShaking;
   private final boolean useMinification;
@@ -208,6 +238,8 @@ public class R8Command extends BaseCommand {
         builder.setTreeShaking(false);
       } else if (arg.equals("--no-minification")) {
         builder.setMinification(false);
+      } else if (arg.equals("--multidex-rules")) {
+        builder.addMainDexRules(Paths.get(args[++i]));
       } else if (arg.equals("--pg-conf")) {
         builder.addProguardConfigurationFiles(Paths.get(args[++i]));
       } else if (arg.equals("--pg-map")) {
@@ -247,6 +279,7 @@ public class R8Command extends BaseCommand {
   private R8Command(
       AndroidApp inputApp,
       Path outputPath,
+      ImmutableList<ProguardConfigurationRule> mainDexKeepRules,
       ProguardConfiguration proguardConfiguration,
       CompilationMode mode,
       int minApiLevel,
@@ -255,6 +288,8 @@ public class R8Command extends BaseCommand {
       boolean ignoreMissingClasses) {
     super(inputApp, outputPath, mode, minApiLevel);
     assert proguardConfiguration != null;
+    assert mainDexKeepRules != null;
+    this.mainDexKeepRules = mainDexKeepRules;
     this.proguardConfiguration = proguardConfiguration;
     this.useTreeShaking = useTreeShaking;
     this.useMinification = useMinification;
@@ -263,6 +298,7 @@ public class R8Command extends BaseCommand {
 
   private R8Command(boolean printHelp, boolean printVersion) {
     super(printHelp, printVersion);
+    mainDexKeepRules = ImmutableList.of();
     proguardConfiguration = null;
     useTreeShaking = false;
     useMinification = false;
@@ -316,6 +352,7 @@ public class R8Command extends BaseCommand {
     internal.printMappingFile = proguardConfiguration.getPrintMappingOutput();
     internal.classObfuscationDictionary = proguardConfiguration.getClassObfuscationDictionary();
     internal.obfuscationDictionary = proguardConfiguration.getObfuscationDictionary();
+    internal.mainDexKeepRules = mainDexKeepRules;
     internal.keepRules = proguardConfiguration.getRules();
     internal.dontWarnPatterns = proguardConfiguration.getDontWarnPatterns();
     return internal;

@@ -86,6 +86,8 @@ public class DexItemFactory {
   public DexString stringDescriptor = createString("Ljava/lang/String;");
   public DexString objectDescriptor = createString("Ljava/lang/Object;");
   public DexString classDescriptor = createString("Ljava/lang/Class;");
+  public DexString enumDescriptor = createString("Ljava/lang/Enum;");
+  public DexString annotationDescriptor = createString("Ljava/lang/annotation/Annotation;");
   public DexString throwableDescriptor = createString("Ljava/lang/Throwable;");
   public DexString objectsDescriptor = createString("Ljava/util/Objects;");
 
@@ -119,6 +121,8 @@ public class DexItemFactory {
 
   public DexType stringType = createType(stringDescriptor);
   public DexType objectType = createType(objectDescriptor);
+  public DexType enumType = createType(enumDescriptor);
+  public DexType annotationType = createType(annotationDescriptor);
   public DexType throwableType = createType(throwableDescriptor);
 
   public StringBuildingMethods stringBuilderMethods =

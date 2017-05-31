@@ -7,6 +7,7 @@ import static com.android.tools.r8.R8Command.USAGE_MESSAGE;
 
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
@@ -25,6 +26,8 @@ import com.android.tools.r8.shaking.AbstractMethodRemover;
 import com.android.tools.r8.shaking.AnnotationRemover;
 import com.android.tools.r8.shaking.DiscardedChecker;
 import com.android.tools.r8.shaking.Enqueuer;
+import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
+import com.android.tools.r8.shaking.MainDexListBuilder;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.shaking.ProguardTypeMatcher;
 import com.android.tools.r8.shaking.ProguardTypeMatcher.MatchSpecificType;
@@ -168,7 +171,7 @@ public class R8 {
     }
   }
 
-  static AndroidApp runForTesting(AndroidApp app, InternalOptions options)
+  static CompilationResult runForTesting(AndroidApp app, InternalOptions options)
       throws ProguardRuleParserException, ExecutionException, IOException {
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
@@ -178,17 +181,25 @@ public class R8 {
     }
   }
 
-  static AndroidApp runForTesting(AndroidApp app, InternalOptions options, ExecutorService executor)
+  static CompilationResult runForTesting(
+      AndroidApp app,
+      InternalOptions options,
+      ExecutorService executor)
       throws ProguardRuleParserException, ExecutionException, IOException {
     return new R8(options).run(app, executor);
   }
 
-  private AndroidApp run(AndroidApp inputApp, ExecutorService executorService)
+  private CompilationResult run(AndroidApp inputApp, ExecutorService executorService)
       throws IOException, ExecutionException, ProguardRuleParserException {
     if (options.quiet) {
       System.setOut(new PrintStream(ByteStreams.nullOutputStream()));
     }
     try {
+      if (options.minApiLevel >= Constants.ANDROID_O_API
+          && !options.mainDexKeepRules.isEmpty()) {
+        throw new CompilationError("Automatic main dex list is not supported when compiling for"
+            + " android O and later (--min-sdk-version " + Constants.ANDROID_O_API + ")");
+      }
       DexApplication application =
           new ApplicationReader(inputApp, options, timing).read(executorService);
 
@@ -196,6 +207,7 @@ public class R8 {
       RootSet rootSet;
       byte[] proguardSeedsData = null;
       timing.begin("Strip unused code");
+      Set<DexType> mainDexBaseClasses = null;
       try {
         Set<DexType> missingClasses = appInfo.getMissingClasses();
         missingClasses = filterMissingClasses(missingClasses, options.dontWarnPatterns);
@@ -211,8 +223,8 @@ public class R8 {
           }
         }
         rootSet = new RootSetBuilder(application, appInfo, options.keepRules).run(executorService);
-        Enqueuer enqueuer = new Enqueuer(rootSet, appInfo);
-        appInfo = enqueuer.run(timing);
+        Enqueuer enqueuer = new Enqueuer(appInfo);
+        appInfo = enqueuer.traceApplication(rootSet, timing);
         if (options.printSeeds) {
           ByteArrayOutputStream bytes = new ByteArrayOutputStream();
           PrintStream out = new PrintStream(bytes);
@@ -262,13 +274,29 @@ public class R8 {
       graphLense = new BridgeMethodAnalysis(graphLense, appInfo.withSubtyping()).run();
 
       application = optimize(application, appInfo, graphLense, executorService);
+
+      if (!options.mainDexKeepRules.isEmpty()) {
+        appInfo = new AppInfoWithSubtyping(application);
+        Enqueuer enqueuer = new Enqueuer(appInfo);
+        // Lets find classes which may have code executed before secondary dex files installation.
+        RootSet mainDexRootSet =
+            new RootSetBuilder(application, appInfo, options.mainDexKeepRules).run(executorService);
+        mainDexBaseClasses = enqueuer.traceMainDex(mainDexRootSet, timing);
+
+        // Calculate the automatic main dex list according to legacy multidex constraints.
+        // Add those classes to an eventual manual list of classes.
+        application = new DexApplication.Builder(application)
+            .addToMainDexList(new MainDexListBuilder(mainDexBaseClasses, application).run())
+            .build();
+      }
+
       appInfo = new AppInfoWithSubtyping(application);
 
       if (options.useTreeShaking || !options.skipMinification) {
         timing.begin("Post optimization code stripping");
         try {
-          Enqueuer enqueuer = new Enqueuer(rootSet, appInfo);
-          appInfo = enqueuer.run(timing);
+          Enqueuer enqueuer = new Enqueuer(appInfo);
+          appInfo = enqueuer.traceApplication(rootSet, timing);
           if (options.useTreeShaking) {
             application = new TreePruner(application, appInfo.withLiveness(), options).run();
             appInfo = appInfo.withLiveness().prunedCopyFrom(application);
@@ -333,7 +361,7 @@ public class R8 {
         }
       }
       options.printWarnings();
-      return androidApp;
+      return new CompilationResult(androidApp, application, appInfo);
     } finally {
       // Dump timings.
       if (options.printTimes) {
@@ -353,7 +381,8 @@ public class R8 {
    */
   public static AndroidApp run(R8Command command)
       throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
-    AndroidApp outputApp = runForTesting(command.getInputApp(), command.getInternalOptions());
+    AndroidApp outputApp =
+        runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp;
     if (command.getOutputPath() != null) {
       outputApp.write(command.getOutputPath());
     }
@@ -373,7 +402,7 @@ public class R8 {
   public static AndroidApp run(R8Command command, ExecutorService executor)
       throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
     AndroidApp outputApp =
-        runForTesting(command.getInputApp(), command.getInternalOptions(), executor);
+        runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp;
     if (command.getOutputPath() != null) {
       outputApp.write(command.getOutputPath());
     }

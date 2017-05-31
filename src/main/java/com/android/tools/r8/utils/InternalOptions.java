@@ -81,6 +81,7 @@ public class InternalOptions {
   public List<String> classObfuscationDictionary = ImmutableList.of();
   public List<String> obfuscationDictionary = ImmutableList.of();
 
+  public ImmutableList<ProguardConfigurationRule> mainDexKeepRules = ImmutableList.of();
   public ImmutableList<ProguardConfigurationRule> keepRules = ImmutableList.of();
   public ImmutableSet<ProguardTypeMatcher> dontWarnPatterns = ImmutableSet.of();
 

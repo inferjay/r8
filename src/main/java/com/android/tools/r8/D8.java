@@ -60,7 +60,7 @@ public final class D8 {
    */
   public static D8Output run(D8Command command) throws IOException {
     D8Output output = new D8Output(
-        runForTesting(command.getInputApp(), command.getInternalOptions()));
+        runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp);
     if (command.getOutputPath() != null) {
       output.write(command.getOutputPath());
     }
@@ -79,7 +79,7 @@ public final class D8 {
    */
   public static D8Output run(D8Command command, ExecutorService executor) throws IOException {
     D8Output output = new D8Output(
-        runForTesting(command.getInputApp(), command.getInternalOptions(), executor));
+        runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp);
     if (command.getOutputPath() != null) {
       output.write(command.getOutputPath());
     }
@@ -132,7 +132,8 @@ public final class D8 {
     }
   }
 
-  static AndroidApp runForTesting(AndroidApp inputApp, InternalOptions options) throws IOException {
+  static CompilationResult runForTesting(AndroidApp inputApp, InternalOptions options)
+      throws IOException {
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
       return runForTesting(inputApp, options, executor);
@@ -141,7 +142,7 @@ public final class D8 {
     }
   }
 
-  static AndroidApp runForTesting(
+  static CompilationResult runForTesting(
       AndroidApp inputApp, InternalOptions options, ExecutorService executor) throws IOException {
     try {
       assert !inputApp.hasPackageDistribution();
@@ -164,9 +165,12 @@ public final class D8 {
         return null;
       }
 
-      AndroidApp output =
-          new ApplicationWriter(app, appInfo, options, NamingLens.getIdentityLens(), null)
-              .write(null, executor);
+      CompilationResult output =
+          new CompilationResult(
+              new ApplicationWriter(app, appInfo, options, NamingLens.getIdentityLens(), null)
+                .write(null, executor),
+                app,
+                appInfo);
 
       options.printWarnings();
       return output;
