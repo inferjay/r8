@@ -5,6 +5,8 @@
 package com.android.tools.r8;
 
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.InternalCompilerError;
+import com.android.tools.r8.errors.Unimplemented;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.function.UnaryOperator;
@@ -32,8 +34,10 @@ public class D8RunExamplesAndroidOTest extends RunExamplesAndroidOTest<D8Command
       D8Command command = builder.addProgramFiles(inputFile).setOutputPath(out).build();
       try {
         ToolHelper.runD8(command, this::combinedOptionConsumer);
+      } catch (Unimplemented | CompilationError | InternalCompilerError re) {
+        throw re;
       } catch (RuntimeException re) {
-        throw re instanceof CompilationError ? re : re.getCause();
+        throw re.getCause() == null ? re : re.getCause();
       }
     }
   }

@@ -46,9 +46,11 @@ public class LambdaRewriter {
   private static final String METHODHANDLE_TYPE_DESCR = "Ljava/lang/invoke/MethodHandle;";
   private static final String OBJECT_ARRAY_TYPE_DESCR = "[Ljava/lang/Object;";
   private static final String SERIALIZABLE_TYPE_DESCR = "Ljava/io/Serializable;";
+  private static final String SERIALIZED_LAMBDA_TYPE_DESCR = "Ljava/lang/invoke/SerializedLambda;";
 
   private static final String METAFACTORY_METHOD_NAME = "metafactory";
   private static final String METAFACTORY_ALT_METHOD_NAME = "altMetafactory";
+  private static final String DESERIALIZE_LAMBDA_METHOD_NAME = "$deserializeLambda$";
 
   static final String LAMBDA_CLASS_NAME_PREFIX = "-$$Lambda$";
   static final String EXPECTED_LAMBDA_METHOD_PREFIX = "lambda$";
@@ -67,6 +69,9 @@ public class LambdaRewriter {
   final DexString constructorName;
   final DexString classConstructorName;
   final DexString instanceFieldName;
+
+  final DexString deserializeLambdaMethodName;
+  final DexProto deserializeLambdaMethodProto;
 
   // Maps call sites seen so far to inferred lambda descriptor. It is intended
   // to help avoid re-matching call sites we already seen. Note that same call
@@ -116,6 +121,10 @@ public class LambdaRewriter {
     this.classConstructorName = factory.createString(Constants.CLASS_INITIALIZER_NAME);
     this.instanceFieldName = factory.createString(LAMBDA_INSTANCE_FIELD_NAME);
     this.serializableType = factory.createType(SERIALIZABLE_TYPE_DESCR);
+
+    this.deserializeLambdaMethodName = factory.createString(DESERIALIZE_LAMBDA_METHOD_NAME);
+    this.deserializeLambdaMethodProto = factory.createProto(
+        factory.objectType, new DexType[] { factory.createType(SERIALIZED_LAMBDA_TYPE_DESCR) });
   }
 
   /**
@@ -146,6 +155,35 @@ public class LambdaRewriter {
           // keeps both `instructions` and `blocks` iterators in
           // valid state so that we can continue iteration.
           patchInstruction(lambdaClass, code, blocks, instructions);
+        }
+      }
+    }
+  }
+
+  /** Remove lambda deserialization methods. */
+  public void removeLambdaDeserializationMethods(Iterable<DexProgramClass> classes) {
+    for (DexProgramClass clazz : classes) {
+      // Search for a lambda deserialization method and remove it if found.
+      DexEncodedMethod[] directMethods = clazz.directMethods;
+      if (directMethods != null) {
+        int methodCount = directMethods.length;
+        for (int i = 0; i < methodCount; i++) {
+          DexEncodedMethod encoded = directMethods[i];
+          DexMethod method = encoded.method;
+          if (method.name == deserializeLambdaMethodName &&
+              method.proto == deserializeLambdaMethodProto) {
+            assert encoded.accessFlags.isStatic();
+            assert encoded.accessFlags.isPrivate();
+            assert encoded.accessFlags.isSynthetic();
+
+            DexEncodedMethod[] newMethods = new DexEncodedMethod[methodCount - 1];
+            System.arraycopy(directMethods, 0, newMethods, 0, i);
+            System.arraycopy(directMethods, i + 1, newMethods, i, methodCount - i - 1);
+            clazz.directMethods = newMethods;
+
+            // We assume there is only one such method in the class.
+            break;
+          }
         }
       }
     }
