@@ -684,9 +684,11 @@ test {
     if (project.hasProperty('tool')) {
         if (project.property('tool') == 'r8') {
             exclude "com/android/tools/r8/art/*/d8/**"
+            exclude "com/android/tools/r8/jctf/d8/**"
         } else {
             assert(project.property('tool') == 'd8')
             exclude "com/android/tools/r8/art/*/r8/**"
+            exclude "com/android/tools/r8/jctf/r8/**"
         }
     }
     if (!project.hasProperty('all_tests')) {
