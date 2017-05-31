@@ -405,6 +405,10 @@ public class ToolHelper {
         .read();
   }
 
+  public static R8Command.Builder prepareR8CommandBuilder(AndroidApp app) {
+    return R8Command.builder(app);
+  }
+
   public static AndroidApp runR8(AndroidApp app)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     return runR8(R8Command.builder(app).build());

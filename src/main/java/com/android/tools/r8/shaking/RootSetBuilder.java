@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.shaking;
 
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexApplication;
@@ -38,6 +39,7 @@ import java.util.concurrent.Future;
 public class RootSetBuilder {
 
   private DexApplication application;
+  private final AppInfo appInfo;
   private final List<ProguardConfigurationRule> rules;
   private final Map<DexItem, ProguardKeepRule> noShrinking = new IdentityHashMap<>();
   private final Set<DexItem> noOptimization = Sets.newIdentityHashSet();
@@ -47,14 +49,15 @@ public class RootSetBuilder {
   private final Set<ProguardConfigurationRule> rulesThatUseExtendsOrImplementsWrong =
       Sets.newIdentityHashSet();
   private final Set<DexItem> checkDiscarded = Sets.newIdentityHashSet();
-  private final Map<DexType, Map<DexItem, ProguardKeepRule>> dependentNoShrinking =
+  private final Map<DexItem, Map<DexItem, ProguardKeepRule>> dependentNoShrinking =
       new IdentityHashMap<>();
   private final Map<DexItem, ProguardMemberRule> noSideEffects = new IdentityHashMap<>();
   private final Map<DexItem, ProguardMemberRule> assumedValues = new IdentityHashMap<>();
 
-  public RootSetBuilder(DexApplication application,
+  public RootSetBuilder(DexApplication application, AppInfo appInfo,
       List<ProguardConfigurationRule> rules) {
     this.application = application;
+    this.appInfo = appInfo;
     this.rules = rules;
   }
 
@@ -409,6 +412,39 @@ public class RootSetBuilder {
     addItemToSets(clazz, rule, null, null);
   }
 
+  private void includeDescriptor(DexItem item, DexType type, ProguardKeepRule context) {
+    if (type.isArrayType()) {
+      type = type.toBaseType(application.dexItemFactory);
+    }
+    if (type.isPrimitiveType()) {
+      return;
+    }
+    DexClass definition = appInfo.definitionFor(type);
+    if (definition == null || definition.isLibraryClass()) {
+      return;
+    }
+    // Keep the type if the item is also kept.
+    dependentNoShrinking.computeIfAbsent(item, x -> new IdentityHashMap<>())
+        .put(definition, context);
+    // Unconditionally add to no-obfuscation, as that is only checked for surviving items.
+    noObfuscation.add(definition);
+  }
+
+  private void includeDescriptorClasses(DexItem item, ProguardKeepRule context) {
+    if (item instanceof DexEncodedMethod) {
+      DexMethod method = ((DexEncodedMethod) item).method;
+      includeDescriptor(item, method.proto.returnType, context);
+      for (DexType value : method.proto.parameters.values) {
+        includeDescriptor(item, value, context);
+      }
+    } else if (item instanceof DexEncodedField) {
+      DexField field = ((DexEncodedField) item).field;
+      includeDescriptor(item, field.type, context);
+    } else {
+      assert item instanceof DexClass;
+    }
+  }
+
   private synchronized void addItemToSets(DexItem item, ProguardConfigurationRule context,
       ProguardMemberRule rule, DexType onlyIfClassKept) {
     if (context instanceof ProguardKeepRule) {
@@ -436,6 +472,9 @@ public class RootSetBuilder {
         assert onlyIfClassKept == null;
         keepPackageName.add(item);
       }
+      if (modifiers.includeDescriptorClasses) {
+        includeDescriptorClasses(item, keepRule);
+      }
       if (modifiers.checkDiscarded) {
         checkDiscarded.add(item);
       }
@@ -456,14 +495,49 @@ public class RootSetBuilder {
     public final Set<DexItem> checkDiscarded;
     public final Map<DexItem, ProguardMemberRule> noSideEffects;
     public final Map<DexItem, ProguardMemberRule> assumedValues;
-    private final Map<DexType, Map<DexItem, ProguardKeepRule>> dependentNoShrinking;
+    private final Map<DexItem, Map<DexItem, ProguardKeepRule>> dependentNoShrinking;
+
+    private boolean legalNoObfuscationItem(DexItem item) {
+      if (!(item instanceof DexProgramClass
+          || item instanceof DexLibraryClass
+          || item instanceof DexEncodedMethod
+          || item instanceof DexEncodedField)) {
+      }
+      assert item instanceof DexProgramClass
+          || item instanceof DexLibraryClass
+          || item instanceof DexEncodedMethod
+          || item instanceof DexEncodedField;
+      return true;
+    }
+
+    private boolean legalNoObfuscationItems(Set<DexItem> items) {
+      items.forEach(this::legalNoObfuscationItem);
+      return true;
+    }
+
+    private boolean legalDependentNoShrinkingItem(DexItem item) {
+      if (!(item instanceof DexType
+          || item instanceof DexEncodedMethod
+          || item instanceof DexEncodedField)) {
+      }
+      assert item instanceof DexType
+          || item instanceof DexEncodedMethod
+          || item instanceof DexEncodedField;
+      return true;
+    }
+
+    private boolean legalDependentNoShrinkingItems(
+        Map<DexItem, Map<DexItem, ProguardKeepRule>> dependentNoShrinking) {
+      dependentNoShrinking.keySet().forEach(this::legalDependentNoShrinkingItem);
+      return true;
+    }
 
     private RootSet(Map<DexItem, ProguardKeepRule> noShrinking,
         Set<DexItem> noOptimization, Set<DexItem> noObfuscation, Set<DexItem> reasonAsked,
         Set<DexItem> keepPackageName, Set<DexItem> checkDiscarded,
         Map<DexItem, ProguardMemberRule> noSideEffects,
         Map<DexItem, ProguardMemberRule> assumedValues,
-        Map<DexType, Map<DexItem, ProguardKeepRule>> dependentNoShrinking) {
+        Map<DexItem, Map<DexItem, ProguardKeepRule>> dependentNoShrinking) {
       this.noShrinking = Collections.unmodifiableMap(noShrinking);
       this.noOptimization = Collections.unmodifiableSet(noOptimization);
       this.noObfuscation = Collections.unmodifiableSet(noObfuscation);
@@ -473,11 +547,16 @@ public class RootSetBuilder {
       this.noSideEffects = Collections.unmodifiableMap(noSideEffects);
       this.assumedValues = Collections.unmodifiableMap(assumedValues);
       this.dependentNoShrinking = dependentNoShrinking;
+      assert legalNoObfuscationItems(noObfuscation);
+      assert legalDependentNoShrinkingItems(dependentNoShrinking);
     }
 
-    Map<DexItem, ProguardKeepRule> getDependentItems(DexType type) {
+    Map<DexItem, ProguardKeepRule> getDependentItems(DexItem item) {
+      assert item instanceof DexType
+          || item instanceof DexEncodedMethod
+          || item instanceof DexEncodedField;
       return Collections
-          .unmodifiableMap(dependentNoShrinking.getOrDefault(type, Collections.emptyMap()));
+          .unmodifiableMap(dependentNoShrinking.getOrDefault(item, Collections.emptyMap()));
     }
   }
 }

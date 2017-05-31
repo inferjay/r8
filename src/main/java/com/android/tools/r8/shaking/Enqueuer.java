@@ -517,6 +517,8 @@ public class Enqueuer {
       Log.verbose(getClass(), "Adding static field `%s` to live set.", encodedField.field);
     }
     liveFields.add(encodedField, reason);
+    // Add all dependent members to the workqueue.
+    enqueueRootItems(rootSet.getDependentItems(encodedField));
   }
 
   private void markInstanceFieldAsLive(DexEncodedField field, KeepReason reason) {
@@ -526,6 +528,8 @@ public class Enqueuer {
       Log.verbose(getClass(), "Adding instance field `%s` to live set.", field.field);
     }
     liveFields.add(field, reason);
+    // Add all dependent members to the workqueue.
+    enqueueRootItems(rootSet.getDependentItems(field));
   }
 
   private void markDirectStaticOrConstructorMethodAsLive(
@@ -832,6 +836,8 @@ public class Enqueuer {
         processAnnotations(parameterAnnotation.annotations);
       }
       method.registerReachableDefinitions(new UseRegistry(method));
+      // Add all dependent members to the workqueue.
+      enqueueRootItems(rootSet.getDependentItems(method));
     }
   }
 

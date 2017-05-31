@@ -1320,7 +1320,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
             splitRangesForSpilledConstant(splitChild, registerNumber);
           } else {
             splitRangesForSpilledInterval(splitChild, registerNumber);
-
           }
         }
       }
