@@ -3,6 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package memberrebinding.subpackage;
 
-public class PublicClass extends PublicClassInTheMiddle {
+public class PublicClass extends PackagePrivateClass {
   // Intentionally left empty.
 }

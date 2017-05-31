@@ -13,14 +13,13 @@ import java.util.Collections;
 // Source code representing synthesized lambda class constructor.
 // Used for stateless lambdas to instantiate singleton instance.
 final class LambdaClassConstructorSourceCode extends SynthesizedLambdaSourceCode {
-
   LambdaClassConstructorSourceCode(LambdaClass lambda) {
     super(null /* Class initializer is static */, lambda, lambda.classConstructor);
     assert lambda.instanceField != null;
   }
 
   @Override
-  protected void prepareInstructions() {
+  void prepareInstructions() {
     // Create and initialize an instance.
     int instance = nextRegister(MoveType.OBJECT);
     add(builder -> builder.addNewInstance(instance, lambda.type));

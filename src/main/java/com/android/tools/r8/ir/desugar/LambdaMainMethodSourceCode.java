@@ -25,7 +25,6 @@ import java.util.List;
 
 // Source code representing synthesized lambda main method
 final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
-
   LambdaMainMethodSourceCode(LambdaClass lambda, DexMethod mainMethod) {
     super(lambda, mainMethod);
   }
@@ -178,7 +177,7 @@ final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
   }
 
   @Override
-  protected void prepareInstructions() {
+  void prepareInstructions() {
     DexType[] capturedTypes = captures();
     DexType[] erasedParams = descriptor().erasedProto.parameters.values;
     DexType erasedReturnType = descriptor().erasedProto.returnType;
@@ -463,7 +462,7 @@ final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
   private int addPrimitiveBoxing(int register, DexType primitiveType, DexType boxType) {
     // Generate factory method fo boxing.
     DexItemFactory factory = factory();
-    DexProto proto = factory.createProto(boxType, new DexType[]{primitiveType});
+    DexProto proto = factory.createProto(boxType, new DexType[] { primitiveType });
     DexMethod method = factory.createMethod(boxType, proto, factory.valueOfMethodName);
 
     MoveType moveType = MoveType.fromDexType(primitiveType);

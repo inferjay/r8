@@ -3,25 +3,21 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.optimize;
 
-import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.Descriptor;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexMethod;
-import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.google.common.collect.Sets;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class MemberRebindingAnalysis {
-
   private final AppInfoWithLiveness appInfo;
   private final GraphLense lense;
   private final GraphLense.Builder builder = GraphLense.builder();
@@ -113,8 +109,7 @@ public class MemberRebindingAnalysis {
 
   private void computeMethodRebinding(Set<DexMethod> methods,
       Function<DexMethod, DexEncodedMethod> lookupTarget,
-      BiFunction<DexClass, DexMethod, DexEncodedMethod> lookupTargetOnClass,
-      BiConsumer<DexProgramClass, DexEncodedMethod> addMethod) {
+      BiFunction<DexClass, DexMethod, DexEncodedMethod> lookupTargetOnClass) {
     for (DexMethod method : methods) {
       method = lense.lookupMethod(method, null);
       // We can safely ignore array types, as the corresponding methods are defined in a library.
@@ -124,63 +119,9 @@ public class MemberRebindingAnalysis {
       DexEncodedMethod target = lookupTarget.apply(method);
       // Rebind to the lowest library class or program class.
       if (target != null && target.method != method) {
-        DexClass targetClass = appInfo.definitionFor(target.method.holder);
-        // If the targetclass is not public but the targeted method is, we might run into
-        // visibility problems when rebinding.
-        if (!targetClass.accessFlags.isPublic() && target.accessFlags.isPublic()) {
-          DexClass originalClass = appInfo.definitionFor(method.holder);
-          // If the original class is public and this method is public, it might have been called
-          // from anywhere, so we need a bridge. Likewise, if the original is in a different
-          // package, we might need a bridge, too.
-          String packageDescriptor =
-              originalClass.accessFlags.isPublic() ? null : method.holder.getPackageDescriptor();
-          if (packageDescriptor == null
-              || !packageDescriptor.equals(targetClass.type.getPackageDescriptor())) {
-            DexProgramClass bridgeHolder = findBridgeMethodHolder(originalClass, targetClass,
-                packageDescriptor);
-            assert bridgeHolder != null;
-            DexEncodedMethod bridgeMethod = target
-                .toForwardingMethod(bridgeHolder, appInfo.dexItemFactory);
-            addMethod.accept(bridgeHolder, bridgeMethod);
-            assert lookupTarget.apply(method) == bridgeMethod;
-            target = bridgeMethod;
-          }
-        }
-        // Target can be null, if we would be rebinding to a non-visible method in a library.
-        if (target != null) {
-          builder.map(method, validTargetFor(target.method, method, lookupTargetOnClass));
-        }
+        builder.map(method, validTargetFor(target.method, method, lookupTargetOnClass));
       }
     }
-  }
-
-  private DexProgramClass findBridgeMethodHolder(DexClass originalClass, DexClass targetClass,
-      String packageDescriptor) {
-    if (originalClass == targetClass || originalClass.isLibraryClass()) {
-      return null;
-    }
-    DexProgramClass newHolder = null;
-    // Recurse through supertype chain.
-    if (originalClass.superType.isSubtypeOf(targetClass.getType(), appInfo)) {
-      DexClass superClass = appInfo.definitionFor(originalClass.superType);
-      newHolder = findBridgeMethodHolder(superClass, targetClass, packageDescriptor);
-    } else {
-      for (DexType iface : originalClass.interfaces.values) {
-        if (iface.isSubtypeOf(targetClass.getType(), appInfo)) {
-          DexClass interfaceClass = appInfo.definitionFor(iface);
-          newHolder = findBridgeMethodHolder(interfaceClass, targetClass, packageDescriptor);
-        }
-      }
-    }
-    if (newHolder != null) {
-      // A supertype fulfills the visibility requirements.
-      return newHolder;
-    } else if (originalClass.accessFlags.isPublic()
-        || originalClass.type.getPackageDescriptor().equals(packageDescriptor)) {
-      // This class is visible. Return it if it is a program class, otherwise null.
-      return originalClass.asProgramClass();
-    }
-    return null;
   }
 
   private void computeFieldRebinding(Set<DexField> fields,
@@ -196,19 +137,14 @@ public class MemberRebindingAnalysis {
     }
   }
 
-  private static void privateMethodsCheck(DexProgramClass clazz, DexEncodedMethod method) {
-    throw new Unreachable("Direct invokes should not require forwarding.");
-  }
-
   public GraphLense run() {
     computeMethodRebinding(appInfo.virtualInvokes, this::virtualLookup,
-        DexClass::findVirtualTarget, DexProgramClass::addVirtualMethod);
-    computeMethodRebinding(appInfo.superInvokes, this::superLookup, DexClass::findVirtualTarget,
-        DexProgramClass::addVirtualMethod);
+        DexClass::findVirtualTarget);
+    computeMethodRebinding(appInfo.superInvokes, this::superLookup, DexClass::findVirtualTarget);
     computeMethodRebinding(appInfo.directInvokes, appInfo::lookupDirectTarget,
-        DexClass::findDirectTarget, MemberRebindingAnalysis::privateMethodsCheck);
+        DexClass::findDirectTarget);
     computeMethodRebinding(appInfo.staticInvokes, appInfo::lookupStaticTarget,
-        DexClass::findDirectTarget, DexProgramClass::addStaticMethod);
+        DexClass::findDirectTarget);
 
     computeFieldRebinding(Sets.union(appInfo.staticFieldsRead, appInfo.staticFieldsWritten),
         appInfo::lookupStaticTarget, DexClass::findStaticTarget);
