@@ -5,7 +5,6 @@ package com.android.tools.r8.utils;
 
 import com.android.tools.r8.CompilationException;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -67,12 +66,7 @@ public class FileUtils {
   }
 
   public static void writeTextFile(Path file, List<String> lines) throws IOException {
-    try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-      for (String line : lines) {
-        writer.write(line);
-        writer.write("\n");
-      }
-    }
+    Files.write(file, lines);
   }
 
   public static void writeTextFile(Path file, String... lines) throws IOException {

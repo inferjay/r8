@@ -10,16 +10,18 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.android.tools.r8.TestBase;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexItemFactory;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class ProguardConfigurationParserTest {
+public class ProguardConfigurationParserTest extends TestBase {
 
   private static final String VALID_PROGUARD_DIR = "src/test/proguard/valid/";
   private static final String INVALID_PROGUARD_DIR = "src/test/proguard/invalid/";
@@ -330,5 +332,18 @@ public class ProguardConfigurationParserTest {
   public void parseAndskipSingleArgument() throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(PARSE_AND_SKIP_SINGLE_ARGUMENT));
+  }
+
+  @Test
+  public void parseInvalidKeepClassOption() throws IOException, ProguardRuleParserException {
+    thrown.expect(ProguardRuleParserException.class);
+    thrown.expectMessage("Unknown option at ");
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    Path proguardConfig = writeTextToTempFile(
+        "-keepclassx public class * {  ",
+        "  native <methods>;           ",
+        "}                             "
+    );
+    parser.parse(proguardConfig);
   }
 }

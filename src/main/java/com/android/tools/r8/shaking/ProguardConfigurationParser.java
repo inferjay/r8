@@ -20,6 +20,7 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -373,6 +374,10 @@ public class ProguardConfigurationParser {
         } else if (acceptString("eswithmembernames")) {
           builder.setType(ProguardKeepRuleType.KEEP_CLASSES_WITH_MEMBERS);
           builder.getModifiersBuilder().allowsShrinking = true;
+        } else {
+          // The only path to here is through "-keep" followed by "class".
+          unacceptString("-keepclass");
+          throw parseError("Unknown option");
         }
       } else {
         builder.setType(ProguardKeepRuleType.KEEP);
@@ -903,6 +908,15 @@ public class ProguardConfigurationParser {
       return contents.substring(start, end);
     }
 
+    private void unacceptString(String expected) {
+      assert position >= expected.length();
+      position -= expected.length();
+      for (int i = 0; i < expected.length(); i++) {
+        assert expected.charAt(i) == contents.charAt(position + i);
+      }
+    }
+
+
     private void checkNotNegatedPattern() throws ProguardRuleParserException {
       skipWhitespace();
       if (acceptChar('!')) {
@@ -945,9 +959,11 @@ public class ProguardConfigurationParser {
       for (int lineNumber = 0; lineNumber < lines.length; lineNumber++) {
         String line = lines[lineNumber];
         if (remaining <= line.length() || lineNumber == lines.length - 1) {
-          return path.toString() + ":" + (lineNumber + 1) + ":" + remaining + "\n" + line;
+          String arrow = CharBuffer.allocate(remaining).toString().replace( '\0', ' ' ) + '^';
+          return path.toString() + ":" + (lineNumber + 1) + ":" + remaining + "\n" + line
+              + '\n' + arrow;
         }
-        remaining -= (line.length() + 1); // include newline.
+        remaining -= (line.length() + 1); // Include newline.
       }
       return path.toString();
     }
