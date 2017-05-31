@@ -11,18 +11,20 @@ import org.junit.Test;
 
 public class SyntheticMethodTest extends DebugTestBase {
 
+  public static final String SOURCE_FILE = "InnerAccessors.java";
+
   private void debugInnerAccessors(StepFilter stepFilter) throws Throwable {
     String debuggeeClass = "InnerAccessors";
     List<Command> commands = new ArrayList<>();
     commands.add(breakpoint("InnerAccessors$Inner", "callPrivateMethodInOuterClass"));
     commands.add(run());
-    commands.add(checkLine(13));
+    commands.add(checkLine(SOURCE_FILE, 13));
     commands.add(stepInto(stepFilter));  // skip synthetic accessor
     if (stepFilter == NO_FILTER) {
       commands.add(stepInto(stepFilter));
     }
     commands.add(checkMethod(debuggeeClass, "privateMethod"));
-    commands.add(checkLine(8));
+    commands.add(checkLine(SOURCE_FILE, 8));
     commands.add(run());
     runDebugTest(debuggeeClass, commands);
   }
