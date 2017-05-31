@@ -214,7 +214,7 @@ def Main():
   assert args.tool in ['jack', 'dx', 'd8']
 
   jack_option = 'ANDROID_COMPILE_WITH_JACK=' \
-      + 'true' if args.tool == 'jack' else 'false'
+      + ('true' if args.tool == 'jack' else 'false')
 
   alt_jar_option = ''
   if args.tool == 'd8':
