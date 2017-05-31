@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package lambdadesugaringnplus;
 
+import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -296,6 +297,23 @@ public class LambdasWithStaticAndDefaultMethods {
     }
   }
 
+  static class B62168701 {
+    interface I extends Serializable {
+      String getValue();
+    }
+
+    interface J {
+      static void dump() {
+        I i = () -> "B62168701 -- OK";
+        System.out.println(i.getValue());
+      }
+    }
+
+    static void test() {
+      J.dump();
+    }
+  }
+
   static void z(Z p) {
     System.out.println(p.foo(null));
   }
@@ -401,5 +419,6 @@ public class LambdasWithStaticAndDefaultMethods {
     B38306708.test();
     B38308515.test();
     B38302860.test();
+    B62168701.test();
   }
 }

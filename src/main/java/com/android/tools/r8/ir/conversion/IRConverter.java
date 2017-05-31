@@ -155,22 +155,37 @@ public class IRConverter {
     }
   }
 
+  private void removeLambdaDeserializationMethods() {
+    if (lambdaRewriter != null) {
+      lambdaRewriter.removeLambdaDeserializationMethods(application.classes());
+    }
+  }
+
+  private void synthesizeLambdaClasses(Builder builder) {
+    if (lambdaRewriter != null) {
+      lambdaRewriter.adjustAccessibility(builder);
+      lambdaRewriter.synthesizeLambdaClasses(builder);
+    }
+  }
+
+  private void desugarInterfaceMethods(
+      Builder builder, InterfaceMethodRewriter.Flavor includeAllResources) {
+    if (interfaceMethodRewriter != null) {
+      interfaceMethodRewriter.desugarInterfaceMethods(builder, includeAllResources);
+    }
+  }
+
   public DexApplication convertToDex() {
+    removeLambdaDeserializationMethods();
+
     convertClassesToDex(application.classes());
 
     // Build a new application with jumbo string info,
     Builder builder = new Builder(application);
     builder.setHighestSortingString(highestSortingString);
 
-    // Lambda rewriter
-    if (lambdaRewriter != null) {
-      lambdaRewriter.adjustAccessibility(builder);
-      lambdaRewriter.synthesizeLambdaClasses(builder);
-    }
-
-    if (interfaceMethodRewriter != null) {
-      interfaceMethodRewriter.desugarInterfaceMethods(builder, ExcludeDexResources);
-    }
+    synthesizeLambdaClasses(builder);
+    desugarInterfaceMethods(builder, ExcludeDexResources);
 
     return builder.build();
   }
@@ -207,6 +222,8 @@ public class IRConverter {
   }
 
   public DexApplication optimize(ExecutorService executorService) throws ExecutionException {
+    removeLambdaDeserializationMethods();
+
     timing.begin("Build call graph");
     callGraph = CallGraph.build(application, appInfo.withSubtyping(), graphLense);
     timing.end();
@@ -265,15 +282,8 @@ public class IRConverter {
       }
     }
 
-    // Lambda rewriter.
-    if (lambdaRewriter != null) {
-      lambdaRewriter.adjustAccessibility(builder);
-      lambdaRewriter.synthesizeLambdaClasses(builder);
-    }
-
-    if (interfaceMethodRewriter != null) {
-      interfaceMethodRewriter.desugarInterfaceMethods(builder, IncludeAllResources);
-    }
+    synthesizeLambdaClasses(builder);
+    desugarInterfaceMethods(builder, IncludeAllResources);
 
     if (outliner != null) {
       timing.begin("IR conversion phase 2");
