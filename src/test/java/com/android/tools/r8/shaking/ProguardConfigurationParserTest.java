@@ -55,6 +55,8 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "dontobfuscate.flags";
   private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASSES =
       VALID_PROGUARD_DIR + "dontskipnonpubliclibraryclasses.flags";
+  private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASS_MEMBERS =
+      VALID_PROGUARD_DIR + "dontskipnonpubliclibraryclassmembers.flags";
   private static final String DONT_OPTIMIZE =
       VALID_PROGUARD_DIR + "dontoptimize.flags";
   private static final String SKIP_NON_PUBLIC_LIBRARY_CLASSES =
@@ -310,6 +312,13 @@ public class ProguardConfigurationParserTest extends TestBase {
       throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(DONT_SKIP_NON_PUBLIC_LIBRARY_CLASSES));
+  }
+
+  @Test
+  public void parseDontskipnonpubliclibraryclassmembers()
+      throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(DONT_SKIP_NON_PUBLIC_LIBRARY_CLASS_MEMBERS));
   }
 
   @Test
