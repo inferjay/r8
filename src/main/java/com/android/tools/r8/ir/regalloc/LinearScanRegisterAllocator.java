@@ -238,7 +238,13 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         int end = liveRange.end;
         Integer nextEnd;
         while ((nextEnd = nextInRange(start, end, ends)) != null) {
-          ranges.add(new LocalRange(value, getRegisterForValue(value, start), start, nextEnd));
+          // If an argument value has been split, we have disallowed argument reuse and therefore,
+          // the argument value is also in the argument register throughout the method. For debug
+          // information, we always use the argument register whenever a local corresponds to an
+          // argument value. That avoids ending and restarting locals whenever we move arguments
+          // to lower register.
+          int register = getRegisterForValue(value, value.isArgument() ? 0 : start);
+          ranges.add(new LocalRange(value, register, start, nextEnd));
           Integer nextStart = nextInRange(nextEnd, end, starts);
           if (nextStart == null) {
             start = -1;
@@ -797,9 +803,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     maxRegisterNumber = Math.max(maxRegisterNumber, maxRegister);
   }
 
-  // Select a spill register.
-  // TODO(ager): At this point this always takes the next unused register number. We need a
-  // more intelligent selection of spill registers.
   private int getSpillRegister(LiveIntervals intervals) {
     int registerNumber = nextUnusedRegisterNumber++;
     maxRegisterNumber = registerNumber;
@@ -873,6 +876,18 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   private boolean allocateSingleInterval(LiveIntervals unhandledInterval, ArgumentReuseMode mode) {
     int registerConstraint = unhandledInterval.getRegisterLimit();
     assert registerConstraint <= Constants.U16BIT_MAX;
+
+    assert unhandledInterval.requiredRegisters() <= 2;
+    boolean needsRegisterPair = unhandledInterval.requiredRegisters() == 2;
+
+    // Just use the argument register if an argument split has no register constraint. That will
+    // avoid move generation for the argument.
+    if (registerConstraint == Constants.U16BIT_MAX && unhandledInterval.isArgumentInterval()) {
+      int argumentRegister = unhandledInterval.getSplitParent().getRegister();
+      assignRegisterToUnhandledInterval(unhandledInterval, needsRegisterPair, argumentRegister);
+      return true;
+    }
+
     if (registerConstraint < Constants.U16BIT_MAX) {
       // We always have argument sentinels that will not actually occupy registers. Therefore, we
       // allow the use of NUMBER_OF_SENTINEL_REGISTERS more than the limit.
@@ -952,8 +967,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       }
     }
 
-    assert unhandledInterval.requiredRegisters() <= 2;
-    boolean needsRegisterPair = unhandledInterval.requiredRegisters() == 2;
     // Attempt to use register hints.
     if (useRegisterHint(unhandledInterval, registerConstraint, freePositions, needsRegisterPair)) {
       return true;
