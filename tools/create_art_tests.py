@@ -63,9 +63,13 @@ def create_tests(toolchain):
   for dir in dirs:
     class_name = "Art" + dir.replace("-", "_") + "Test"
     for tool in TOOLS:
+      if tool == "d8" and toolchain == "none":
+        tool_enum = 'R8DEBUG_AFTER_D8'
+      else:
+        tool_enum = upper(tool)
       contents = TEMPLATE.substitute(
           name=dir,
-          compilerUnderTestEnum=upper(tool),
+          compilerUnderTestEnum=tool_enum,
           compilerUnderTest=tool,
           testGeneratingToolchain=toolchain,
           testGeneratingToolchainEnum=upper(toolchain),

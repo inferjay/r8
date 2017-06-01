@@ -5,8 +5,8 @@
 package com.android.tools.r8;
 
 import static com.android.tools.r8.TestCondition.D8_COMPILER;
-import static com.android.tools.r8.TestCondition.R8_COMPILER;
 import static com.android.tools.r8.TestCondition.R8DEBUG_AFTER_D8_COMPILER;
+import static com.android.tools.r8.TestCondition.R8_COMPILER;
 import static com.android.tools.r8.TestCondition.any;
 import static com.android.tools.r8.TestCondition.match;
 import static com.android.tools.r8.TestCondition.runtimes;
@@ -4808,32 +4808,37 @@ public class JctfTestSpecifications {
           .put("lang.RuntimePermission.Class.RuntimePermission_class_A13", any())
           .build(); // end of timeoutsWithArt
 
-  private static final boolean testMatch(Multimap<String, TestCondition> testConditions,
+  private static final boolean testMatch(
+      Multimap<String, TestCondition> testConditions,
       String name,
-      CompilerUnderTest compilerUnderTest, DexVm dexVm) {
+      CompilerUnderTest compilerUnderTest,
+      DexVm dexVm,
+      CompilationMode compilationMode) {
     Collection<TestCondition> entries = testConditions.get(name);
     for (TestCondition entry : entries) {
-      if (entry.test(DexTool.NONE, compilerUnderTest, dexVm)) {
+      if (entry.test(DexTool.NONE, compilerUnderTest, dexVm, compilationMode)) {
         return true;
       }
     }
     return false;
   }
 
-  public static final Outcome getExpectedOutcome(String name,
+  public static final Outcome getExpectedOutcome(
+      String name,
       CompilerUnderTest compilerUnderTest,
-      DexVm dexVm) {
+      DexVm dexVm,
+      CompilationMode compilationMode) {
 
     Outcome outcome = null;
 
-    if (testMatch(failuresToTriage, name, compilerUnderTest, dexVm)) {
+    if (testMatch(failuresToTriage, name, compilerUnderTest, dexVm, compilationMode)) {
       outcome = Outcome.FAILS_WITH_ART;
     }
-    if (testMatch(timeoutsWithArt, name, compilerUnderTest, dexVm)) {
+    if (testMatch(timeoutsWithArt, name, compilerUnderTest, dexVm, compilationMode)) {
       assert outcome == null;
       outcome = Outcome.TIMEOUTS_WITH_ART;
     }
-    if (testMatch(flakyWithArt, name, compilerUnderTest, dexVm)) {
+    if (testMatch(flakyWithArt, name, compilerUnderTest, dexVm, compilationMode)) {
       assert outcome == null;
       outcome = Outcome.FLAKY_WITH_ART;
     }

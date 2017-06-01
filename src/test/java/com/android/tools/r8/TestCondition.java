@@ -38,27 +38,46 @@ public class TestCondition {
     }
   }
 
+  static class CompilationModeSet {
+
+    final EnumSet<CompilationMode> set;
+
+    public CompilationModeSet(EnumSet<CompilationMode> set) {
+      this.set = set;
+    }
+  }
+
   public static final CompilerSet D8_COMPILER = compilers(CompilerUnderTest.D8);
   public static final CompilerSet R8_COMPILER = compilers(CompilerUnderTest.R8);
   public static final CompilerSet R8DEBUG_AFTER_D8_COMPILER =
       compilers(CompilerUnderTest.R8DEBUG_AFTER_D8);
 
+  public static final CompilationModeSet DEBUG_MODE =
+      new CompilationModeSet(EnumSet.of(CompilationMode.DEBUG));
+  public static final CompilationModeSet RELEASE_MODE =
+      new CompilationModeSet(EnumSet.of(CompilationMode.RELEASE));
+
   private static final ToolSet ANY_TOOL = new ToolSet(EnumSet.allOf(DexTool.class));
   private static final CompilerSet ANY_COMPILER =
       new CompilerSet(EnumSet.allOf(CompilerUnderTest.class));
   private static final RuntimeSet ANY_RUNTIME = new RuntimeSet(EnumSet.allOf(DexVm.class));
+  private static final CompilationModeSet ANY_MODE =
+      new CompilationModeSet(EnumSet.allOf(CompilationMode.class));
 
   private final EnumSet<DexTool> dexTools;
   private final EnumSet<CompilerUnderTest> compilers;
   private final EnumSet<DexVm> dexVms;
+  private final EnumSet<CompilationMode> compilationModes;
 
   public TestCondition(
       EnumSet<DexTool> dexTools,
       EnumSet<CompilerUnderTest> compilers,
-      EnumSet<DexVm> dexVms) {
+      EnumSet<DexVm> dexVms,
+      EnumSet<CompilationMode> compilationModes) {
     this.dexTools = dexTools;
     this.compilers = compilers;
     this.dexVms = dexVms;
+    this.compilationModes = compilationModes;
   }
 
   public static ToolSet tools(DexTool... tools) {
@@ -76,8 +95,16 @@ public class TestCondition {
     return new RuntimeSet(EnumSet.copyOf(Arrays.asList(runtimes)));
   }
 
+  public static TestCondition match(
+      ToolSet tools,
+      CompilerSet compilers,
+      RuntimeSet runtimes,
+      CompilationModeSet compilationModes) {
+    return new TestCondition(tools.set, compilers.set, runtimes.set, compilationModes.set);
+  }
+
   public static TestCondition match(ToolSet tools, CompilerSet compilers, RuntimeSet runtimes) {
-    return new TestCondition(tools.set, compilers.set, runtimes.set);
+    return match(tools, compilers, runtimes, TestCondition.ANY_MODE);
   }
 
   public static TestCondition any() {
@@ -100,6 +127,10 @@ public class TestCondition {
     return match(TestCondition.ANY_TOOL, compilers, TestCondition.ANY_RUNTIME);
   }
 
+  public static TestCondition match(CompilerSet compilers, CompilationModeSet compilationModes) {
+    return match(TestCondition.ANY_TOOL, compilers, TestCondition.ANY_RUNTIME, compilationModes);
+  }
+
   public static TestCondition match(CompilerSet compilers, RuntimeSet runtimes) {
     return match(TestCondition.ANY_TOOL, compilers, runtimes);
   }
@@ -108,7 +139,11 @@ public class TestCondition {
     return match(TestCondition.ANY_TOOL, TestCondition.ANY_COMPILER, runtimes);
   }
 
-  public boolean test(DexTool dexTool, CompilerUnderTest compilerUnderTest, DexVm dexVm) {
+  public boolean test(
+      DexTool dexTool,
+      CompilerUnderTest compilerUnderTest,
+      DexVm dexVm,
+      CompilationMode compilationMode) {
     // R8DEBUG_AFTER_D8 will be set in the R8 phase of the D8-then-R8 tests. So R8DEBUG_AFTER_D8
     // must match both with plain R8 and itself.
     boolean compilerMatches = compilers.contains(compilerUnderTest)
@@ -116,6 +151,7 @@ public class TestCondition {
             && compilers.contains(CompilerUnderTest.R8));
     return dexTools.contains(dexTool)
         && compilerMatches
-        && dexVms.contains(dexVm);
+        && dexVms.contains(dexVm)
+        && compilationModes.contains(compilationMode);
   }
 }

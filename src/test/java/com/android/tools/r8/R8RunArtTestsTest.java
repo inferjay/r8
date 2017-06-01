@@ -459,7 +459,9 @@ public abstract class R8RunArtTestsTest {
           // large array as still live and the subsequent allocations will fail to reach the desired
           // size before an out-of-memory error occurs. See:
           // tests/art/{dx,jack}/104-growth-limit/src/Main.java:40
-          .put("104-growth-limit", TestCondition.match(TestCondition.R8_COMPILER))
+          .put(
+              "104-growth-limit",
+              TestCondition.match(TestCondition.R8_COMPILER, TestCondition.RELEASE_MODE))
           .put(
               "461-get-reference-vreg",
               TestCondition.match(
@@ -790,28 +792,23 @@ public abstract class R8RunArtTestsTest {
     }
   }
 
-  private static Map<SpecificationKey, TestSpecification> AVAILABLE_TESTS_MAP_R8 =
-      data(CompilerUnderTest.R8);
-
-  private static Map<SpecificationKey, TestSpecification> AVAILABLE_TESTS_MAP_D8 =
-      data(CompilerUnderTest.D8);
-
-
-  private static Set<String> collectTestsMatchingConditions(DexTool dexTool,
-      CompilerUnderTest compilerUnderTest, DexVm dexVm,
+  private static Set<String> collectTestsMatchingConditions(
+      DexTool dexTool,
+      CompilerUnderTest compilerUnderTest,
+      DexVm dexVm,
+      CompilationMode mode,
       Multimap<String, TestCondition> testConditionsMap) {
     Set<String> set = Sets.newHashSet();
     for (Map.Entry<String, TestCondition> kv : testConditionsMap.entries()) {
-      if (kv.getValue().test(dexTool, compilerUnderTest, dexVm)) {
+      if (kv.getValue().test(dexTool, compilerUnderTest, dexVm, mode)) {
         set.add(kv.getKey());
       }
     }
     return set;
   }
 
-
-  private static Map<SpecificationKey, TestSpecification> data(
-      CompilerUnderTest compilerUnderTest) {
+  private static Map<SpecificationKey, TestSpecification> get_tests_map(
+      CompilerUnderTest compilerUnderTest, CompilationMode compilationMode) {
     File artTestDir = new File(ART_TESTS_DIR);
     if (!artTestDir.exists()) {
       // Don't run any tests if the directory does not exist.
@@ -834,8 +831,9 @@ public abstract class R8RunArtTestsTest {
     DexVm dexVm = ToolHelper.getDexVm();
     for (DexTool dexTool : DexTool.values()) {
       // Collect the tests failing code generation.
-      Set<String> failsWithCompiler = collectTestsMatchingConditions(dexTool, compilerUnderTest,
-          dexVm, failingWithCompiler);
+      Set<String> failsWithCompiler =
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, failingWithCompiler);
 
       // Collect tests that has no input:
       if (dexTool == DexTool.NONE) {
@@ -843,15 +841,18 @@ public abstract class R8RunArtTestsTest {
       }
 
       // Collect the test that we should skip in this configuration.
-      skipArt.addAll(collectTestsMatchingConditions(dexTool, compilerUnderTest,
-          dexVm, timeoutOrSkipRunWithArt));
+      skipArt.addAll(
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, timeoutOrSkipRunWithArt));
 
       // Collect the tests failing to run in Art (we still run R8/D8 on these).
-      Set<String> failsWithArt = collectTestsMatchingConditions(dexTool, compilerUnderTest, dexVm,
-          failingRunWithArt);
+      Set<String> failsWithArt =
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, failingRunWithArt);
       {
-        Set<String> tmpSet = collectTestsMatchingConditions(dexTool, compilerUnderTest, dexVm,
-            expectedToFailRunWithArt);
+        Set<String> tmpSet =
+            collectTestsMatchingConditions(
+                dexTool, compilerUnderTest, dexVm, compilationMode, expectedToFailRunWithArt);
         failsWithArt.addAll(tmpSet);
       }
 
@@ -863,14 +864,17 @@ public abstract class R8RunArtTestsTest {
       }
 
       // Collect the tests failing with output differences in Art.
-      Set<String> failsRunWithArtOutput = collectTestsMatchingConditions(dexTool, compilerUnderTest,
-          dexVm, failingRunWithArtOutput);
-      Set<String> expectedToFailWithCompilerSet = collectTestsMatchingConditions(dexTool,
-          compilerUnderTest, dexVm, expectedToFailWithCompiler);
+      Set<String> failsRunWithArtOutput =
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, failingRunWithArtOutput);
+      Set<String> expectedToFailWithCompilerSet =
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, expectedToFailWithCompiler);
 
       // Collect the tests where the original works in Art and the R8/D8 generated output does not.
-      Set<String> failsRunWithArtOriginalOnly = collectTestsMatchingConditions(dexTool,
-          compilerUnderTest, dexVm, failingRunWithArtOriginalOnly);
+      Set<String> failsRunWithArtOriginalOnly =
+          collectTestsMatchingConditions(
+              dexTool, compilerUnderTest, dexVm, compilationMode, failingRunWithArtOriginalOnly);
 
       File compilerTestDir = artTestDir.toPath().resolve(dexToolDirectory(dexTool)).toFile();
       File[] testDirs = compilerTestDir.listFiles();
@@ -893,6 +897,22 @@ public abstract class R8RunArtTestsTest {
       }
     }
     return data;
+  }
+
+  private static CompilationMode defaultCompilationMode(CompilerUnderTest compilerUnderTest) {
+    CompilationMode compilationMode = null;
+    switch (compilerUnderTest) {
+      case R8:
+        compilationMode = CompilationMode.RELEASE;
+        break;
+      case D8:
+      case R8DEBUG_AFTER_D8:
+        compilationMode = CompilationMode.DEBUG;
+        break;
+      default:
+        throw new RuntimeException("Unreachable.");
+    }
+    return compilationMode;
   }
 
   private static String dexToolDirectory(DexTool tool) {
@@ -936,12 +956,6 @@ public abstract class R8RunArtTestsTest {
   }
 
   private void executeCompilerUnderTest(
-      CompilerUnderTest compilerUnderTest, Collection<String> fileNames, String resultPath)
-      throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, null, null);
-  }
-
-  private void executeCompilerUnderTest(
       CompilerUnderTest compilerUnderTest,
       Collection<String> fileNames,
       String resultPath,
@@ -957,43 +971,48 @@ public abstract class R8RunArtTestsTest {
       CompilationMode mode,
       String keepRulesFile)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
+    assert mode != null;
     switch (compilerUnderTest) {
-      case D8: {
-        assert keepRulesFile == null : "Keep-rules file specified for D8.";
-        D8Command.Builder builder =
-            D8Command.builder()
-                .setMode(mode == null ? CompilationMode.DEBUG : mode)
-                .addProgramFiles(ListUtils.map(fileNames, Paths::get));
-        Integer minSdkVersion = needMinSdkVersion.get(name);
-        if (minSdkVersion != null) {
-          builder.setMinApiLevel(minSdkVersion);
-        }
-        D8Output output = D8.run(builder.build());
-        output.write(Paths.get(resultPath));
-        break;
-      }
-      case R8: {
-        R8Command.Builder builder =
-            R8Command.builder()
-                .setMode(mode == null ? CompilationMode.RELEASE : mode)
-                .setOutputPath(Paths.get(resultPath))
-                .addProgramFiles(ListUtils.map(fileNames, Paths::get))
-                .setIgnoreMissingClasses(true);
-        Integer minSdkVersion = needMinSdkVersion.get(name);
-        if (minSdkVersion != null) {
-          builder.setMinApiLevel(minSdkVersion);
-        }
-        if (keepRulesFile != null) {
-          builder.addProguardConfigurationFiles(Paths.get(keepRulesFile));
-        }
-        // Add internal flags for testing purposes.
-        ToolHelper.runR8(builder.build(), options -> {
-          if (enableInterfaceMethodDesugaring.contains(name)) {
-            options.interfaceMethodDesugaring = OffOrAuto.Auto;
+      case D8:
+        {
+          assert keepRulesFile == null : "Keep-rules file specified for D8.";
+          D8Command.Builder builder =
+              D8Command.builder()
+                  .setMode(mode)
+                  .addProgramFiles(ListUtils.map(fileNames, Paths::get));
+          Integer minSdkVersion = needMinSdkVersion.get(name);
+          if (minSdkVersion != null) {
+            builder.setMinApiLevel(minSdkVersion);
           }
-        });
-        break;
-      }
+          D8Output output = D8.run(builder.build());
+          output.write(Paths.get(resultPath));
+          break;
+        }
+      case R8:
+        {
+          R8Command.Builder builder =
+              R8Command.builder()
+                  .setMode(mode)
+                  .setOutputPath(Paths.get(resultPath))
+                  .addProgramFiles(ListUtils.map(fileNames, Paths::get))
+                  .setIgnoreMissingClasses(true);
+          Integer minSdkVersion = needMinSdkVersion.get(name);
+          if (minSdkVersion != null) {
+            builder.setMinApiLevel(minSdkVersion);
+          }
+          if (keepRulesFile != null) {
+            builder.addProguardConfigurationFiles(Paths.get(keepRulesFile));
+          }
+          // Add internal flags for testing purposes.
+          ToolHelper.runR8(
+              builder.build(),
+              options -> {
+                if (enableInterfaceMethodDesugaring.contains(name)) {
+                  options.interfaceMethodDesugaring = OffOrAuto.Auto;
+                }
+              });
+          break;
+        }
       default:
         assert false : compilerUnderTest;
     }
@@ -1003,7 +1022,7 @@ public abstract class R8RunArtTestsTest {
     return builder.setMinification(false);
   }
 
-  private static final boolean isAuxClassFile(String fileName, String auxClassFileBase) {
+  private static boolean isAuxClassFile(String fileName, String auxClassFileBase) {
     return fileName.endsWith(".class")
         && (fileName.startsWith(auxClassFileBase + "$")
         || fileName.startsWith(auxClassFileBase + "_"));
@@ -1060,11 +1079,13 @@ public abstract class R8RunArtTestsTest {
         compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
             ? CompilerUnderTest.D8
             : compilerUnderTest;
+    CompilationMode compilationMode = defaultCompilationMode(compilerUnderTest);
 
     File resultDir = temp.newFolder(firstCompilerUnderTest.toString().toLowerCase() + "-output");
 
-    JctfTestSpecifications.Outcome expectedOutcome = JctfTestSpecifications
-        .getExpectedOutcome(name, firstCompilerUnderTest, dexVm);
+    JctfTestSpecifications.Outcome expectedOutcome =
+        JctfTestSpecifications.getExpectedOutcome(
+            name, firstCompilerUnderTest, dexVm, compilationMode);
     TestSpecification specification = new TestSpecification(name, DexTool.NONE, resultDir,
         expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
             || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
@@ -1133,11 +1154,12 @@ public abstract class R8RunArtTestsTest {
       fileNames.add(f.getCanonicalPath());
     }
 
-    runJctfTestDoRunOnArt(fileNames,
+    runJctfTestDoRunOnArt(
+        fileNames,
         specification,
         firstCompilerUnderTest,
         fullClassName,
-        null,
+        compilationMode,
         dexVm,
         resultDir);
 
@@ -1149,8 +1171,10 @@ public abstract class R8RunArtTestsTest {
               .map(Path::toString)
               .collect(Collectors.toList());
       File r8ResultDir = temp.newFolder("r8-output");
-      expectedOutcome = JctfTestSpecifications
-          .getExpectedOutcome(name, CompilerUnderTest.R8DEBUG_AFTER_D8, dexVm);
+      compilationMode = CompilationMode.DEBUG;
+      expectedOutcome =
+          JctfTestSpecifications.getExpectedOutcome(
+              name, CompilerUnderTest.R8DEBUG_AFTER_D8, dexVm, compilationMode);
       specification = new TestSpecification(name, DexTool.DX, r8ResultDir,
           expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
               || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
@@ -1163,7 +1187,7 @@ public abstract class R8RunArtTestsTest {
           specification,
           CompilerUnderTest.R8,
           fullClassName,
-          CompilationMode.DEBUG,
+          compilationMode,
           dexVm,
           r8ResultDir);
     }
@@ -1234,16 +1258,16 @@ public abstract class R8RunArtTestsTest {
 
   protected void runArtTest(DexVm version, CompilerUnderTest compilerUnderTest)
       throws Throwable {
-    Map<SpecificationKey, TestSpecification> specificationMap = null;
+    CompilerUnderTest firstCompilerUnderTest =
+        compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
+            ? CompilerUnderTest.D8
+            : compilerUnderTest;
 
-    if (compilerUnderTest == CompilerUnderTest.R8) {
-      specificationMap = AVAILABLE_TESTS_MAP_R8;
-    } else {
-      assert (compilerUnderTest == CompilerUnderTest.D8);
-      specificationMap = AVAILABLE_TESTS_MAP_D8;
-    }
+    CompilationMode compilationMode = defaultCompilationMode(compilerUnderTest);
 
-    TestSpecification specification = specificationMap.get(new SpecificationKey(name, toolchain));
+    TestSpecification specification =
+        get_tests_map(firstCompilerUnderTest, compilationMode)
+            .get(new SpecificationKey(name, toolchain));
 
     if (specification == null) {
       throw new RuntimeException("Test " + name + " has no specification for toolchain"
@@ -1280,12 +1304,52 @@ public abstract class R8RunArtTestsTest {
     for (File file : inputFiles) {
       fileNames.add(file.getCanonicalPath());
     }
-    File resultDir = temp.getRoot();
 
+    File resultDir = temp.newFolder(firstCompilerUnderTest.toString().toLowerCase() + "-output");
+
+    runArtTestDoRunOnArt(
+        version, firstCompilerUnderTest, specification, fileNames, resultDir, compilationMode);
+
+    if (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8) {
+      compilationMode = CompilationMode.DEBUG;
+      specification =
+          get_tests_map(CompilerUnderTest.R8DEBUG_AFTER_D8, compilationMode)
+              .get(new SpecificationKey(name, DexTool.DX));
+
+      if (specification == null) {
+        throw new RuntimeException(
+            "Test " + name + " has no specification for toolchain" + toolchain + ".");
+      }
+
+      if (specification.skipTest) {
+        return;
+      }
+
+      fileNames.clear();
+      for (File file : resultDir.listFiles((File file) -> file.getName().endsWith(".dex"))) {
+        fileNames.add(file.getCanonicalPath());
+      }
+
+      resultDir = temp.newFolder("r8-output");
+
+      runArtTestDoRunOnArt(
+          version, CompilerUnderTest.R8, specification, fileNames, resultDir, compilationMode);
+    }
+  }
+
+  private void runArtTestDoRunOnArt(
+      DexVm version,
+      CompilerUnderTest compilerUnderTest,
+      TestSpecification specification,
+      List<String> fileNames,
+      File resultDir,
+      CompilationMode compilationMode)
+      throws Throwable {
     if (specification.expectedToFailWithX8) {
       thrown.expect(CompilationError.class);
       try {
-        executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getCanonicalPath());
+        executeCompilerUnderTest(
+            compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode, null);
       } catch (CompilationException e) {
         throw new CompilationError(e.getMessage(), e);
       } catch (ExecutionException e) {
@@ -1295,11 +1359,13 @@ public abstract class R8RunArtTestsTest {
       return;
     } else if (specification.failsWithX8) {
       thrown.expect(Throwable.class);
-      executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getCanonicalPath());
+      executeCompilerUnderTest(
+          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode);
       System.err.println("Should have failed R8/D8 compilation with an exception.");
       return;
     } else {
-      executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getCanonicalPath());
+      executeCompilerUnderTest(
+          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode);
     }
 
     if (!specification.skipArt && ToolHelper.artSupported()) {
