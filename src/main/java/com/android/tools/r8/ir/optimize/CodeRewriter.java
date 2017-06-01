@@ -9,9 +9,11 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.ir.code.ArrayGet;
 import com.android.tools.r8.ir.code.ArrayPut;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.Binop;
@@ -28,6 +30,7 @@ import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionIterator;
 import com.android.tools.r8.ir.code.InstructionListIterator;
 import com.android.tools.r8.ir.code.Invoke;
+import com.android.tools.r8.ir.code.InvokeDirect;
 import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.InvokeVirtual;
 import com.android.tools.r8.ir.code.JumpInstruction;
@@ -37,15 +40,26 @@ import com.android.tools.r8.ir.code.NewArrayFilledData;
 import com.android.tools.r8.ir.code.NumericType;
 import com.android.tools.r8.ir.code.Phi;
 import com.android.tools.r8.ir.code.Return;
+import com.android.tools.r8.ir.code.StaticGet;
+import com.android.tools.r8.ir.code.StaticPut;
 import com.android.tools.r8.ir.code.Switch;
+import com.android.tools.r8.ir.code.Switch.Type;
 import com.android.tools.r8.ir.code.Value;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LongInterval;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
+import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -300,6 +314,244 @@ public class CodeRewriter {
         }
       }
     }
+  }
+
+  /**
+   * Inline the indirection of switch maps into the switch statement.
+   * <p>
+   * To ensure binary compatibility, javac generated code does not use ordinal values of enums
+   * directly in switch statements but instead generates a companion class that computes a mapping
+   * from switch branches to ordinals at runtime. As we have whole-program knowledge, we can
+   * analyze these maps and inline the indirection into the switch map again.
+   * <p>
+   * In particular, we look for code of the form
+   *
+   * <blockquote><pre>
+   * switch(CompanionClass.$switchmap$field[enumValue.ordinal()]) {
+   *   ...
+   * }
+   * </pre></blockquote>
+   * See {@link #extractIndexMapFrom} and {@link #extractOrdinalsMapFor} for
+   * details of the companion class and ordinals computation.
+   */
+  public void removeSwitchMaps(IRCode code) {
+    for (BasicBlock block : code.blocks) {
+      InstructionListIterator it = block.listIterator();
+      while (it.hasNext()) {
+        Instruction insn = it.next();
+        // Pattern match a switch on a switch map as input.
+        if (insn.isSwitch()) {
+          Switch switchInsn = insn.asSwitch();
+          Instruction input = switchInsn.inValues().get(0).definition;
+          if (input == null || !input.isArrayGet()) {
+            continue;
+          }
+          ArrayGet arrayGet = input.asArrayGet();
+          Instruction index = arrayGet.index().definition;
+          if (index == null || !index.isInvokeVirtual()) {
+            continue;
+          }
+          InvokeVirtual ordinalInvoke = index.asInvokeVirtual();
+          DexMethod ordinalMethod = ordinalInvoke.getInvokedMethod();
+          DexClass enumClass = appInfo.definitionFor(ordinalMethod.holder);
+          if (enumClass == null
+              || (!enumClass.accessFlags.isEnum() && enumClass.type != dexItemFactory.enumType)
+              || ordinalMethod.name != dexItemFactory.ordinalMethodName
+              || ordinalMethod.proto.returnType != dexItemFactory.intType
+              || !ordinalMethod.proto.parameters.isEmpty()) {
+            continue;
+          }
+          Instruction array = arrayGet.array().definition;
+          if (array == null || !array.isStaticGet()) {
+            continue;
+          }
+          StaticGet staticGet = array.asStaticGet();
+          if (staticGet.getField().name.toSourceString().startsWith("$SwitchMap$")) {
+            Int2ReferenceMap<DexField> indexMap = extractIndexMapFrom(staticGet.getField());
+            if (indexMap == null || indexMap.isEmpty()) {
+              continue;
+            }
+            // Due to member rebinding, only the fields are certain to provide the actual enums
+            // class.
+            DexType switchMapHolder = indexMap.values().iterator().next().getHolder();
+            Reference2IntMap ordinalsMap = extractOrdinalsMapFor(switchMapHolder);
+            if (ordinalsMap != null) {
+              Int2IntMap targetMap = new Int2IntArrayMap();
+              int keys[] = new int[switchInsn.numberOfKeys()];
+              for (int i = 0; i < keys.length; i++) {
+                keys[i] = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
+                targetMap.put(keys[i], switchInsn.targetBlockIndices()[i]);
+              }
+              Arrays.sort(keys);
+              int[] targets = new int[keys.length];
+              for (int i = 0; i < keys.length; i++) {
+                targets[i] = targetMap.get(keys[i]);
+              }
+
+              Switch newSwitch = new Switch(Type.SPARSE, ordinalInvoke.outValue(), keys,
+                  targets, switchInsn.getFallthroughBlockIndex());
+              // Replace the switch itself.
+              it.replaceCurrentInstruction(newSwitch);
+              // If the original input to the switch is now unused, remove it too. It is not dead
+              // as it might have side-effects but we ignore these here.
+              if (arrayGet.outValue().numberOfUsers() == 0) {
+                arrayGet.inValues().forEach(v -> v.removeUser(arrayGet));
+                arrayGet.getBlock().removeInstruction(arrayGet);
+              }
+              if (staticGet.outValue().numberOfUsers() == 0) {
+                assert staticGet.inValues().isEmpty();
+                staticGet.getBlock().removeInstruction(staticGet);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Extracts the mapping from ordinal values to switch case constants.
+   * <p>
+   * This is done by pattern-matching on the class initializer of the synthetic switch map class.
+   * For a switch
+   *
+   * <blockquote><pre>
+   * switch (day) {
+   *   case WEDNESDAY:
+   *   case FRIDAY:
+   *     System.out.println("3 or 5");
+   *     break;
+   *   case SUNDAY:
+   *     System.out.println("7");
+   *     break;
+   *   default:
+   *     System.out.println("other");
+   * }
+   * </pre></blockquote>
+   *
+   * the generated companing class initializer will have the form
+   *
+   * <blockquote><pre>
+   * class Switches$1 {
+   *   static {
+   *   $SwitchMap$switchmaps$Days[Days.WEDNESDAY.ordinal()] = 1;
+   *   $SwitchMap$switchmaps$Days[Days.FRIDAY.ordinal()] = 2;
+   *   $SwitchMap$switchmaps$Days[Days.SUNDAY.ordinal()] = 3;
+   * }
+   * </pre></blockquote>
+   *
+   * Note that one map per class is generated, so the map might contain additional entries as used
+   * by other switches in the class.
+   */
+  private Int2ReferenceMap<DexField> extractIndexMapFrom(DexField field) {
+    DexClass clazz = appInfo.definitionFor(field.getHolder());
+    if (!clazz.accessFlags.isSynthetic()) {
+      return null;
+    }
+    DexEncodedMethod initializer = clazz.getClassInitializer();
+    if (initializer == null || initializer.getCode() == null) {
+      return null;
+    }
+    IRCode code = initializer.getCode().buildIR(initializer, new InternalOptions());
+    Int2ReferenceMap<DexField> switchMap = new Int2ReferenceArrayMap<>();
+    for (BasicBlock block : code.blocks) {
+      InstructionListIterator it = block.listIterator();
+      Instruction insn = it.nextUntil(i -> i.isStaticGet() && i.asStaticGet().getField() == field);
+      if (insn == null) {
+        continue;
+      }
+      for (Instruction use : insn.outValue().uniqueUsers()) {
+        if (use.isArrayPut()) {
+          Instruction index = use.asArrayPut().source().definition;
+          if (index == null || !index.isConstNumber()) {
+            return null;
+          }
+          int integerIndex = index.asConstNumber().getIntValue();
+          Instruction value = use.asArrayPut().index().definition;
+          if (value == null || !value.isInvokeVirtual()) {
+            return null;
+          }
+          InvokeVirtual invoke = value.asInvokeVirtual();
+          DexClass holder = appInfo.definitionFor(invoke.getInvokedMethod().holder);
+          if (holder == null ||
+              (!holder.accessFlags.isEnum() && holder.type != dexItemFactory.enumType)) {
+            return null;
+          }
+          Instruction enumGet = invoke.arguments().get(0).definition;
+          if (enumGet == null || !enumGet.isStaticGet()) {
+            return null;
+          }
+          DexField enumField = enumGet.asStaticGet().getField();
+          if (!appInfo.definitionFor(enumField.getHolder()).accessFlags.isEnum()) {
+            return null;
+          }
+          if (switchMap.put(integerIndex, enumField) != null) {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      }
+    }
+    return switchMap;
+  }
+
+  /**
+   * Extracts the ordinal values for an Enum class from the classes static initializer.
+   * <p>
+   * An Enum class has a field for each value. In the class initializer, each field is initialized
+   * to a singleton object that represents the value. This code matches on the corresponding call
+   * to the constructor (instance initializer) and extracts the value of the second argument, which
+   * is the ordinal.
+   */
+  private Reference2IntMap<DexField> extractOrdinalsMapFor(DexType enumClass) {
+    DexClass clazz = appInfo.definitionFor(enumClass);
+    if (clazz == null || clazz.isLibraryClass()) {
+      // We have to keep binary compatibility in tact for libraries.
+      return null;
+    }
+    DexEncodedMethod initializer = clazz.getClassInitializer();
+    if (!clazz.accessFlags.isEnum() || initializer == null || initializer.getCode() == null) {
+      return null;
+    }
+    IRCode code = initializer.getCode().buildIR(initializer, new InternalOptions());
+    Reference2IntMap<DexField> ordinalsMap = new Reference2IntArrayMap<>();
+    ordinalsMap.defaultReturnValue(-1);
+    InstructionIterator it = code.instructionIterator();
+    while (it.hasNext()) {
+      Instruction insn = it.next();
+      if (!insn.isStaticPut()) {
+        continue;
+      }
+      StaticPut staticPut = insn.asStaticPut();
+      if (staticPut.getField().type != enumClass) {
+        continue;
+      }
+      Instruction newInstance = staticPut.inValue().definition;
+      if (newInstance == null || !newInstance.isNewInstance()) {
+        continue;
+      }
+      Instruction ordinal = null;
+      for (Instruction ctorCall : newInstance.outValue().uniqueUsers()) {
+        if (!ctorCall.isInvokeDirect()) {
+          continue;
+        }
+        InvokeDirect invoke = ctorCall.asInvokeDirect();
+        if (!dexItemFactory.isConstructor(invoke.getInvokedMethod())
+            || invoke.arguments().size() < 3) {
+          continue;
+        }
+        ordinal = invoke.arguments().get(2).definition;
+        break;
+      }
+      if (ordinal == null || !ordinal.isConstNumber()) {
+        return null;
+      }
+      if (ordinalsMap.put(staticPut.getField(), ordinal.asConstNumber().getIntValue()) != -1) {
+        return null;
+      }
+    }
+    return ordinalsMap;
   }
 
   /**
@@ -920,11 +1172,11 @@ public class CodeRewriter {
       if (current.isInvokeMethod()) {
         DexMethod invokedMethod = current.asInvokeMethod().getInvokedMethod();
         if (invokedMethod == dexItemFactory.longMethods.compare) {
-            List<Value> inValues = current.inValues();
-            assert inValues.size() == 2;
-            iterator.replaceCurrentInstruction(
-                new Cmp(NumericType.LONG, Bias.NONE, current.outValue(), inValues.get(0),
-                    inValues.get(1)));
+          List<Value> inValues = current.inValues();
+          assert inValues.size() == 2;
+          iterator.replaceCurrentInstruction(
+              new Cmp(NumericType.LONG, Bias.NONE, current.outValue(), inValues.get(0),
+                  inValues.get(1)));
         } else if (!canUseObjectsNonNull
             && invokedMethod == dexItemFactory.objectsMethods.requireNonNull) {
           // Rewrite calls to Objects.requireNonNull(Object) because Javac 9 start to use it for

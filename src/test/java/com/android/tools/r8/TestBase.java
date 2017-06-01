@@ -34,7 +34,7 @@ public class TestBase {
   /**
    * Write lines of text to a temporary file.
    */
-  protected Path writeTextToTempFile(String... lines) throws IOException{
+  protected Path writeTextToTempFile(String... lines) throws IOException {
     Path file = temp.newFile().toPath();
     FileUtils.writeTextFile(file, lines);
     return file;
@@ -86,7 +86,7 @@ public class TestBase {
   /**
    * Compile an application with R8 using the supplied proguard configuration.
    */
-  protected  AndroidApp compileWithR8(List<Class> classes, Path proguardConfig)
+  protected AndroidApp compileWithR8(List<Class> classes, Path proguardConfig)
       throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
     return compileWithR8(readClasses(classes), proguardConfig);
   }

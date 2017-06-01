@@ -426,6 +426,7 @@ public class IRConverter {
     if (memberValuePropagation != null) {
       memberValuePropagation.rewriteWithConstantValues(code);
     }
+    codeRewriter.removeSwitchMaps(code);
     if (options.inlineAccessors && inliner != null) {
       inliner.performInlining(method, code, callGraph);
     }

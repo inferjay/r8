@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -840,6 +841,15 @@ public class BasicBlock {
   }
 
   /**
+   * Remove an instruction.
+   */
+  public void removeInstruction(Instruction toRemove) {
+    int index = instructions.indexOf(toRemove);
+    assert index >= 0;
+    removeInstructions(Collections.singletonList(index));
+  }
+
+  /**
    * Create a new basic block with a single goto instruction.
    *
    * <p>The constructed basic block has no predecessors and has one
@@ -1101,7 +1111,8 @@ public class BasicBlock {
     }
   }
 
-  /** Append catch handlers from another block <code>fromBlock</code> (which must have catch
+  /**
+   * Append catch handlers from another block <code>fromBlock</code> (which must have catch
    * handlers) to the catch handlers of this block.
    *
    * Note that after appending catch handlers their targets are referenced by both
