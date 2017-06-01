@@ -82,6 +82,7 @@ public class DexItemFactory {
   public DexString valueOfMethodName = createString("valueOf");
 
   public DexString getClassMethodName = createString("getClass");
+  public DexString ordinalMethodName = createString("ordinal");
 
   public DexString stringDescriptor = createString("Ljava/lang/String;");
   public DexString objectDescriptor = createString("Ljava/lang/Object;");
@@ -139,6 +140,7 @@ public class DexItemFactory {
   }
 
   public class LongMethods {
+
     public DexMethod compare;
 
     private LongMethods() {
@@ -148,18 +150,20 @@ public class DexItemFactory {
   }
 
   public class ThrowableMethods {
+
     public final DexMethod addSuppressed;
     public final DexMethod getSuppressed;
 
     private ThrowableMethods() {
       addSuppressed = createMethod(throwableDescriptor,
-          createString("addSuppressed"), voidDescriptor, new DexString[] { throwableDescriptor });
+          createString("addSuppressed"), voidDescriptor, new DexString[]{throwableDescriptor});
       getSuppressed = createMethod(throwableDescriptor,
           createString("getSuppressed"), throwableArrayDescriptor, DexString.EMPTY_ARRAY);
     }
   }
 
   public class ObjectMethods {
+
     public DexMethod getClass;
 
     private ObjectMethods() {
@@ -169,6 +173,7 @@ public class DexItemFactory {
   }
 
   public class ObjectsMethods {
+
     public DexMethod requireNonNull;
 
     private ObjectsMethods() {
@@ -178,6 +183,7 @@ public class DexItemFactory {
   }
 
   public class StringBuildingMethods {
+
     public DexMethod appendBoolean;
     public DexMethod appendChar;
     public DexMethod appendCharArray;

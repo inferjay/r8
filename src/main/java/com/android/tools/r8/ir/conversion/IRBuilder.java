@@ -412,7 +412,8 @@ public class IRBuilder {
     if (!options.debug) {
       return;
     }
-    Value value = writeRegister(register, MoveType.fromConstType(type), ThrowingInfo.NO_THROW, null);
+    Value value = writeRegister(register, MoveType.fromConstType(type), ThrowingInfo.NO_THROW,
+        null);
     assert value.getLocalInfo() == null;
     addInstruction(new DebugLocalUninitialized(type, value));
   }
@@ -637,7 +638,8 @@ public class IRBuilder {
     boolean canThrow = type != NumericType.DOUBLE && type != NumericType.FLOAT;
     Value in1 = readNumericRegister(left, type);
     Value in2 = readNumericRegister(right, type);
-    Value out = writeNumericRegister(dest, type, canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
+    Value out = writeNumericRegister(dest, type,
+        canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
     Div instruction = new Div(type, out, in1, in2);
     assert instruction.instructionTypeCanThrow() == canThrow;
     add(instruction);
@@ -648,7 +650,8 @@ public class IRBuilder {
     boolean canThrow = type != NumericType.DOUBLE && type != NumericType.FLOAT;
     Value in1 = readNumericRegister(value, type);
     Value in2 = readLiteral(type, constant);
-    Value out = writeNumericRegister(dest, type, canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
+    Value out = writeNumericRegister(dest, type,
+        canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
     Div instruction = new Div(type, out, in1, in2);
     assert instruction.instructionTypeCanThrow() == canThrow;
     add(instruction);
@@ -697,7 +700,8 @@ public class IRBuilder {
     boolean canThrow = type != NumericType.DOUBLE && type != NumericType.FLOAT;
     Value in1 = readNumericRegister(left, type);
     Value in2 = readNumericRegister(right, type);
-    Value out = writeNumericRegister(dest, type, canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
+    Value out = writeNumericRegister(dest, type,
+        canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
     Rem instruction = new Rem(type, out, in1, in2);
     assert instruction.instructionTypeCanThrow() == canThrow;
     addInstruction(instruction);
@@ -708,7 +712,8 @@ public class IRBuilder {
     boolean canThrow = type != NumericType.DOUBLE && type != NumericType.FLOAT;
     Value in1 = readNumericRegister(value, type);
     Value in2 = readLiteral(type, constant);
-    Value out = writeNumericRegister(dest, type, canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
+    Value out = writeNumericRegister(dest, type,
+        canThrow ? ThrowingInfo.CAN_THROW : ThrowingInfo.NO_THROW);
     Rem instruction = new Rem(type, out, in1, in2);
     assert instruction.instructionTypeCanThrow() == canThrow;
     addInstruction(instruction);
@@ -1119,6 +1124,7 @@ public class IRBuilder {
     Value switchValue = readRegister(value, MoveType.SINGLE);
 
     // Change a switch with just one case to an if.
+    // TODO(62247472): Move these into their own pass.
     if (numberOfTargets == 1) {
       addSwitchIf(keys[0], value, labelOffsets[0], fallthroughOffset);
       return;

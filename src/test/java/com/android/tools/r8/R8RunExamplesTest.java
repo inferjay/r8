@@ -100,6 +100,7 @@ public class R8RunExamplesTest {
         {"minification.Minification", null},
         {"enclosingmethod.Main", null},
         {"interfaceinlining.Main", null},
+        {"switchmaps.Switches", null},
     };
 
     List<String[]> fullTestList = new ArrayList<>(tests.length * 2);

@@ -43,49 +43,65 @@ public class R8Command extends BaseCommand {
       return this;
     }
 
-    /** Enable/disable tree shaking. This overrides any settings in proguard configuration files. */
+    /**
+     * Enable/disable tree shaking. This overrides any settings in proguard configuration files.
+     */
     public Builder setTreeShaking(boolean useTreeShaking) {
       treeShaking = Optional.of(useTreeShaking);
       return this;
     }
 
-    /** Enable/disable minification. This overrides any settings in proguard configuration files. */
+    /**
+     * Enable/disable minification. This overrides any settings in proguard configuration files.
+     */
     public Builder setMinification(boolean useMinification) {
       minification = Optional.of(useMinification);
       return this;
     }
 
-    /** Add proguard configuration file resources for automatic main dex list calculation. */
+    /**
+     * Add proguard configuration file resources for automatic main dex list calculation.
+     */
     public Builder addMainDexRules(Path... paths) {
       Collections.addAll(mainDexRules, paths);
       return this;
     }
 
-    /** Add proguard configuration file resources for automatic main dex list calculation. */
+    /**
+     * Add proguard configuration file resources for automatic main dex list calculation.
+     */
     public Builder addMainDexRules(List<Path> paths) {
       mainDexRules.addAll(paths);
       return this;
     }
 
-    /** Add proguard configuration file resources. */
+    /**
+     * Add proguard configuration file resources.
+     */
     public Builder addProguardConfigurationFiles(Path... paths) {
       Collections.addAll(proguardConfigFiles, paths);
       return this;
     }
 
-    /** Add proguard configuration file resources. */
+    /**
+     * Add proguard configuration file resources.
+     */
     public Builder addProguardConfigurationFiles(List<Path> paths) {
       proguardConfigFiles.addAll(paths);
       return this;
     }
 
-    /** Set a proguard mapping file resource. */
+    /**
+     * Set a proguard mapping file resource.
+     */
     public Builder setProguardMapFile(Path path) {
       getAppBuilder().setProguardMapFile(path);
       return this;
     }
 
-    /** Set a package distribution file resource. */
+    /**
+     * Set a package distribution file resource.
+     */
     public Builder setPackageDistributionFile(Path path) {
       getAppBuilder().setPackageDistributionFile(path);
       return this;
@@ -154,6 +170,7 @@ public class R8Command extends BaseCommand {
 
   // Internal state to verify parsing properties not enforced by the builder.
   private static class ParseState {
+
     CompilationMode mode = null;
   }
 
@@ -313,6 +330,7 @@ public class R8Command extends BaseCommand {
     return useMinification;
   }
 
+  @Override
   InternalOptions getInternalOptions() {
     InternalOptions internal = new InternalOptions(proguardConfiguration.getDexItemFactory());
     assert !internal.debug;

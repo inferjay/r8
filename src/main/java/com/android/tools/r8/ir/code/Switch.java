@@ -73,8 +73,16 @@ public class Switch extends JumpInstruction {
     }
   }
 
-  private int numberOfKeys() {
+  public int numberOfKeys() {
     return targetBlockIndices.length;
+  }
+
+  public int getKey(int index) {
+    if (type == Type.PACKED) {
+      return keys[0] + index;
+    } else {
+      return keys[index];
+    }
   }
 
   public int[] targetBlockIndices() {
