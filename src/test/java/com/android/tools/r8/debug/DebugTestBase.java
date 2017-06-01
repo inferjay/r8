@@ -15,6 +15,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -29,12 +30,15 @@ import org.apache.harmony.jpda.tests.framework.jdwp.EventBuilder;
 import org.apache.harmony.jpda.tests.framework.jdwp.EventPacket;
 import org.apache.harmony.jpda.tests.framework.jdwp.Frame.Variable;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPCommands;
+import org.apache.harmony.jpda.tests.framework.jdwp.JDWPCommands.ReferenceTypeCommandSet;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPCommands.StackFrameCommandSet;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants;
+import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.Error;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.EventKind;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.StepDepth;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.StepSize;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.SuspendPolicy;
+import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.TypeTag;
 import org.apache.harmony.jpda.tests.framework.jdwp.Location;
 import org.apache.harmony.jpda.tests.framework.jdwp.ParsedEvent;
 import org.apache.harmony.jpda.tests.framework.jdwp.ParsedEvent.EventThread;
@@ -73,14 +77,15 @@ public abstract class DebugTestBase {
   // Set to true to enable verbose logs
   private static final boolean DEBUG_TESTS = false;
 
-  private static final List<DexVm> UNSUPPORTED_ART_VERSIONS = ImmutableList.of(
+  private static final List<DexVm> UNSUPPORTED_ART_VERSIONS = ImmutableList.<DexVm>builder()
       // Dalvik does not support command ReferenceType.Methods which is used to set breakpoint.
       // TODO(shertz) use command ReferenceType.MethodsWithGeneric instead
-      DexVm.ART_4_4_4,
+      .add(DexVm.ART_4_4_4)
       // Older runtimes fail on buildbot
       // TODO(shertz) re-enable once issue is solved
-      DexVm.ART_5_1_1,
-      DexVm.ART_6_0_1);
+      .add(DexVm.ART_5_1_1)
+      .add(DexVm.ART_6_0_1)
+      .build();
 
   private static final Path JDWP_JAR = ToolHelper
       .getJdwpTestsJarPath(ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()));
@@ -200,7 +205,12 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command breakpoint(String className, String methodName) {
-    return new JUnit3Wrapper.Command.BreakpointCommand(className, methodName);
+    return breakpoint(className, methodName, null);
+  }
+
+  protected final JUnit3Wrapper.Command breakpoint(String className, String methodName,
+      String methodSignature) {
+    return new JUnit3Wrapper.Command.BreakpointCommand(className, methodName, methodSignature);
   }
 
   protected final JUnit3Wrapper.Command stepOver() {
@@ -252,7 +262,19 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command checkMethod(String className, String methodName) {
-    return inspect(t -> t.checkMethod(className, methodName));
+    return checkMethod(className, methodName, null);
+  }
+
+  protected final JUnit3Wrapper.Command checkMethod(String className, String methodName,
+      String methodSignature) {
+    return inspect(t -> {
+      Assert.assertEquals("Incorrect class name", className, t.getCurrentClassName());
+      Assert.assertEquals("Incorrect method name", methodName, t.getCurrentMethodName());
+      if (methodSignature != null) {
+        Assert.assertEquals("Incorrect method signature", methodSignature,
+            t.getCurrentMethodSignature());
+      }
+    });
   }
 
   protected final JUnit3Wrapper.Command inspect(Consumer<JUnit3Wrapper.DebuggeeState> inspector) {
@@ -528,15 +550,43 @@ public abstract class DebugTestBase {
         return getVariablesAt(location).stream().map(v -> v.getName()).collect(Collectors.toList());
       }
 
-      public void checkMethod(String className, String methodName) {
-        String currentClassSig = getMirror().getClassSignature(location.classID);
-        assert currentClassSig.charAt(0) == 'L';
-        String currentClassName = currentClassSig.substring(1, currentClassSig.length() - 1)
-            .replace('/', '.');
-        Assert.assertEquals("Incorrect class name", className, currentClassName);
+      public String getCurrentClassName() {
+        String classSignature = getCurrentClassSignature();
+        assert classSignature.charAt(0) == 'L';
+        // Remove leading 'L' and trailing ';'
+        classSignature = classSignature.substring(1, classSignature.length() - 1);
+        // Return fully qualified name
+        return classSignature.replace('/', '.');
+      }
 
-        String currentMethodName = getMirror().getMethodName(location.classID, location.methodID);
-        Assert.assertEquals("Incorrect method name", methodName, currentMethodName);
+      public String getCurrentClassSignature() {
+        return getMirror().getClassSignature(location.classID);
+      }
+
+      public String getCurrentMethodName() {
+        return getMirror().getMethodName(location.classID, location.methodID);
+      }
+
+      public String getCurrentMethodSignature() {
+        CommandPacket command = new CommandPacket(ReferenceTypeCommandSet.CommandSetID,
+            ReferenceTypeCommandSet.MethodsWithGenericCommand);
+        command.setNextValueAsReferenceTypeID(location.classID);
+
+        ReplyPacket reply = getMirror().performCommand(command);
+        assert reply.getErrorCode() == Error.NONE;
+        int methods = reply.getNextValueAsInt();
+
+        for (int i = 0; i < methods; ++i) {
+          long methodId = reply.getNextValueAsMethodID();
+          reply.getNextValueAsString(); // skip name
+          String methodSignature = reply.getNextValueAsString();
+          reply.getNextValueAsString(); // skip generic signature
+          reply.getNextValueAsInt();  // skip modifiers
+          if (methodId == location.methodID) {
+            return methodSignature;
+          }
+        }
+        throw new AssertionError("No method info for the current location");
       }
     }
 
@@ -604,7 +654,14 @@ public abstract class DebugTestBase {
     }
 
     private boolean installBreakpoint(BreakpointInfo breakpointInfo) {
-      final long classId = getMirror().getClassID(getClassSignature(breakpointInfo.className));
+      String classSignature = getClassSignature(breakpointInfo.className);
+      byte typeTag = TypeTag.CLASS;
+      long classId = getMirror().getClassID(classSignature);
+      if (classId == -1) {
+        // Is it an interface ?
+        classId = getMirror().getInterfaceID(classSignature);
+        typeTag = TypeTag.INTERFACE;
+      }
       if (classId == -1) {
         // The class is not ready yet. Request a CLASS_PREPARE to delay the installation of the
         // breakpoint.
@@ -615,11 +672,92 @@ public abstract class DebugTestBase {
             new ClassPrepareHandler(breakpointInfo, classPrepareRequestId));
         return false;
       } else {
-        int breakpointId = getMirror()
-            .setBreakpointAtMethodBegin(classId, breakpointInfo.methodName);
+        // Find the method.
+        long breakpointMethodId = findMethod(classId, breakpointInfo.methodName,
+            breakpointInfo.methodSignature);
+        long index = getMethodFirstCodeIndex(classId, breakpointMethodId);
+        Assert.assertTrue("No code in method", index >= 0);
+        // Install the breakpoint.
+        ReplyPacket replyPacket = getMirror()
+            .setBreakpoint(new Location(typeTag, classId, breakpointMethodId, index),
+                SuspendPolicy.ALL);
+        checkReplyPacket(replyPacket, "Breakpoint");
+        int breakpointId = replyPacket.getNextValueAsInt();
         // Nothing to do on breakpoint
         events.put(Integer.valueOf(breakpointId), new DefaultEventHandler());
         return true;
+      }
+    }
+
+    private long findMethod(long classId, String methodName, String methodSignature) {
+      class MethodInfo {
+
+        final long methodId;
+        final String methodName;
+        final String methodSignature;
+
+        MethodInfo(long methodId, String methodName, String methodSignature) {
+          this.methodId = methodId;
+          this.methodName = methodName;
+          this.methodSignature = methodSignature;
+        }
+      }
+
+      boolean withGenericSignature = true;
+      CommandPacket commandPacket = new CommandPacket(ReferenceTypeCommandSet.CommandSetID,
+          ReferenceTypeCommandSet.MethodsWithGenericCommand);
+      commandPacket.setNextValueAsReferenceTypeID(classId);
+      ReplyPacket replyPacket = getMirror().performCommand(commandPacket);
+      if (replyPacket.getErrorCode() != Error.NONE) {
+        // Retry with older command ReferenceType.Methods
+        withGenericSignature = false;
+        commandPacket.setCommand(ReferenceTypeCommandSet.MethodsCommand);
+        replyPacket = getMirror().performCommand(commandPacket);
+        assert replyPacket.getErrorCode() == Error.NONE;
+      }
+
+      int methodsCount = replyPacket.getNextValueAsInt();
+      List<MethodInfo> methodInfos = new ArrayList<>(methodsCount);
+      for (int i = 0; i < methodsCount; ++i) {
+        long currentMethodId = replyPacket.getNextValueAsMethodID();
+        String currentMethodName = replyPacket.getNextValueAsString();
+        String currentMethodSignature = replyPacket.getNextValueAsString();
+        if (withGenericSignature) {
+          replyPacket.getNextValueAsString(); // skip generic signature
+        }
+        replyPacket.getNextValueAsInt(); // skip modifiers
+        methodInfos
+            .add(new MethodInfo(currentMethodId, currentMethodName, currentMethodSignature));
+      }
+      Assert.assertTrue(replyPacket.isAllDataRead());
+
+      // Only keep methods with the expected name.
+      methodInfos = methodInfos.stream()
+          .filter(m -> m.methodName.equals(methodName)).collect(
+              Collectors.toList());
+      if (methodSignature != null) {
+        methodInfos = methodInfos.stream()
+            .filter(m -> methodSignature.equals(m.methodSignature)).collect(
+                Collectors.toList());
+      }
+      Assert.assertFalse("No method found", methodInfos.isEmpty());
+      // There must be only one matching method
+      Assert.assertEquals("More than 1 method found: please specify a signature", 1,
+          methodInfos.size());
+      return methodInfos.get(0).methodId;
+    }
+
+    private long getMethodFirstCodeIndex(long classId, long breakpointMethodId) {
+      ReplyPacket replyPacket = getMirror().getLineTable(classId, breakpointMethodId);
+      checkReplyPacket(replyPacket, "Failed to get method line table");
+      replyPacket.getNextValueAsLong(); // start
+      replyPacket.getNextValueAsLong(); // end
+      int linesCount = replyPacket.getNextValueAsInt();
+      if (linesCount == 0) {
+        return -1;
+      } else {
+        // Read only the 1st line because code indices are in ascending order
+        return replyPacket.getNextValueAsLong();
       }
     }
 
@@ -643,22 +781,24 @@ public abstract class DebugTestBase {
         }
       }
 
-      // TODO(shertz) add method signature support (when multiple methods have the same name)
       class BreakpointCommand implements Command {
 
         private final String className;
         private final String methodName;
+        private final String methodSignature;
 
-        public BreakpointCommand(String className, String methodName) {
+        public BreakpointCommand(String className, String methodName,
+            String methodSignature) {
           assert className != null;
           assert methodName != null;
           this.className = className;
           this.methodName = methodName;
+          this.methodSignature = methodSignature;
         }
 
         @Override
         public void perform(JUnit3Wrapper testBase) {
-          testBase.installBreakpoint(new BreakpointInfo(className, methodName));
+          testBase.installBreakpoint(new BreakpointInfo(className, methodName, methodSignature));
         }
 
         @Override
@@ -780,10 +920,12 @@ public abstract class DebugTestBase {
 
       private final String className;
       private final String methodName;
+      private final String methodSignature;
 
-      private BreakpointInfo(String className, String methodName) {
+      private BreakpointInfo(String className, String methodName, String methodSignature) {
         this.className = className;
         this.methodName = methodName;
+        this.methodSignature = methodSignature;
       }
     }
 
