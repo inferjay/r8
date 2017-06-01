@@ -37,7 +37,9 @@ public class ProguardConfigurationParser {
   private final DexItemFactory dexItemFactory;
 
   private static final List<String> ignoredSingleArgOptions = ImmutableList
-      .of("protomapping", "optimizationpasses");
+      .of("protomapping",
+          "optimizationpasses",
+          "target");
   private static final List<String> ignoredFlagOptions = ImmutableList
       .of("forceprocessing", "dontusemixedcaseclassnames",
           "dontpreverify", "experimentalshrinkunusedprotofields",
