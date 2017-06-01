@@ -244,8 +244,11 @@ public abstract class DebugTestBase {
     return inspect(t -> Assert.assertTrue(t.getLocalNames().isEmpty()));
   }
 
-  protected final JUnit3Wrapper.Command checkLine(int line) {
-    return inspect(t -> t.checkLine(line));
+  protected final JUnit3Wrapper.Command checkLine(String sourceFile, int line) {
+    return inspect(t -> {
+      Assert.assertEquals(sourceFile, t.getCurrentSourceFile());
+      Assert.assertEquals(line, t.getCurrentLineNumber());
+    });
   }
 
   protected final JUnit3Wrapper.Command checkMethod(String className, String methodName) {
@@ -477,11 +480,48 @@ public abstract class DebugTestBase {
         Assert.assertEquals(expectedValue, localValue);
       }
 
-      public void checkLine(int line) {
-        Location location = getLocation();
-        int currentLine = getMirror()
-            .getLineNumber(location.classID, location.methodID, location.index);
-        Assert.assertEquals(line, currentLine);
+      public int getCurrentLineNumber() {
+        ReplyPacket reply = getMirror().getLineTable(location.classID, location.methodID);
+        if (reply.getErrorCode() != 0) {
+          return -1;
+        }
+
+        long startCodeIndex = reply.getNextValueAsLong();
+        long endCodeIndex = reply.getNextValueAsLong();
+        int lines = reply.getNextValueAsInt();
+        int line = -1;
+        long previousLineCodeIndex = -1;
+        for (int i = 0; i < lines; ++i) {
+          long currentLineCodeIndex = reply.getNextValueAsLong();
+          int currentLineNumber = reply.getNextValueAsInt();
+
+          // Code indices are in ascending order.
+          assert currentLineCodeIndex >= startCodeIndex;
+          assert currentLineCodeIndex <= endCodeIndex;
+          assert currentLineCodeIndex > previousLineCodeIndex;
+          previousLineCodeIndex = currentLineCodeIndex;
+
+          if (location.index >= currentLineCodeIndex) {
+            line = currentLineNumber;
+          } else {
+            break;
+          }
+        }
+
+        return line;
+      }
+
+      public String getCurrentSourceFile() {
+        CommandPacket sourceFileCommand = new CommandPacket(
+            JDWPCommands.ReferenceTypeCommandSet.CommandSetID,
+            JDWPCommands.ReferenceTypeCommandSet.SourceFileCommand);
+        sourceFileCommand.setNextValueAsReferenceTypeID(location.classID);
+        ReplyPacket replyPacket = getMirror().performCommand(sourceFileCommand);
+        if (replyPacket.getErrorCode() != 0) {
+          return null;
+        } else {
+          return replyPacket.getNextValueAsString();
+        }
       }
 
       public List<String> getLocalNames() {

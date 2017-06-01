@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.debug;
 
-import com.android.tools.r8.debug.DebugTestBase;
 import org.apache.harmony.jpda.tests.framework.jdwp.Value;
 import org.junit.Test;
 
@@ -11,6 +10,8 @@ import org.junit.Test;
  * Tests local variable information.
  */
 public class LocalsTest extends DebugTestBase {
+
+  public static final String SOURCE_FILE = "Locals.java";
 
   @Test
   public void testNoLocal() throws Throwable {
@@ -20,11 +21,11 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(8),
+        checkLine(SOURCE_FILE, 8),
         checkNoLocal(),
         stepOver(),
         checkMethod(className, methodName),
-        checkLine(9),
+        checkLine(SOURCE_FILE, 9),
         checkNoLocal(),
         run());
   }
@@ -37,10 +38,10 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(12),
+        checkLine(SOURCE_FILE, 12),
         checkNoLocal(),
         stepOver(),
-        checkLine(13),
+        checkLine(SOURCE_FILE, 13),
         checkLocal("i", Value.createInt(Integer.MAX_VALUE)),
         run());
   }
@@ -57,14 +58,14 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(17),
+        checkLine(SOURCE_FILE, 17),
         checkLocal("p", pValue),
         stepOver(),
-        checkLine(18),
+        checkLine(SOURCE_FILE, 18),
         checkLocal("p", pValue),
         checkLocal("c", cValue),
         stepOver(),
-        checkLine(19),
+        checkLine(SOURCE_FILE, 19),
         checkLocal("p", pValue),
         checkLocal("c", cValue),
         checkLocal("v", vValue),
@@ -84,16 +85,16 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(17),
+        checkLine(SOURCE_FILE, 17),
         checkLocal("p", pValue),
         stepOver(),
-        checkLine(18),
+        checkLine(SOURCE_FILE, 18),
         checkLocal("p", pValue),
         checkLocal("c", cValue),
         setLocal("c", newValue),
         checkLocal("c", newValue),  // we should see the updated value
         stepOver(),
-        checkLine(19),
+        checkLine(SOURCE_FILE, 19),
         checkLocal("p", pValue),
         checkLocal("c", newValue),
         checkLocal("v", vValue),
@@ -109,15 +110,15 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(23),
+        checkLine(SOURCE_FILE, 23),
         checkNoLocal(),
         stepOver(),
         checkMethod(className, methodName),
-        checkLine(24),
+        checkLine(SOURCE_FILE, 24),
         checkLocal("i", Value.createInt(0)),
         setLocal("i", newValueForI),
         stepOver(),
-        checkLine(25),
+        checkLine(SOURCE_FILE, 25),
         checkLocal("i", newValueForI),
         checkLocal("f", Value.createFloat(0)),
         run());
@@ -133,15 +134,15 @@ public class LocalsTest extends DebugTestBase {
         breakpoint(className, methodName),
         run(),
         checkMethod(className, methodName),
-        checkLine(29),
+        checkLine(SOURCE_FILE, 29),
         checkNoLocal(),
         stepOver(),
         checkMethod(className, methodName),
-        checkLine(30),
+        checkLine(SOURCE_FILE, 30),
         checkLocal("i", oldValueForI),
         setLocal("i", newValueForI),
         stepOver(),
-        checkLine(33),
+        checkLine(SOURCE_FILE, 33),
         checkLocal("i", newValueForI),
         run());
   }

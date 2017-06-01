@@ -8,6 +8,8 @@ import org.junit.Test;
 
 public class LambdaTest extends DebugTestBase {
 
+  public static final String SOURCE_FILE = "DebugLambda.java";
+
   @Test
   public void testLambdaDebugging() throws Throwable {
     String debuggeeClass = "DebugLambda";
@@ -17,9 +19,9 @@ public class LambdaTest extends DebugTestBase {
         breakpoint(debuggeeClass, initialMethodName),
         run(),
         checkMethod(debuggeeClass, initialMethodName),
-        checkLine(12),
+        checkLine(SOURCE_FILE, 12),
         stepInto(INTELLIJ_FILTER),
-        checkLine(16),
+        checkLine(SOURCE_FILE, 16),
         run());
   }
 }

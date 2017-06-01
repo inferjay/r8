@@ -11,6 +11,8 @@ import org.junit.Test;
 
 public class DefaultMethodTest extends DebugTestBase {
 
+  private static final String SOURCE_FILE = "DebugDefaultMethod.java";
+
   @Test
   public void testDefaultMethod() throws Throwable {
     String debuggeeClass = "DebugDefaultMethod";
@@ -21,7 +23,7 @@ public class DefaultMethodTest extends DebugTestBase {
     commands.add(breakpoint(debuggeeClass, "testDefaultMethod"));
     commands.add(run());
     commands.add(checkMethod(debuggeeClass, "testDefaultMethod"));
-    commands.add(checkLine(27));
+    commands.add(checkLine(SOURCE_FILE, 27));
     if (!supportsDefaultMethod()) {
       // We desugared default method. This means we're going to step through an extra (forward)
       // method first.
@@ -50,7 +52,7 @@ public class DefaultMethodTest extends DebugTestBase {
     commands.add(run());
     commands.add(run() /* resume after 1st breakpoint */);
     commands.add(checkMethod(debuggeeClass, "testDefaultMethod"));
-    commands.add(checkLine(27));
+    commands.add(checkLine(SOURCE_FILE, 27));
     commands.add(stepInto());
     commands.add(checkMethod("DebugDefaultMethod$OverrideImpl", "doSomething"));
     commands.add(checkLocal(parameterName));
@@ -61,5 +63,4 @@ public class DefaultMethodTest extends DebugTestBase {
 
     runDebugTestJava8(debuggeeClass, commands);
   }
-
 }

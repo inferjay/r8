@@ -10,6 +10,8 @@ import org.junit.Test;
  */
 public class ExceptionTest extends DebugTestBase {
 
+  public static final String SOURCE_FILE = "Exceptions.java";
+
   @Test
   public void testStepOnCatch() throws Throwable {
     int catchLine;
@@ -24,9 +26,9 @@ public class ExceptionTest extends DebugTestBase {
     runDebugTest("Exceptions",
         breakpoint("Exceptions", "catchException"),
         run(),
-        checkLine(9), // line of the method call throwing the exception
+        checkLine(SOURCE_FILE, 9), // line of the method call throwing the exception
         stepOver(),
-        checkLine(catchLine), // line of the catch declaration
+        checkLine(SOURCE_FILE, catchLine), // line of the catch declaration
         run());
   }
 

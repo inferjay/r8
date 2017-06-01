@@ -10,16 +10,18 @@ import org.junit.Test;
  */
 public class MultipleReturnsTest extends DebugTestBase {
 
+  public static final String SOURCE_FILE = "MultipleReturns.java";
+
   @Test
   public void testMultipleReturns() throws Throwable {
     runDebugTest("MultipleReturns",
         breakpoint("MultipleReturns", "multipleReturns"),
         run(),
         stepOver(),
-        checkLine(16), // this should be the 1st return statement
+        checkLine(SOURCE_FILE, 16), // this should be the 1st return statement
         run(),
         stepOver(),
-        checkLine(18), // this should be the 2nd return statement
+        checkLine(SOURCE_FILE, 18), // this should be the 2nd return statement
         run());
   }
 }
