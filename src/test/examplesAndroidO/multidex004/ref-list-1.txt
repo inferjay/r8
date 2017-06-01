@@ -1,4 +1,4 @@
-Lmultidex004/-$$Lambda$MainActivity$dRBNeLGjbsJicx27QgIJsf0cF7o;
+Lmultidex004/-$$Lambda$MainActivity$g120D_43GXrTOaB3kfYt6wSIJh4;
 Lmultidex004/MainActivity;
 Lmultidex004/VersionInterface;
 Lmultidex004/VersionStatic;
