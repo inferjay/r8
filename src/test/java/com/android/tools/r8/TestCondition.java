@@ -40,6 +40,8 @@ public class TestCondition {
 
   public static final CompilerSet D8_COMPILER = compilers(CompilerUnderTest.D8);
   public static final CompilerSet R8_COMPILER = compilers(CompilerUnderTest.R8);
+  public static final CompilerSet R8DEBUG_AFTER_D8_COMPILER =
+      compilers(CompilerUnderTest.R8DEBUG_AFTER_D8);
 
   private static final ToolSet ANY_TOOL = new ToolSet(EnumSet.allOf(DexTool.class));
   private static final CompilerSet ANY_COMPILER =
@@ -107,7 +109,13 @@ public class TestCondition {
   }
 
   public boolean test(DexTool dexTool, CompilerUnderTest compilerUnderTest, DexVm dexVm) {
-    return dexTools.contains(dexTool) && compilers.contains(compilerUnderTest)
+    // R8DEBUG_AFTER_D8 will be set in the R8 phase of the D8-then-R8 tests. So D8_R8DEBUG must
+    // match both with plain R8 and itself.
+    boolean compilerMatches = compilers.contains(compilerUnderTest)
+        || (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
+            && compilers.contains(CompilerUnderTest.R8));
+    return dexTools.contains(dexTool)
+        && compilerMatches
         && dexVms.contains(dexVm);
   }
 }

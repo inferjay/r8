@@ -71,7 +71,8 @@ def read_package_from_java_file(filepath):
   raise IOError("Can't find package statement in java file: " + filepath)
 
 
-def generate_test(class_name, compiler_under_test, relative_package):
+def generate_test(class_name, compiler_under_test, compiler_under_test_enum,
+    relative_package):
   filename = join(DESTINATION_DIR, compiler_under_test,
       relative_package.replace('.', '/'), class_name + '.java')
   utils.makedirs_if_needed(dirname(filename))
@@ -83,7 +84,7 @@ def generate_test(class_name, compiler_under_test, relative_package):
       relativePackage = relative_package,
       name = full_class_name,
       testClassName = class_name,
-      compilerUnderTestEnum = compiler_under_test.upper(),
+      compilerUnderTestEnum = compiler_under_test_enum,
       classFile = full_class_name.replace('.', '/') + '.class',
       nameWithoutPackagePrefix = '{}.{}'.format(relative_package, class_name))
 
@@ -120,8 +121,8 @@ def Main():
     assert idx >= 0
     relative_package = package[idx + len(dot_java_dot):]
 
-    for d in ['r8', 'd8']:
-      generate_test(class_name, d, relative_package)
+    generate_test(class_name, 'd8', 'R8DEBUG_AFTER_D8', relative_package)
+    generate_test(class_name, 'r8', 'R8', relative_package)
 
 
 if __name__ == '__main__':

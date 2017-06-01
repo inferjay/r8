@@ -6,6 +6,7 @@ package com.android.tools.r8;
 
 import static com.android.tools.r8.TestCondition.D8_COMPILER;
 import static com.android.tools.r8.TestCondition.R8_COMPILER;
+import static com.android.tools.r8.TestCondition.R8DEBUG_AFTER_D8_COMPILER;
 import static com.android.tools.r8.TestCondition.any;
 import static com.android.tools.r8.TestCondition.match;
 import static com.android.tools.r8.TestCondition.runtimes;
@@ -4652,6 +4653,14 @@ public class JctfTestSpecifications {
           .put("lang.Math.hypotDD.Math_hypot_A04", match(runtimes(DexVm.ART_5_1_1)))
           // 1) t04
           // java.lang.AssertionError
+
+          .put("lang.reflect.Field.getLjava_lang_Object.Field_get_A04", match(R8DEBUG_AFTER_D8_COMPILER))
+          // 1) t02
+          // java.lang.AssertionError: expected:<9223372036854775807> but was:<72057594037927935>
+
+          .put("lang.reflect.Field.getLongLjava_lang_Object.Field_getLong_A04", match(R8DEBUG_AFTER_D8_COMPILER))
+          // 1)
+          // java.lang.AssertionError: expected:<9223372036854775807> but was:<72057594037927935>
 
           .build(); // end of failuresToTriage
 
