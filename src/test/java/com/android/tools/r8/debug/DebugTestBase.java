@@ -438,6 +438,10 @@ public abstract class DebugTestBase {
           String debuggeeClassPath = String.join(File.pathSeparator, debuggeePath);
           setProperty("jpda.settings.debuggeeClasspath", debuggeeClassPath);
 
+          // Force to localhost (required for continuous testing configuration). Use port '0'
+          // for automatic selection (required when tests are executed in parallel).
+          setProperty("jpda.settings.transportAddress", "127.0.0.1:0");
+
           // Set verbosity
           setProperty("jpda.settings.verbose", Boolean.toString(DEBUG_TESTS));
         }
