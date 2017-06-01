@@ -4,41 +4,27 @@
 
 package com.android.tools.r8.maindexlist;
 
-import static com.android.tools.r8.ToolHelper.EXAMPLES_DIR;
 import static com.android.tools.r8.utils.FileUtils.JAR_EXTENSION;
 import static com.android.tools.r8.utils.FileUtils.ZIP_EXTENSION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.CompilationResult;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
-import com.android.tools.r8.R8Command.Builder;
-import com.android.tools.r8.ToolHelper.DexVm;
-import com.android.tools.r8.ToolHelper.ProcessResult;
-import com.android.tools.r8.dex.Constants;
-import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexType;
-import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
-import com.android.tools.r8.utils.OffOrAuto;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 public class MainDexTracingTest {
@@ -155,11 +141,21 @@ public class MainDexTracingTest {
           .map(dexType -> dexType.descriptor.toString())
           .collect(Collectors.toList());
       Collections.sort(resultMainDexList);
-      StringBuilder resultString = new StringBuilder();
-      resultMainDexList.forEach(descriptor -> resultString.append(descriptor).append('\n'));
-      String refList = new String(Files.readAllBytes(
-          expectedMainDexList), StandardCharsets.UTF_8);
-      Assert.assertEquals(refList, resultString.toString());
+      String[] refList = new String(Files.readAllBytes(
+          expectedMainDexList), StandardCharsets.UTF_8).split("\n");
+      for (int i = 0; i < refList.length; i++) {
+        String reference = refList[i];
+        String computed = resultMainDexList.get(i);
+        if (reference.contains("-$$Lambda$")) {
+          // For lambda classes we check that there is a lambda class for the right containing
+          // class. However, we do not check the hash for the generated lambda class. The hash
+          // changes on any change to code generation and for the main dex list computation the
+          // hash itself is not important.
+          reference = reference.substring(0, reference.lastIndexOf('$'));
+          computed = computed.substring(0, computed.lastIndexOf('$'));
+        }
+        Assert.assertEquals(reference, computed);
+      }
     } catch (ExecutionException e) {
       throw e.getCause();
     }
