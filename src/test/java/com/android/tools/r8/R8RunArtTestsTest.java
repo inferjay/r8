@@ -942,9 +942,11 @@ public abstract class R8RunArtTestsTest {
   }
 
   private void executeCompilerUnderTest(
-      CompilerUnderTest compilerUnderTest, Collection<String> fileNames, String resultPath,
-      CompilationMode compilationMode // use null for default
-  ) throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
+      CompilerUnderTest compilerUnderTest,
+      Collection<String> fileNames,
+      String resultPath,
+      CompilationMode compilationMode)
+      throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, compilationMode, null);
   }
 
@@ -1318,7 +1320,7 @@ public abstract class R8RunArtTestsTest {
       }
 
       File expectedFile = specification.resolveFile("expected.txt");
-      String expected = String.join("\n", FileUtils.readTextFile(expectedFile.toPath()));
+      String expected = com.google.common.io.Files.toString(expectedFile, Charsets.UTF_8);
       if (specification.failsWithArt) {
         thrown.expect(AssertionError.class);
       }

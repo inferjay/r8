@@ -109,8 +109,8 @@ public class TestCondition {
   }
 
   public boolean test(DexTool dexTool, CompilerUnderTest compilerUnderTest, DexVm dexVm) {
-    // R8DEBUG_AFTER_D8 will be set in the R8 phase of the D8-then-R8 tests. So D8_R8DEBUG must
-    // match both with plain R8 and itself.
+    // R8DEBUG_AFTER_D8 will be set in the R8 phase of the D8-then-R8 tests. So R8DEBUG_AFTER_D8
+    // must match both with plain R8 and itself.
     boolean compilerMatches = compilers.contains(compilerUnderTest)
         || (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
             && compilers.contains(CompilerUnderTest.R8));
