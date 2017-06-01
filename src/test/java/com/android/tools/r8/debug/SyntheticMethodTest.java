@@ -11,24 +11,6 @@ import org.junit.Test;
 
 public class SyntheticMethodTest extends DebugTestBase {
 
-  public static final String SOURCE_FILE = "InnerAccessors.java";
-
-  private void debugInnerAccessors(StepFilter stepFilter) throws Throwable {
-    String debuggeeClass = "InnerAccessors";
-    List<Command> commands = new ArrayList<>();
-    commands.add(breakpoint("InnerAccessors$Inner", "callPrivateMethodInOuterClass"));
-    commands.add(run());
-    commands.add(checkLine(SOURCE_FILE, 13));
-    commands.add(stepInto(stepFilter));  // skip synthetic accessor
-    if (stepFilter == NO_FILTER) {
-      commands.add(stepInto(stepFilter));
-    }
-    commands.add(checkMethod(debuggeeClass, "privateMethod"));
-    commands.add(checkLine(SOURCE_FILE, 8));
-    commands.add(run());
-    runDebugTest(debuggeeClass, commands);
-  }
-
   @Test
   public void testInnerAccessors_NoFilter() throws Throwable {
     debugInnerAccessors(NO_FILTER);
@@ -37,6 +19,53 @@ public class SyntheticMethodTest extends DebugTestBase {
   @Test
   public void testInnerAccessors_IntelliJ() throws Throwable {
     debugInnerAccessors(INTELLIJ_FILTER);
+  }
+
+  @Test
+  public void testGenericBridges_NoFilter() throws Throwable {
+    debugGenericBridges(NO_FILTER);
+  }
+
+  @Test
+  public void testGenericBridges_IntelliJ() throws Throwable {
+    debugGenericBridges(INTELLIJ_FILTER);
+  }
+
+  private void debugInnerAccessors(StepFilter stepFilter) throws Throwable {
+    final String sourceFile = "InnerAccessors.java";
+    String debuggeeClass = "InnerAccessors";
+    List<Command> commands = new ArrayList<>();
+    commands.add(breakpoint("InnerAccessors$Inner", "callPrivateMethodInOuterClass"));
+    commands.add(run());
+    commands.add(checkLine(sourceFile, 13));
+    commands.add(stepInto(stepFilter));  // skip synthetic accessor
+    if (stepFilter == NO_FILTER) {
+      commands.add(stepInto(stepFilter));
+    }
+    commands.add(checkMethod(debuggeeClass, "privateMethod"));
+    commands.add(checkLine(sourceFile, 8));
+    commands.add(run());
+    runDebugTest(debuggeeClass, commands);
+  }
+
+  private void debugGenericBridges(StepFilter stepFilter) throws Throwable {
+    final String sourceFile = "Bridges.java";
+    String debuggeeClass = "Bridges";
+    List<Command> commands = new ArrayList<>();
+    commands.add(breakpoint(debuggeeClass, "testGenericBridge"));
+    commands.add(run());
+    commands.add(checkLine(sourceFile, 21));
+    commands.add(stepInto(stepFilter));  // skip synthetic accessor
+    String implementationClassName = "Bridges$StringImpl";
+    String methodName = "get";
+    if (stepFilter == NO_FILTER) {
+      commands.add(checkMethod(implementationClassName, methodName, "(Ljava/lang/Object;)V"));
+      commands.add(stepInto(stepFilter));
+    }
+    commands.add(checkMethod(implementationClassName, methodName, "(Ljava/lang/String;)V"));
+    commands.add(checkLine(sourceFile, 16));
+    commands.add(run());
+    runDebugTest(debuggeeClass, commands);
   }
 
 }
