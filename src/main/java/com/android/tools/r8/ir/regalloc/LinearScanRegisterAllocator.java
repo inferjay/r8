@@ -1722,7 +1722,20 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     // If the invoke instruction require more than 5 registers we link the inputs because they
     // need to be in consecutive registers.
     if (invoke.requiredArgumentRegisters() > 5) {
-      replaceFullArgumentList(invoke, insertAt);
+      List<Value> arguments = invoke.arguments();
+      Value previous = null;
+      for (int i = 0; i < arguments.size(); i++) {
+        Value argument = arguments.get(i);
+        Value newArgument = createValue(argument.outType(), argument.getDebugInfo());
+        Move move = new Move(newArgument, argument);
+        move.setBlock(invoke.getBlock());
+        replaceArgument(invoke, i, newArgument);
+        insertAt.add(move);
+        if (previous != null) {
+          previous.linkTo(newArgument);
+        }
+        previous = newArgument;
+      }
     }
   }
 
@@ -1787,33 +1800,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         }
       }
     }
-  }
-
-  private void replaceFullArgumentList(Invoke invoke, InstructionListIterator insertAt) {
-    List<Value> arguments = invoke.arguments();
-    Value previous = null;
-    for (int i = 0; i < arguments.size(); i++) {
-      generateArgumentMove(invoke, i, insertAt);
-      if (previous != null) {
-        previous.linkTo(arguments.get(i));
-      }
-      previous = arguments.get(i);
-    }
-  }
-
-  private Move generateArgumentMove(Invoke invoke, int i) {
-    List<Value> arguments = invoke.arguments();
-    Value argument = arguments.get(i);
-    Value newArgument = createValue(argument.outType(), argument.getDebugInfo());
-    Move move = new Move(newArgument, argument);
-    move.setBlock(invoke.getBlock());
-    replaceArgument(invoke, i, newArgument);
-    return move;
-  }
-
-  private void generateArgumentMove(Invoke invoke, int i, InstructionListIterator insertAt) {
-    Move move = generateArgumentMove(invoke, i);
-    insertAt.add(move);
   }
 
   private void computeNeedsRegister() {
