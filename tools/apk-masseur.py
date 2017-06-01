@@ -28,6 +28,9 @@ def parse_options():
                     help='install the generated apk with adb options -t -r -d',
                     default=False,
                     action='store_true')
+  parser.add_option('--adb-options',
+                    help='additional adb options when running adb',
+                    default=None)
   (options, args) = parser.parse_args()
   if len(args) != 1:
     parser.error('Expected <apk> argument, got: ' + ' '.join(args))
@@ -106,10 +109,14 @@ def main():
     aligned_apk = align(signed_apk, temp)
     print 'Writing result to', options.out
     shutil.copyfile(aligned_apk, options.out)
+    adb_cmd = ['adb']
+    if options.adb_options:
+      adb_cmd.extend(
+          [option for option in options.adb_options.split(' ') if option])
     if options.install:
-      cmd = ['adb', 'install', '-t', '-r', '-d', options.out]
-      utils.PrintCmd(cmd)
-      subprocess.check_call(cmd)
+      adb_cmd.extend(['install', '-t', '-r', '-d', options.out]);
+      utils.PrintCmd(adb_cmd)
+      subprocess.check_call(adb_cmd)
   return 0
 
 if __name__ == '__main__':
