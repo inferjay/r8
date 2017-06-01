@@ -149,8 +149,8 @@ public class MainDexTracingTest {
         if (reference.contains("-$$Lambda$")) {
           // For lambda classes we check that there is a lambda class for the right containing
           // class. However, we do not check the hash for the generated lambda class. The hash
-          // changes on any change to code generation and for the main dex list computation the
-          // hash itself is not important.
+          // changes for different compiler versions because different compiler versions generate
+          // different lambda implementation method names.
           reference = reference.substring(0, reference.lastIndexOf('$'));
           computed = computed.substring(0, computed.lastIndexOf('$'));
         }
