@@ -15,6 +15,7 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.ArtErrorParser;
 import com.android.tools.r8.utils.ArtErrorParser.ArtErrorInfo;
 import com.android.tools.r8.utils.DexInspector;
+import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.JarBuilder;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.OffOrAuto;
@@ -25,10 +26,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
-import com.google.common.io.Files;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -54,7 +55,6 @@ import org.junit.rules.TemporaryFolder;
 public abstract class R8RunArtTestsTest {
 
   private static final boolean DEX_COMPARE_WITH_DEX_REFERENCE_ON_FAILURE = true;
-  private static String[] D8_EXTRA_ARGS = {"--debug"};
 
   private final String name;
   private final DexTool toolchain;
@@ -70,7 +70,8 @@ public abstract class R8RunArtTestsTest {
 
   public enum CompilerUnderTest {
     D8,
-    R8
+    R8,
+    R8DEBUG_AFTER_D8 // refers to the R8/debug step but implies a previous D8 step as well
   }
 
   private static final String ART_TESTS_DIR = "tests/art";
@@ -937,13 +938,21 @@ public abstract class R8RunArtTestsTest {
   private void executeCompilerUnderTest(
       CompilerUnderTest compilerUnderTest, Collection<String> fileNames, String resultPath)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, null);
+    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, null, null);
+  }
+
+  private void executeCompilerUnderTest(
+      CompilerUnderTest compilerUnderTest, Collection<String> fileNames, String resultPath,
+      CompilationMode compilationMode // use null for default
+  ) throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
+    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, compilationMode, null);
   }
 
   private void executeCompilerUnderTest(
       CompilerUnderTest compilerUnderTest,
       Collection<String> fileNames,
       String resultPath,
+      CompilationMode mode,
       String keepRulesFile)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     switch (compilerUnderTest) {
@@ -951,7 +960,7 @@ public abstract class R8RunArtTestsTest {
         assert keepRulesFile == null : "Keep-rules file specified for D8.";
         D8Command.Builder builder =
             D8Command.builder()
-                .setMode(CompilationMode.DEBUG)
+                .setMode(mode == null ? CompilationMode.DEBUG : mode)
                 .addProgramFiles(ListUtils.map(fileNames, Paths::get));
         Integer minSdkVersion = needMinSdkVersion.get(name);
         if (minSdkVersion != null) {
@@ -964,7 +973,7 @@ public abstract class R8RunArtTestsTest {
       case R8: {
         R8Command.Builder builder =
             R8Command.builder()
-                .setMode(CompilationMode.RELEASE)
+                .setMode(mode == null ? CompilationMode.RELEASE : mode)
                 .setOutputPath(Paths.get(resultPath))
                 .addProgramFiles(ListUtils.map(fileNames, Paths::get))
                 .setIgnoreMissingClasses(true);
@@ -1045,10 +1054,15 @@ public abstract class R8RunArtTestsTest {
 
     DexVm dexVm = ToolHelper.getDexVm();
 
-    File resultDir = temp.getRoot();
+    CompilerUnderTest firstCompilerUnderTest =
+        compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
+            ? CompilerUnderTest.D8
+            : compilerUnderTest;
+
+    File resultDir = temp.newFolder(firstCompilerUnderTest.toString().toLowerCase() + "-output");
 
     JctfTestSpecifications.Outcome expectedOutcome = JctfTestSpecifications
-        .getExpectedOutcome(name, compilerUnderTest, dexVm);
+        .getExpectedOutcome(name, firstCompilerUnderTest, dexVm);
     TestSpecification specification = new TestSpecification(name, DexTool.NONE, resultDir,
         expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
             || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
@@ -1116,7 +1130,53 @@ public abstract class R8RunArtTestsTest {
     for (File f : allClassFiles) {
       fileNames.add(f.getCanonicalPath());
     }
-    executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getCanonicalPath());
+
+    runJctfTestDoRunOnArt(fileNames,
+        specification,
+        firstCompilerUnderTest,
+        fullClassName,
+        null,
+        dexVm,
+        resultDir);
+
+    // second pass if D8_R8Debug
+    if (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8) {
+      List<String> d8OutputFileNames =
+          Files.list(resultDir.toPath())
+              .filter(FileUtils::isDexFile)
+              .map(Path::toString)
+              .collect(Collectors.toList());
+      File r8ResultDir = temp.newFolder("r8-output");
+      expectedOutcome = JctfTestSpecifications
+          .getExpectedOutcome(name, CompilerUnderTest.R8DEBUG_AFTER_D8, dexVm);
+      specification = new TestSpecification(name, DexTool.DX, r8ResultDir,
+          expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
+              || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
+          expectedOutcome == JctfTestSpecifications.Outcome.FAILS_WITH_ART);
+      if (specification.skipTest) {
+        return;
+      }
+      runJctfTestDoRunOnArt(
+          d8OutputFileNames,
+          specification,
+          CompilerUnderTest.R8,
+          fullClassName,
+          CompilationMode.DEBUG,
+          dexVm,
+          r8ResultDir);
+    }
+  }
+
+  private void runJctfTestDoRunOnArt(
+      Collection<String> fileNames,
+      TestSpecification specification,
+      CompilerUnderTest compilerUnderTest,
+      String fullClassName,
+      CompilationMode mode,
+      DexVm dexVm,
+      File resultDir)
+      throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
+    executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getAbsolutePath(), mode);
 
     if (!ToolHelper.artSupported()) {
       return;
@@ -1196,7 +1256,7 @@ public abstract class R8RunArtTestsTest {
     if (toolchain == DexTool.NONE) {
       File classes = new File(specification.directory, "classes");
       inputFiles =
-          Files.fileTreeTraverser().breadthFirstTraversal(classes).filter(
+          com.google.common.io.Files.fileTreeTraverser().breadthFirstTraversal(classes).filter(
               (File f) -> !f.isDirectory()).toArray(File.class);
       File smali = new File(specification.directory, "smali");
       if (smali.exists()) {
@@ -1207,7 +1267,7 @@ public abstract class R8RunArtTestsTest {
       File classes2 = new File(specification.directory, "classes2");
       if (classes2.exists()) {
         inputFiles = ObjectArrays.concat(inputFiles,
-            Files.fileTreeTraverser().breadthFirstTraversal(classes2).filter(
+            com.google.common.io.Files.fileTreeTraverser().breadthFirstTraversal(classes2).filter(
                 (File f) -> !f.isDirectory()).toArray(File.class), File.class);
       }
     } else {
@@ -1258,7 +1318,7 @@ public abstract class R8RunArtTestsTest {
       }
 
       File expectedFile = specification.resolveFile("expected.txt");
-      String expected = Files.toString(expectedFile, Charsets.UTF_8);
+      String expected = String.join("\n", FileUtils.readTextFile(expectedFile.toPath()));
       if (specification.failsWithArt) {
         thrown.expect(AssertionError.class);
       }
@@ -1281,7 +1341,7 @@ public abstract class R8RunArtTestsTest {
       if (checkCommand.exists()) {
         // Run the Art test custom check command.
         File actualFile = temp.newFile();
-        Files.asByteSink(actualFile).write(output.getBytes(Charsets.UTF_8));
+        com.google.common.io.Files.asByteSink(actualFile).write(output.getBytes(Charsets.UTF_8));
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.command(
             specification.resolveFile("check").toString(), expectedFile.toString(),
