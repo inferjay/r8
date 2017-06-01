@@ -70,6 +70,7 @@ public class InternalOptions {
   public String packagePrefix = "";
   public boolean allowAccessModification = true;
   public boolean inlineAccessors = true;
+  public boolean removeSwitchMaps = true;
   public final OutlineOptions outline = new OutlineOptions();
   public boolean debugKeepRules = false;
   public final AttributeRemovalOptions attributeRemoval = new AttributeRemovalOptions();

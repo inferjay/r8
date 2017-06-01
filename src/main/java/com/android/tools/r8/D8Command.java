@@ -26,7 +26,9 @@ import java.nio.file.Paths;
  */
 public class D8Command extends BaseCommand {
 
-  /** Builder for constructing a D8Command. */
+  /**
+   * Builder for constructing a D8Command.
+   */
   public static class Builder extends BaseCommand.Builder<D8Command, Builder> {
 
     private Builder() {
@@ -42,7 +44,9 @@ public class D8Command extends BaseCommand {
       return this;
     }
 
-    /** Build the final D8Command. */
+    /**
+     * Build the final D8Command.
+     */
     @Override
     public D8Command build() throws CompilationException {
       if (isPrintHelp() || isPrintVersion()) {
@@ -148,6 +152,8 @@ public class D8Command extends BaseCommand {
     internal.allowAccessModification = false;
     assert internal.inlineAccessors;
     internal.inlineAccessors = false;
+    assert internal.removeSwitchMaps;
+    internal.removeSwitchMaps = false;
     assert internal.outline.enabled;
     internal.outline.enabled = false;
     internal.lazyClasspathLoading = true;
