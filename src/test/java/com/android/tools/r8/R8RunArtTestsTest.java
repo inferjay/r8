@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
+import static com.android.tools.r8.TestCondition.compilers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -71,7 +72,7 @@ public abstract class R8RunArtTestsTest {
   public enum CompilerUnderTest {
     D8,
     R8,
-    R8DEBUG_AFTER_D8 // refers to the R8/debug step but implies a previous D8 step as well
+    R8_AFTER_D8 // refers to the R8 (default: debug) step but implies a previous D8 step as well
   }
 
   private static final String ART_TESTS_DIR = "tests/art";
@@ -554,8 +555,11 @@ public abstract class R8RunArtTestsTest {
           // Array index out of bounds exception.
           .put("150-loadlibrary", TestCondition.any())
           // Uses dex file version 37 and therefore only runs on Android N and above.
-          .put("370-dex-v37",
-              TestCondition.match(TestCondition.tools(DexTool.JACK, DexTool.DX),
+          .put(
+              "370-dex-v37",
+              TestCondition.match(
+                  TestCondition.tools(DexTool.JACK, DexTool.DX),
+                  compilers(CompilerUnderTest.R8, CompilerUnderTest.D8),
                   TestCondition.runtimes(DexVm.ART_4_4_4, DexVm.ART_5_1_1, DexVm.ART_6_0_1)))
           // Array index out of bounds exception.
           .put("449-checker-bce", TestCondition.any())
@@ -906,7 +910,7 @@ public abstract class R8RunArtTestsTest {
         compilationMode = CompilationMode.RELEASE;
         break;
       case D8:
-      case R8DEBUG_AFTER_D8:
+      case R8_AFTER_D8:
         compilationMode = CompilationMode.DEBUG;
         break;
       default:
@@ -1076,7 +1080,7 @@ public abstract class R8RunArtTestsTest {
     DexVm dexVm = ToolHelper.getDexVm();
 
     CompilerUnderTest firstCompilerUnderTest =
-        compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
+        compilerUnderTest == CompilerUnderTest.R8_AFTER_D8
             ? CompilerUnderTest.D8
             : compilerUnderTest;
     CompilationMode compilationMode = defaultCompilationMode(compilerUnderTest);
@@ -1164,7 +1168,7 @@ public abstract class R8RunArtTestsTest {
         resultDir);
 
     // second pass if D8_R8Debug
-    if (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8) {
+    if (compilerUnderTest == CompilerUnderTest.R8_AFTER_D8) {
       List<String> d8OutputFileNames =
           Files.list(resultDir.toPath())
               .filter(FileUtils::isDexFile)
@@ -1174,7 +1178,7 @@ public abstract class R8RunArtTestsTest {
       compilationMode = CompilationMode.DEBUG;
       expectedOutcome =
           JctfTestSpecifications.getExpectedOutcome(
-              name, CompilerUnderTest.R8DEBUG_AFTER_D8, dexVm, compilationMode);
+              name, CompilerUnderTest.R8_AFTER_D8, dexVm, compilationMode);
       specification = new TestSpecification(name, DexTool.DX, r8ResultDir,
           expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
               || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
@@ -1259,7 +1263,7 @@ public abstract class R8RunArtTestsTest {
   protected void runArtTest(DexVm version, CompilerUnderTest compilerUnderTest)
       throws Throwable {
     CompilerUnderTest firstCompilerUnderTest =
-        compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8
+        compilerUnderTest == CompilerUnderTest.R8_AFTER_D8
             ? CompilerUnderTest.D8
             : compilerUnderTest;
 
@@ -1310,10 +1314,10 @@ public abstract class R8RunArtTestsTest {
     runArtTestDoRunOnArt(
         version, firstCompilerUnderTest, specification, fileNames, resultDir, compilationMode);
 
-    if (compilerUnderTest == CompilerUnderTest.R8DEBUG_AFTER_D8) {
+    if (compilerUnderTest == CompilerUnderTest.R8_AFTER_D8) {
       compilationMode = CompilationMode.DEBUG;
       specification =
-          get_tests_map(CompilerUnderTest.R8DEBUG_AFTER_D8, compilationMode)
+          get_tests_map(CompilerUnderTest.R8_AFTER_D8, compilationMode)
               .get(new SpecificationKey(name, DexTool.DX));
 
       if (specification == null) {
