@@ -172,7 +172,7 @@ public class R8 {
   }
 
   static CompilationResult runForTesting(AndroidApp app, InternalOptions options)
-      throws ProguardRuleParserException, ExecutionException, IOException {
+      throws ProguardRuleParserException, IOException {
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
       return runForTesting(app, options, executor);
@@ -185,12 +185,12 @@ public class R8 {
       AndroidApp app,
       InternalOptions options,
       ExecutorService executor)
-      throws ProguardRuleParserException, ExecutionException, IOException {
+      throws ProguardRuleParserException, IOException {
     return new R8(options).run(app, executor);
   }
 
   private CompilationResult run(AndroidApp inputApp, ExecutorService executorService)
-      throws IOException, ExecutionException, ProguardRuleParserException {
+      throws IOException, ProguardRuleParserException {
     if (options.quiet) {
       System.setOut(new PrintStream(ByteStreams.nullOutputStream()));
     }
@@ -362,6 +362,12 @@ public class R8 {
       }
       options.printWarnings();
       return new CompilationResult(androidApp, application, appInfo);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof CompilationError) {
+        throw (CompilationError) e.getCause();
+      } else {
+        throw new RuntimeException(e.getMessage(), e.getCause());
+      }
     } finally {
       // Dump timings.
       if (options.printTimes) {
@@ -380,7 +386,7 @@ public class R8 {
    * @return the compilation result.
    */
   public static AndroidApp run(R8Command command)
-      throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
+      throws IOException, CompilationException, ProguardRuleParserException {
     AndroidApp outputApp =
         runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp;
     if (command.getOutputPath() != null) {
@@ -400,7 +406,7 @@ public class R8 {
    * @return the compilation result.
    */
   public static AndroidApp run(R8Command command, ExecutorService executor)
-      throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
+      throws IOException, CompilationException, ProguardRuleParserException {
     AndroidApp outputApp =
         runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp;
     if (command.getOutputPath() != null) {
@@ -410,7 +416,7 @@ public class R8 {
   }
 
   private static void run(String[] args)
-      throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
+      throws IOException, ProguardRuleParserException, CompilationException {
     R8Command.Builder builder = R8Command.parse(args);
     if (builder.getOutputPath() == null) {
       builder.setOutputPath(Paths.get("."));
@@ -441,7 +447,7 @@ public class R8 {
     } catch (ProguardRuleParserException e) {
       System.err.println("Failed parsing proguard keep rules: " + e.getMessage());
       System.exit(1);
-    } catch (RuntimeException | ExecutionException e) {
+    } catch (RuntimeException e) {
       System.err.println("Compilation failed with an internal error.");
       Throwable cause = e.getCause() == null ? e : e.getCause();
       cause.printStackTrace();

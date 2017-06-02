@@ -69,13 +69,6 @@ public class ApplicationReader {
       readDexSources(builder, executorService, futures, closer);
       readClassSources(builder, closer);
       ThreadUtils.awaitFutures(futures);
-    } catch (ExecutionException e) {
-      // If the reading failed with a valid compilation error, rethrow the unwrapped exception.
-      Throwable cause = e.getCause();
-      if (cause != null && cause instanceof CompilationError) {
-        throw (CompilationError) cause;
-      }
-      throw e;
     } finally {
       timing.end();
     }

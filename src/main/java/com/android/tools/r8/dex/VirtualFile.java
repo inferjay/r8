@@ -550,6 +550,7 @@ public class VirtualFile {
       this.originalNames = originalNames;
     }
 
+    @Override
     public List<DexProgramClass> call() {
       String currentPrefix = null;
       int currentFileId = -1;
@@ -573,9 +574,9 @@ public class VirtualFile {
           inserted.add(clazz);
         }
         if (file.isFull()) {
-          throw new RuntimeException(
+          throw new CompilationError(
               "Cannot fit package " + currentPrefix
-                  + " in requested dex file, consider to remove mapping.");
+                  + " in requested dex file, consider removing mapping.");
         }
       }
       file.commitTransaction();
@@ -670,6 +671,7 @@ public class VirtualFile {
       return originalNames != null ? originalNames.get(clazz) : clazz.toString();
     }
 
+    @Override
     public Map<String, Integer> call() throws IOException {
       Iterator<VirtualFile> allFilesCyclic = Iterators.cycle(files.values());
       Iterator<VirtualFile> activeFiles = Iterators.limit(allFilesCyclic, files.size());
@@ -772,7 +774,7 @@ public class VirtualFile {
     }
 
     private void addNonPackageClasses(Iterator<VirtualFile> activeFiles,
-        List<DexProgramClass> nonPackageClasses) throws IOException {
+        List<DexProgramClass> nonPackageClasses) {
       VirtualFile current;
       current = activeFiles.next();
       for (DexProgramClass clazz : nonPackageClasses) {
@@ -795,7 +797,7 @@ public class VirtualFile {
       }
     }
 
-    private VirtualFile getVirtualFile(Iterator<VirtualFile> activeFiles) throws IOException {
+    private VirtualFile getVirtualFile(Iterator<VirtualFile> activeFiles) {
       VirtualFile current = null;
       while (activeFiles.hasNext() && (current = activeFiles.next()).isFilledEnough(options)) {}
       if (current == null || current.isFilledEnough(options)) {
