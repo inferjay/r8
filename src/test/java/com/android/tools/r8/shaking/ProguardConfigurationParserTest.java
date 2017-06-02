@@ -51,6 +51,8 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "seeds-2.flags";
   private static final String VERBOSE =
       VALID_PROGUARD_DIR + "verbose.flags";
+  private static final String KEEPDIRECTORIES =
+      VALID_PROGUARD_DIR + "keepdirectories.flags";
   private static final String DONT_OBFUSCATE =
       VALID_PROGUARD_DIR + "dontobfuscate.flags";
   private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASSES =
@@ -307,6 +309,12 @@ public class ProguardConfigurationParserTest extends TestBase {
     parser.parse(Paths.get(VERBOSE));
     ProguardConfiguration config = parser.getConfig();
     assertTrue(config.isVerbose());
+  }
+
+  @Test
+  public void parseKeepdirectories() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(KEEPDIRECTORIES));
   }
 
   @Test

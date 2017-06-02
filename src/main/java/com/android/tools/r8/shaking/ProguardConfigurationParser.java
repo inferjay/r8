@@ -40,6 +40,8 @@ public class ProguardConfigurationParser {
       .of("protomapping",
           "optimizationpasses",
           "target");
+  private static final List<String> ignoredOptionalSingleArgOptions = ImmutableList
+      .of("keepdirectories");
   private static final List<String> ignoredFlagOptions = ImmutableList
       .of("forceprocessing", "dontusemixedcaseclassnames",
           "dontpreverify", "experimentalshrinkunusedprotofields",
@@ -121,6 +123,7 @@ public class ProguardConfigurationParser {
       expectChar('-');
       String option;
       if (Iterables.any(ignoredSingleArgOptions, this::skipOptionWithSingleArg)
+          || Iterables.any(ignoredOptionalSingleArgOptions, this::skipOptionWithOptionalSingleArg)
           || Iterables.any(ignoredFlagOptions, this::skipFlag)
           || Iterables.any(ignoredClassDescriptorOptions, this::skipOptionWithClassSpec)
           || parseOptimizationOption()) {
@@ -256,6 +259,20 @@ public class ProguardConfigurationParser {
           Log.debug(ProguardConfigurationParser.class, "Skipping '-%s` option", name);
         }
         skipSingleArgument();
+        return true;
+      }
+      return false;
+    }
+
+    private boolean skipOptionWithOptionalSingleArg(String name) {
+      if (acceptString(name)) {
+        if (Log.ENABLED) {
+          Log.debug(ProguardConfigurationParser.class, "Skipping '-%s` option", name);
+        }
+        skipWhitespace();
+        if (!eof() && peekChar() != '-') {
+          skipSingleArgument();
+        }
         return true;
       }
       return false;
