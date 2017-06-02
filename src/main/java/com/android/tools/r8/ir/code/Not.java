@@ -23,16 +23,16 @@ public class Not extends Unop {
   }
 
   @Override
-  public ConstInstruction fold(ValueNumberGenerator valueNumberGenerator) {
+  public ConstInstruction fold(IRCode code) {
     assert canBeFolded();
     if (type == NumericType.INT) {
       int result = ~(source().getConstInstruction().asConstNumber().getIntValue());
-      Value value = new Value(valueNumberGenerator.next(), -1, MoveType.SINGLE, getDebugInfo());
+      Value value = code.createValue(MoveType.SINGLE, getDebugInfo());
       return new ConstNumber(ConstType.INT, value, result);
     } else {
       assert type == NumericType.LONG;
       long result = ~source().getConstInstruction().asConstNumber().getLongValue();
-      Value value = new Value(valueNumberGenerator.next(), -1, MoveType.WIDE, getDebugInfo());
+      Value value = code.createValue(MoveType.WIDE, getDebugInfo());
       return new ConstNumber(ConstType.LONG, value, result);
     }
   }

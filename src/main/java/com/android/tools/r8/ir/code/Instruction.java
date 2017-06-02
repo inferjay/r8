@@ -792,7 +792,7 @@ public abstract class Instruction {
     return false;
   }
 
-  public ConstInstruction fold(ValueNumberGenerator valueNumberGenerator) {
+  public ConstInstruction fold(IRCode code) {
     throw new Unreachable("Unsupported folding for " + this);
   }
 

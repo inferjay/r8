@@ -147,7 +147,7 @@ public class Cmp extends Binop {
   }
 
   @Override
-  public ConstInstruction fold(ValueNumberGenerator valueNumberGenerator) {
+  public ConstInstruction fold(IRCode code) {
     assert canBeFolded();
     int result;
     if (type == NumericType.LONG) {
@@ -180,7 +180,7 @@ public class Cmp extends Binop {
       }
     }
     assert result == -1 || result == 0 || result == 1;
-    Value value = new Value(valueNumberGenerator.next(), -1, MoveType.SINGLE, getDebugInfo());
+    Value value = code.createValue(MoveType.SINGLE, getDebugInfo());
     return new ConstNumber(ConstType.INT, value, result);
   }
 

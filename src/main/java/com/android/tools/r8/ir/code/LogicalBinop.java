@@ -30,13 +30,14 @@ public abstract class LogicalBinop extends Binop {
     return leftValue().isConstant() && rightValue().isConstant();
   }
 
-  public ConstInstruction fold(ValueNumberGenerator valueNumberGenerator) {
+  @Override
+  public ConstInstruction fold(IRCode code) {
     assert canBeFolded();
     if (type == NumericType.INT) {
       int left = leftValue().getConstInstruction().asConstNumber().getIntValue();
       int right = rightValue().getConstInstruction().asConstNumber().getIntValue();
       int result = foldIntegers(left, right);
-      Value value = new Value(valueNumberGenerator.next(), -1, MoveType.SINGLE, getDebugInfo());
+      Value value = code.createValue(MoveType.SINGLE, getDebugInfo());
       return new ConstNumber(ConstType.INT, value, result);
     } else {
       assert type == NumericType.LONG;
@@ -49,7 +50,7 @@ public abstract class LogicalBinop extends Binop {
         right = rightValue().getConstInstruction().asConstNumber().getLongValue();
       }
       long result = foldLongs(left, right);
-      Value value = new Value(valueNumberGenerator.next(), -1, MoveType.WIDE, getDebugInfo());
+      Value value = code.createValue(MoveType.WIDE, getDebugInfo());
       return new ConstNumber(ConstType.LONG, value, result);
     }
   }

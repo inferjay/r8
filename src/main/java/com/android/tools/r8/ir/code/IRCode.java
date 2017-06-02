@@ -347,4 +347,12 @@ public class IRCode {
         == method.method.proto.parameters.values.length + (method.accessFlags.isStatic() ? 0 : 1);
     return arguments;
   }
+
+  public Value createValue(MoveType moveType, Value.DebugInfo debugInfo) {
+    return new Value(valueNumberGenerator.next(), -1, moveType, debugInfo);
+  }
+
+  public Value createValue(MoveType moveType) {
+    return createValue(moveType, null);
+  }
 }

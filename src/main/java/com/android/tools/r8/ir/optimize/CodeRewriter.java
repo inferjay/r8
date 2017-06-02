@@ -690,7 +690,7 @@ public class CodeRewriter {
         Instruction current = iterator.next();
         Instruction folded;
         if (canBeFolded(current)) {
-          folded = current.fold(code.valueNumberGenerator);
+          folded = current.fold(code);
           iterator.replaceCurrentInstruction(folded);
           folded.outValue().uniqueUsers()
               .forEach(instruction -> worklist.add(instruction.getBlock()));
@@ -1228,7 +1228,7 @@ public class CodeRewriter {
             // Replace call to Throwable::getSuppressed() with new Throwable[0].
 
             // First insert the constant value *before* the current instruction.
-            Value zero = new Value(code.valueNumberGenerator.next(), -1, MoveType.SINGLE, null);
+            Value zero = code.createValue(MoveType.SINGLE);
             assert iterator.hasPrevious();
             iterator.previous();
             iterator.add(new ConstNumber(ConstType.INT, zero, 0));
