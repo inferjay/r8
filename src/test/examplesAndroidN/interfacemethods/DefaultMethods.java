@@ -4,6 +4,8 @@
 
 package interfacemethods;
 
+import interfacemethods.p1.I4;
+
 public class DefaultMethods {
 
   interface I3 {
@@ -22,8 +24,12 @@ public class DefaultMethods {
   static class C4 extends C3 implements I3 {
   }
 
+  static class C5 implements I4 {
+  }
+
   public static void main(String[] args) {
     new C2().d1();
     System.out.println(new C4().getValue());
+    new C5().dump();
   }
 }
