@@ -375,11 +375,11 @@ public class CompatDx {
       throw new Unimplemented("dump-to file not yet supported");
     }
 
-    if (dexArgs.positions != PositionInfo.NONE) {
-      mode = CompilationMode.DEBUG;
+    if (dexArgs.positions == PositionInfo.NONE) {
+      System.out.println("Warning: no support for positions none.");
     }
 
-    if (!dexArgs.noLocals) {
+    if (dexArgs.positions == PositionInfo.LINES && !dexArgs.noLocals) {
       mode = CompilationMode.DEBUG;
     }
 
