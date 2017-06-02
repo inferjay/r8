@@ -191,69 +191,49 @@ public class DexAnnotation extends DexItem {
   }
 
   /**
-   * As a simple heuristic for compressing a signature, we locate all starting points of qualified
-   * names and of inner classes (started by an L or $) and make them individual parts, potentially
-   * splitting the qualified name into its package prefix and class name components. All other
-   * parts of the signature are simply grouped and separate the names.
+   * As a simple heuristic for compressing a signature by splitting on fully qualified class names
+   * and make them individual part. All other parts of the signature are simply grouped and separate
+   * the names.
    * For examples, "()Ljava/lang/List<Lfoo/bar/Baz;>;" splits into:
    * <pre>
-   *   ["()", "Ljava/lang/List<", "Lfoo/bar/", "Baz;", ">;"]
+   *   ["()", "Ljava/lang/List", "<", "Lfoo/bar/Baz;", ">;"]
    * </pre>
-   * We don't split classes in java and android since they are very frequent and the added string
-   * payload is outweighed by the reduced number of parts.
    */
   private static DexValue compressSignature(String signature, DexItemFactory factory) {
     final int length = signature.length();
     List<DexValue> parts = new ArrayList<>();
-    int previous = 0;
-    int index = 0;
-    while (index < length) {
-      char c = signature.charAt(index);
-      if (c == 'L' || c == '$') {
-        if (previous < index) {
-          parts.add(toDexValue(signature.substring(previous, index), factory));
-          previous = index;
-        }
-        int startOfClassName = index;
-        ++index;
-        while (index < length && isAlphaNumericPath(index, signature)) {
-          ++index;
-          // Record the last separator.
-          if (signature.charAt(index - 1) == '/') {
-            startOfClassName = index;
+
+    for (int at = 0; at < length; /*at*/) {
+      char c = signature.charAt(at);
+      int endAt = at + 1;
+      if (c == 'L') {
+        // Scan to ';' or '<' and consume them.
+        while (endAt < length) {
+          c = signature.charAt(endAt);
+          if (c == ';' /*|| c == '<'*/) {
+            endAt++;
+            break;
+          } else if (c == '<') {
+            break;
           }
+          endAt++;
         }
-        // Include the termination char in the part (this will typically be duplicated).
-        int lastChar = signature.charAt(index);
-        if (lastChar == ';' || lastChar == '<') {
-          ++index;
-        }
-        if (splitQualifiedName(previous, index, startOfClassName, signature)) {
-          parts.add(toDexValue(signature.substring(previous, startOfClassName), factory));
-          parts.add(toDexValue(signature.substring(startOfClassName, index), factory));
-        } else {
-          parts.add(toDexValue(signature.substring(previous, index), factory));
-        }
-        previous = index;
       } else {
-        ++index;
+        // Scan to 'L' without consuming it.
+        while (endAt < length) {
+          c = signature.charAt(endAt);
+          if (c == 'L') {
+            break;
+          }
+          endAt++;
+        }
       }
+
+      parts.add(toDexValue(signature.substring(at, endAt), factory));
+      at = endAt;
     }
-    if (previous < index) {
-      parts.add(toDexValue(signature.substring(previous, index), factory));
-    }
+
     return new DexValueArray(parts.toArray(new DexValue[parts.size()]));
-  }
-
-  private static boolean isAlphaNumericPath(int position, String data) {
-    char c = data.charAt(position);
-    return c == '/' || Character.isLetterOrDigit(c);
-  }
-
-  private static boolean splitQualifiedName(int start, int end, int classStart, String signature) {
-    return start < classStart && classStart < end - 1
-        && !signature.startsWith("Landroid/", start)
-        && !signature.startsWith("Ljava/", start);
   }
 
   private static DexValue toDexValue(String string, DexItemFactory factory) {
