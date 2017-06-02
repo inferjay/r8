@@ -121,7 +121,7 @@ def Main():
     assert idx >= 0
     relative_package = package[idx + len(dot_java_dot):]
 
-    generate_test(class_name, 'd8', 'R8DEBUG_AFTER_D8', relative_package)
+    generate_test(class_name, 'd8', 'R8_AFTER_D8', relative_package)
     generate_test(class_name, 'r8', 'R8', relative_package)
 
 
