@@ -196,7 +196,7 @@ public class DexAnnotation extends DexItem {
    * the names.
    * For examples, "()Ljava/lang/List<Lfoo/bar/Baz;>;" splits into:
    * <pre>
-   *   ["()", "Ljava/lang/List", "<", "Lfoo/bar/Baz;", ">;"]
+   *   ["()", "Ljava/lang/List<", "Lfoo/bar/Baz;", ">;"]
    * </pre>
    */
   private static DexValue compressSignature(String signature, DexItemFactory factory) {
@@ -210,10 +210,8 @@ public class DexAnnotation extends DexItem {
         // Scan to ';' or '<' and consume them.
         while (endAt < length) {
           c = signature.charAt(endAt);
-          if (c == ';' /*|| c == '<'*/) {
+          if (c == ';' || c == '<') {
             endAt++;
-            break;
-          } else if (c == '<') {
             break;
           }
           endAt++;
