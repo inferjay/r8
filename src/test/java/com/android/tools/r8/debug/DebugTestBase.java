@@ -77,15 +77,9 @@ public abstract class DebugTestBase {
   // Set to true to enable verbose logs
   private static final boolean DEBUG_TESTS = false;
 
-  private static final List<DexVm> UNSUPPORTED_ART_VERSIONS = ImmutableList.<DexVm>builder()
-      // Dalvik does not support command ReferenceType.Methods which is used to set breakpoint.
-      // TODO(shertz) use command ReferenceType.MethodsWithGeneric instead
-      .add(DexVm.ART_4_4_4)
-      // Older runtimes fail on buildbot
-      // TODO(shertz) re-enable once issue is solved
-      .add(DexVm.ART_5_1_1)
-      .add(DexVm.ART_6_0_1)
-      .build();
+  // Dalvik does not support command ReferenceType.Methods which is used to set breakpoint.
+  // TODO(shertz) use command ReferenceType.MethodsWithGeneric instead
+  private static final List<DexVm> UNSUPPORTED_ART_VERSIONS = ImmutableList.of(DexVm.ART_4_4_4);
 
   private static final Path JDWP_JAR = ToolHelper
       .getJdwpTestsJarPath(ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm()));
