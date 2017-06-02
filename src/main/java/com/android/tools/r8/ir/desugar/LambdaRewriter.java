@@ -279,8 +279,7 @@ public class LambdaRewriter {
     Value lambdaInstanceValue = invoke.outValue();
     if (lambdaInstanceValue == null) {
       // The out value might be empty in case it was optimized out.
-      lambdaInstanceValue = new Value(
-          code.valueNumberGenerator.next(), -1, MoveType.OBJECT, null);
+      lambdaInstanceValue = code.createValue(MoveType.OBJECT);
     }
 
     // For stateless lambdas we replace InvokeCustom instruction with StaticGet
