@@ -34,8 +34,8 @@ public class Phi extends Value {
   // computation of the phi until all operands are known.
   private MoveType outType = null;
 
-  public Phi(int number, int register, BasicBlock block, MoveType type, DebugLocalInfo local) {
-    super(number, register, type, local == null ? null : new DebugInfo(local, null));
+  public Phi(int number, BasicBlock block, MoveType type, DebugLocalInfo local) {
+    super(number, type, local == null ? null : new DebugInfo(local, null));
     this.block = block;
     block.addPhi(this);
   }
@@ -54,7 +54,7 @@ public class Phi extends Value {
     return block;
   }
 
-  public void addOperands(IRBuilder builder) {
+  public void addOperands(IRBuilder builder, int register) {
     // Phi operands are only filled in once to complete the phi. Some phis are incomplete for a
     // period of time to break cycles. When the cycle has been resolved they are completed
     // exactly once by adding the operands.
@@ -63,8 +63,7 @@ public class Phi extends Value {
     for (BasicBlock pred : block.getPredecessors()) {
       EdgeType edgeType = pred.getEdgeType(block);
       // Since this read has been delayed we must provide the local info for the value.
-      Value operand = builder.readRegister(
-          getOriginalRegister(), pred, edgeType, type, getLocalInfo());
+      Value operand = builder.readRegister(register, pred, edgeType, type, getLocalInfo());
       canBeNull |= operand.canBeNull();
       appendOperand(operand);
     }

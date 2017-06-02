@@ -355,8 +355,8 @@ public class SplitBlockTest extends SmaliTestBase {
     BasicBlock originalReturnBlock = code.getNormalExitBlock();
     BasicBlock newReturnBlock = originalReturnBlock.listIterator().split(code);
     // Modify the code to make the inserted block add the constant 10 to the original return value.
-    Value newConstValue = new Value(test.valueNumberGenerator.next(), -1, MoveType.SINGLE, null);
-    Value newReturnValue = new Value(test.valueNumberGenerator.next(), -1, MoveType.SINGLE, null);
+    Value newConstValue = new Value(test.valueNumberGenerator.next(), MoveType.SINGLE, null);
+    Value newReturnValue = new Value(test.valueNumberGenerator.next(), MoveType.SINGLE, null);
     Value oldReturnValue = newReturnBlock.listIterator().next().asReturn().returnValue();
     newReturnBlock.listIterator().next().asReturn().returnValue().replaceUsers(newReturnValue);
     Instruction constInstruction = new ConstNumber(ConstType.INT, newConstValue, 10);

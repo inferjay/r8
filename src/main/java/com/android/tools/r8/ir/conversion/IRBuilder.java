@@ -1379,7 +1379,7 @@ public class IRBuilder {
     Value value;
     if (!block.isSealed()) {
       assert !blocks.isEmpty() : "No write to " + register;
-      Phi phi = new Phi(valueNumberGenerator.next(), register, block, type, local);
+      Phi phi = new Phi(valueNumberGenerator.next(), block, type, local);
       block.addIncompletePhi(register, phi, readingEdge);
       value = phi;
     } else if (block.getPredecessors().size() == 1) {
@@ -1388,11 +1388,11 @@ public class IRBuilder {
       EdgeType edgeType = pred.getEdgeType(block);
       value = readRegister(register, pred, edgeType, type, local);
     } else {
-      Phi phi = new Phi(valueNumberGenerator.next(), register, block, type, local);
+      Phi phi = new Phi(valueNumberGenerator.next(), block, type, local);
       // We need to write the phi before adding operands to break cycles. If the phi is trivial
       // and is removed by addOperands, the definition is overwritten and looked up again below.
       block.updateCurrentDefinition(register, phi, readingEdge);
-      phi.addOperands(this);
+      phi.addOperands(this, register);
       // Lookup the value for the register again at this point. Recursive trivial
       // phi removal could have simplified what we wanted to return here.
       value = block.readCurrentDefinition(register, readingEdge);
@@ -1406,7 +1406,7 @@ public class IRBuilder {
   }
 
   public Value readLiteral(NumericType type, long constant) {
-    Value value = new Value(valueNumberGenerator.next(), -1, MoveType.fromNumericType(type), null);
+    Value value = new Value(valueNumberGenerator.next(), MoveType.fromNumericType(type), null);
     add(new ConstNumber(ConstType.fromNumericType(type), value, constant));
     return value;
   }
@@ -1415,7 +1415,7 @@ public class IRBuilder {
   // See addDebugLocalStart and addDebugLocalEnd.
   private Value writeRegister(int register, MoveType type, ThrowingInfo throwing, DebugInfo info) {
     checkRegister(register);
-    Value value = new Value(valueNumberGenerator.next(), register, type, info);
+    Value value = new Value(valueNumberGenerator.next(), type, info);
     currentBlock.writeCurrentDefinition(register, value, throwing);
     return value;
   }
@@ -1610,7 +1610,7 @@ public class IRBuilder {
         MoveType returnType = origReturn.getReturnType();
         assert origReturn.getLocalInfo() == null;
         phi = new Phi(
-            valueNumberGenerator.next(), -1, normalExitBlock, returnValue.outType(), null);
+            valueNumberGenerator.next(), normalExitBlock, returnValue.outType(), null);
         normalExitBlock.add(new Return(phi, returnType));
         assert returnType == MoveType.fromDexType(method.method.proto.returnType);
       }

@@ -41,13 +41,13 @@ public class IdenticalAfterRegisterAllocationTest {
   @Test
   public void equalityOfConstantOperands() {
     RegisterAllocator allocator = new MockRegisterAllocator();
-    Value value0 = new Value(0, -1, MoveType.SINGLE, null);
+    Value value0 = new Value(0, MoveType.SINGLE, null);
     ConstNumber const0 = new ConstNumber(ConstType.INT, value0, 0);
-    Value value1 = new Value(1, -1, MoveType.SINGLE, null);
+    Value value1 = new Value(1, MoveType.SINGLE, null);
     ConstNumber const1 = new ConstNumber(ConstType.INT, value1, 1);
-    Value value2 = new Value(2, -1, MoveType.SINGLE, null);
+    Value value2 = new Value(2, MoveType.SINGLE, null);
     ConstNumber const2 = new ConstNumber(ConstType.INT, value2, 2);
-    Value value3 = new Value(2, -1, MoveType.SINGLE, null);
+    Value value3 = new Value(2, MoveType.SINGLE, null);
     Add add0 = new Add(NumericType.INT, value3, value0, value1);
     Add add1 = new Add(NumericType.INT, value3, value0, value2);
     value0.computeNeedsRegister();

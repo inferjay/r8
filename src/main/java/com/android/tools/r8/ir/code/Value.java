@@ -53,11 +53,10 @@ public class Value {
     }
   }
 
-  public static final Value UNDEFINED = new Value(-1, -1, MoveType.OBJECT, null);
+  public static final Value UNDEFINED = new Value(-1, MoveType.OBJECT, null);
 
   protected final int number;
   protected MoveType type;
-  private int originalRegister;
   public Instruction definition = null;
   private LinkedList<Instruction> users = new LinkedList<>();
   private Set<Instruction> uniqueUsers = null;
@@ -73,10 +72,9 @@ public class Value {
   private LongInterval valueRange;
   private DebugData debugData;
 
-  public Value(int number, int originalRegister, MoveType type, DebugInfo debugInfo) {
+  public Value(int number, MoveType type, DebugInfo debugInfo) {
     this.number = number;
     this.type = type;
-    this.originalRegister = originalRegister;
     this.debugData = debugInfo == null ? null : new DebugData(debugInfo);
   }
 
@@ -90,10 +88,6 @@ public class Value {
 
   public int getNumber() {
     return number;
-  }
-
-  public int getOriginalRegister() {
-    return originalRegister;
   }
 
   public int requiredRegisters() {
@@ -374,26 +368,23 @@ public class Value {
     StringBuilder builder = new StringBuilder();
     builder.append("v");
     builder.append(number);
-    builder.append("(");
-    if (definition != null && isConstant()) {
-      ConstNumber constNumber = getConstInstruction().asConstNumber();
-      if (constNumber.outType() == MoveType.SINGLE) {
-        builder.append((int) constNumber.getRawValue());
-      } else {
-        builder.append(constNumber.getRawValue());
+    boolean isConstant = definition != null && isConstant();
+    boolean hasLocalInfo = getLocalInfo() != null;
+    if (isConstant || hasLocalInfo) {
+      builder.append("(");
+      if (isConstant) {
+        ConstNumber constNumber = getConstInstruction().asConstNumber();
+        if (constNumber.outType() == MoveType.SINGLE) {
+          builder.append((int) constNumber.getRawValue());
+        } else {
+          builder.append(constNumber.getRawValue());
+        }
       }
-    } else {
-      if (originalRegister >= 0) {
-        builder.append("r");
-        builder.append(originalRegister);
-      } else {
-        builder.append("_");
+      if (hasLocalInfo) {
+        builder.append(", ").append(getLocalInfo());
       }
+      builder.append(")");
     }
-    if (getLocalInfo() != null) {
-      builder.append(", ").append(getLocalInfo());
-    }
-    builder.append(")");
     if (valueRange != null) {
       builder.append(valueRange);
     }

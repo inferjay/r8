@@ -38,7 +38,6 @@ public class ConstNumber extends ConstInstruction {
     Value newValue =
         new Value(
             code.valueNumberGenerator.next(),
-            original.outValue().getOriginalRegister(),
             original.outType(),
             original.getDebugInfo());
     return new ConstNumber(original.type, newValue, original.getRawValue());
