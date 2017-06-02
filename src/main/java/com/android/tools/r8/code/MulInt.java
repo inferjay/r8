@@ -17,6 +17,11 @@ public class MulInt extends Format23x {
 
   public MulInt(int dest, int left, int right) {
     super(dest, left, right);
+    // The art x86 backend had a bug that made it fail on "mul r0, r1, r0" instructions where
+    // the second src register and the dst register is the same (but the first src register is
+    // different). Therefore, we have to avoid generating that pattern. The bug was fixed for
+    // Android M: https://android-review.googlesource.com/#/c/114932/
+    assert dest != right || dest == left;
   }
 
   public String getName() {

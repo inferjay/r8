@@ -27,19 +27,31 @@ public class Mul extends ArithmeticBinop {
   }
 
   public com.android.tools.r8.code.Instruction CreateInt(int dest, int left, int right) {
-    return new MulInt(dest, left, right);
+    // Flip arguments if dest and right are the same to work around x86 code generation bug on
+    // Android L. See https://android-review.googlesource.com/#/c/114932/ for the fix for Android
+    // M.
+    return dest == right ? new MulInt(dest, right, left) : new MulInt(dest, left, right);
   }
 
   public com.android.tools.r8.code.Instruction CreateLong(int dest, int left, int right) {
-    return new MulLong(dest, left, right);
+    // Flip arguments if dest and right are the same to work around x86 code generation bug on
+    // Android L. See https://android-review.googlesource.com/#/c/114932/ for the fix for Android
+    // M.
+    return dest == right ? new MulLong(dest, right, left) : new MulLong(dest, left, right);
   }
 
   public com.android.tools.r8.code.Instruction CreateFloat(int dest, int left, int right) {
-    return new MulFloat(dest, left, right);
+    // Flip arguments if dest and right are the same to work around x86 code generation bug on
+    // Android L. See https://android-review.googlesource.com/#/c/114932/ for the fix for Android
+    // M.
+    return dest == right ? new MulFloat(dest, right, left) : new MulFloat(dest, left, right);
   }
 
   public com.android.tools.r8.code.Instruction CreateDouble(int dest, int left, int right) {
-    return new MulDouble(dest, left, right);
+    // Flip arguments if dest and right are the same to work around x86 code generation bug on
+    // Android L. See https://android-review.googlesource.com/#/c/114932/ for the fix for Android
+    // M.
+    return dest == right ? new MulDouble(dest, right, left) : new MulDouble(dest, left, right);
   }
 
   public com.android.tools.r8.code.Instruction CreateInt2Addr(int left, int right) {
