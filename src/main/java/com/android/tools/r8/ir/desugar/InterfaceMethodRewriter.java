@@ -216,18 +216,17 @@ public final class InterfaceMethodRewriter {
   }
 
   private static boolean shouldProcess(
-      DexClassPromise promise, Flavor flavour, boolean mustBeInterface) {
-    return promise.isProgramClass()
-        && (promise.getOrigin() != DexClass.Origin.Dex || flavour == Flavor.IncludeAllResources)
-        && promise.get().isInterface() == mustBeInterface;
+      DexProgramClass clazz, Flavor flavour, boolean mustBeInterface) {
+    return (clazz.getOrigin() != DexClass.Origin.Dex || flavour == Flavor.IncludeAllResources)
+        && clazz.isInterface() == mustBeInterface;
   }
 
   private Map<DexProgramClass, DexProgramClass> processInterfaces(
       Builder builder, Flavor flavour) {
     InterfaceProcessor processor = new InterfaceProcessor(this);
-    for (DexClassPromise promise : builder.classMap.values()) {
-      if (shouldProcess(promise, flavour, true)) {
-        processor.process(promise.get().asProgramClass());
+    for (DexProgramClass clazz : builder.getProgramClasses()) {
+      if (shouldProcess(clazz, flavour, true)) {
+        processor.process(clazz.get().asProgramClass());
       }
     }
     return processor.companionClasses;
@@ -235,9 +234,9 @@ public final class InterfaceMethodRewriter {
 
   private Set<DexEncodedMethod> processClasses(Builder builder, Flavor flavour) {
     ClassProcessor processor = new ClassProcessor(this);
-    for (DexClassPromise promise : builder.classMap.values()) {
-      if (shouldProcess(promise, flavour, false)) {
-        processor.process(promise.get());
+    for (DexProgramClass clazz : builder.getProgramClasses()) {
+      if (shouldProcess(clazz, flavour, false)) {
+        processor.process(clazz.get());
       }
     }
     return processor.getForwardMethods();

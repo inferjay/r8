@@ -11,6 +11,7 @@ import com.android.tools.r8.ir.desugar.LambdaRewriter;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.LazyClassCollection;
 import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableMap;
@@ -33,7 +34,16 @@ import java.util.Set;
 public class DexApplication {
 
   // Maps type into class promise, may be used concurrently.
-  final ImmutableMap<DexType, DexClassPromise> classMap;
+  private final ImmutableMap<DexType, DexClassPromise> classMap;
+
+  // Lazily loaded classes.
+  //
+  // Note that this collection is autonomous and may be used in several
+  // different applications. Particularly, it is the case when one
+  // application is being build based on another one. Among others,
+  // it will have an important side-effect: class conflict resolution,
+  // generated errors in particular, may be different in lazy scenario.
+  private final LazyClassCollection lazyClassCollection;
 
   public final ImmutableSet<DexType> mainDexList;
 
@@ -50,11 +60,13 @@ public class DexApplication {
   private DexApplication(
       ClassNameMapper proguardMap,
       ImmutableMap<DexType, DexClassPromise> classMap,
+      LazyClassCollection lazyClassCollection,
       ImmutableSet<DexType> mainDexList,
       DexItemFactory dexItemFactory,
       DexString highestSortingString,
       Timing timing) {
     this.proguardMap = proguardMap;
+    this.lazyClassCollection = lazyClassCollection;
     this.mainDexList = mainDexList;
     this.classMap = classMap;
     this.dexItemFactory = dexItemFactory;
@@ -62,8 +74,15 @@ public class DexApplication {
     this.timing = timing;
   }
 
+  ImmutableMap<DexType, DexClassPromise> getClassMap() {
+    assert lazyClassCollection == null : "Only allowed in non-lazy scenarios.";
+    return classMap;
+  }
+
   public Iterable<DexProgramClass> classes() {
     List<DexProgramClass> result = new ArrayList<>();
+    // Note: we ignore lazy class collection because it
+    // is never supposed to be used for program classes.
     for (DexClassPromise promise : classMap.values()) {
       if (promise.isProgramClass()) {
         result.add(promise.get().asProgramClass());
@@ -73,6 +92,7 @@ public class DexApplication {
   }
 
   public Iterable<DexLibraryClass> libraryClasses() {
+    assert lazyClassCollection == null : "Only allowed in non-lazy scenarios.";
     List<DexLibraryClass> result = new ArrayList<>();
     for (DexClassPromise promise : classMap.values()) {
       if (promise.isLibraryClass()) {
@@ -84,11 +104,17 @@ public class DexApplication {
 
   public DexClass definitionFor(DexType type) {
     DexClassPromise promise = classMap.get(type);
+    // In presence of lazy class collection we also reach out to it
+    // as well unless the class found is already a program class.
+    if (lazyClassCollection != null && (promise == null || !promise.isProgramClass())) {
+      promise = lazyClassCollection.get(type, promise);
+    }
     return promise == null ? null : promise.get();
   }
 
   public DexProgramClass programDefinitionFor(DexType type) {
     DexClassPromise promise = classMap.get(type);
+    // Don't bother about lazy class collection, it should never load program classes.
     return (promise == null || !promise.isProgramClass()) ? null : promise.get().asProgramClass();
   }
 
@@ -212,7 +238,9 @@ public class DexApplication {
 
   public static class Builder {
 
-    public final Hashtable<DexType, DexClassPromise> classMap = new Hashtable<>();
+    private final Hashtable<DexType, DexClassPromise> classMap = new Hashtable<>();
+    private LazyClassCollection lazyClassCollection;
+
     public final Hashtable<DexCode, DexCode> codeItems = new Hashtable<>();
 
     public final DexItemFactory dexItemFactory;
@@ -225,6 +253,7 @@ public class DexApplication {
     public Builder(DexItemFactory dexItemFactory, Timing timing) {
       this.dexItemFactory = dexItemFactory;
       this.timing = timing;
+      this.lazyClassCollection = null;
     }
 
     public Builder(DexApplication application) {
@@ -233,6 +262,7 @@ public class DexApplication {
 
     public Builder(DexApplication application, Map<DexType, DexClassPromise> classMap) {
       this.classMap.putAll(classMap);
+      this.lazyClassCollection = application.lazyClassCollection;
       proguardMap = application.proguardMap;
       timing = application.timing;
       highestSortingString = application.highestSortingString;
@@ -256,17 +286,35 @@ public class DexApplication {
       return this;
     }
 
+    public Builder setLazyClassCollection(LazyClassCollection lazyClassMap) {
+      this.lazyClassCollection = lazyClassMap;
+      return this;
+    }
+
     public Builder addClassIgnoringLibraryDuplicates(DexClass clazz) {
       addClass(clazz, true);
       return this;
     }
 
     public Builder addSynthesizedClass(DexProgramClass synthesizedClass, boolean addToMainDexList) {
+      assert synthesizedClass.isProgramClass() : "All synthesized classes must be program classes";
       addClassPromise(synthesizedClass);
       if (addToMainDexList && !mainDexList.isEmpty()) {
         mainDexList.add(synthesizedClass.type);
       }
       return this;
+    }
+
+    public List<DexProgramClass> getProgramClasses() {
+      List<DexProgramClass> result = new ArrayList<>();
+      // Note: we ignore lazy class collection because it
+      // is never supposed to be used for program classes.
+      for (DexClassPromise promise : classMap.values()) {
+        if (promise.isProgramClass()) {
+          result.add(promise.get().asProgramClass());
+        }
+      }
+      return result;
     }
 
     // Callback from FileReader when parsing a DexProgramClass (multi-threaded).
@@ -286,83 +334,6 @@ public class DexApplication {
       }
     }
 
-    private DexClassPromise chooseClass(DexClassPromise a, DexClassPromise b, boolean skipLibDups) {
-      // NOTE: We assume that there should not be any conflicting names in user defined
-      // classes and/or linked jars. If we ever want to allow 'keep first'-like policy
-      // to resolve this kind of conflict between program and/or classpath classes, we'll
-      // need to make sure we choose the class we keep deterministically.
-      if (a.isProgramClass() && b.isProgramClass()) {
-        if (allowProgramClassConflict(a, b)) {
-          return a;
-        }
-        throw new CompilationError(
-            "Program type already present: " + a.getType().toSourceString());
-      }
-      if (a.isProgramClass()) {
-        return chooseBetweenProgramAndOtherClass(a, b);
-      }
-      if (b.isProgramClass()) {
-        return chooseBetweenProgramAndOtherClass(b, a);
-      }
-
-      if (a.isClasspathClass() && b.isClasspathClass()) {
-        throw new CompilationError(
-            "Classpath type already present: " + a.getType().toSourceString());
-      }
-      if (a.isClasspathClass()) {
-        return chooseBetweenClasspathAndLibraryClass(a, b);
-      }
-      if (b.isClasspathClass()) {
-        return chooseBetweenClasspathAndLibraryClass(b, a);
-      }
-
-      return chooseBetweenLibraryClasses(b, a, skipLibDups);
-    }
-
-    private boolean allowProgramClassConflict(DexClassPromise a, DexClassPromise b) {
-      // Currently only allow collapsing synthetic lambda classes.
-      return a.getOrigin() == DexClass.Origin.Dex
-          && b.getOrigin() == DexClass.Origin.Dex
-          && a.get().accessFlags.isSynthetic()
-          && b.get().accessFlags.isSynthetic()
-          && LambdaRewriter.hasLambdaClassPrefix(a.getType())
-          && LambdaRewriter.hasLambdaClassPrefix(b.getType());
-    }
-
-    private DexClassPromise chooseBetweenProgramAndOtherClass(
-        DexClassPromise selected, DexClassPromise ignored) {
-      assert selected.isProgramClass() && !ignored.isProgramClass();
-      if (ignored.isLibraryClass()) {
-        logIgnoredClass(ignored, "Class `%s` was specified as library and program type.");
-      }
-      // We don't log program/classpath class conflict since it is expected case.
-      return selected;
-    }
-
-    private DexClassPromise chooseBetweenClasspathAndLibraryClass(
-        DexClassPromise selected, DexClassPromise ignored) {
-      assert selected.isClasspathClass() && ignored.isLibraryClass();
-      logIgnoredClass(ignored, "Class `%s` was specified as library and classpath type.");
-      return selected;
-    }
-
-    private DexClassPromise chooseBetweenLibraryClasses(
-        DexClassPromise selected, DexClassPromise ignored, boolean skipDups) {
-      assert selected.isLibraryClass() && ignored.isLibraryClass();
-      if (!skipDups) {
-        throw new CompilationError(
-            "Library type already present: " + selected.getType().toSourceString());
-      }
-      logIgnoredClass(ignored, "Class `%s` was specified twice as a library type.");
-      return selected;
-    }
-
-    private void logIgnoredClass(DexClassPromise ignored, String message) {
-      if (Log.ENABLED) {
-        Log.warn(getClass(), message, ignored.getType().toSourceString());
-      }
-    }
-
     public Builder addToMainDexList(Collection<DexType> mainDexList) {
       this.mainDexList.addAll(mainDexList);
       return this;
@@ -372,10 +343,89 @@ public class DexApplication {
       return new DexApplication(
           proguardMap,
           ImmutableMap.copyOf(classMap),
+          lazyClassCollection,
           ImmutableSet.copyOf(mainDexList),
           dexItemFactory,
           highestSortingString,
           timing);
+    }
+  }
+
+  public static DexClassPromise chooseClass(
+      DexClassPromise a, DexClassPromise b, boolean skipLibDups) {
+    // NOTE: We assume that there should not be any conflicting names in user defined
+    // classes and/or linked jars. If we ever want to allow 'keep first'-like policy
+    // to resolve this kind of conflict between program and/or classpath classes, we'll
+    // need to make sure we choose the class we keep deterministically.
+    if (a.isProgramClass() && b.isProgramClass()) {
+      if (allowProgramClassConflict(a, b)) {
+        return a;
+      }
+      throw new CompilationError(
+          "Program type already present: " + a.getType().toSourceString());
+    }
+    if (a.isProgramClass()) {
+      return chooseBetweenProgramAndOtherClass(a, b);
+    }
+    if (b.isProgramClass()) {
+      return chooseBetweenProgramAndOtherClass(b, a);
+    }
+
+    if (a.isClasspathClass() && b.isClasspathClass()) {
+      throw new CompilationError(
+          "Classpath type already present: " + a.getType().toSourceString());
+    }
+    if (a.isClasspathClass()) {
+      return chooseBetweenClasspathAndLibraryClass(a, b);
+    }
+    if (b.isClasspathClass()) {
+      return chooseBetweenClasspathAndLibraryClass(b, a);
+    }
+
+    return chooseBetweenLibraryClasses(b, a, skipLibDups);
+  }
+
+  private static boolean allowProgramClassConflict(DexClassPromise a, DexClassPromise b) {
+    // Currently only allow collapsing synthetic lambda classes.
+    return a.getOrigin() == DexClass.Origin.Dex
+        && b.getOrigin() == DexClass.Origin.Dex
+        && a.get().accessFlags.isSynthetic()
+        && b.get().accessFlags.isSynthetic()
+        && LambdaRewriter.hasLambdaClassPrefix(a.getType())
+        && LambdaRewriter.hasLambdaClassPrefix(b.getType());
+  }
+
+  private static DexClassPromise chooseBetweenProgramAndOtherClass(
+      DexClassPromise selected, DexClassPromise ignored) {
+    assert selected.isProgramClass() && !ignored.isProgramClass();
+    if (ignored.isLibraryClass()) {
+      logIgnoredClass(ignored, "Class `%s` was specified as library and program type.");
+    }
+    // We don't log program/classpath class conflict since it is expected case.
+    return selected;
+  }
+
+  private static DexClassPromise chooseBetweenClasspathAndLibraryClass(
+      DexClassPromise selected, DexClassPromise ignored) {
+    assert selected.isClasspathClass() && ignored.isLibraryClass();
+    logIgnoredClass(ignored, "Class `%s` was specified as library and classpath type.");
+    return selected;
+  }
+
+  private static DexClassPromise chooseBetweenLibraryClasses(
+      DexClassPromise selected, DexClassPromise ignored, boolean skipDups) {
+    assert selected.isLibraryClass() && ignored.isLibraryClass();
+    if (!skipDups) {
+      throw new CompilationError(
+          "Library type already present: " + selected.getType().toSourceString());
+    }
+    logIgnoredClass(ignored, "Class `%s` was specified twice as a library type.");
+    return selected;
+  }
+
+  private static void logIgnoredClass(DexClassPromise ignored, String message) {
+    if (Log.ENABLED) {
+      Log.warn(DexApplication.class, message, ignored.getType().toSourceString());
     }
   }
 }

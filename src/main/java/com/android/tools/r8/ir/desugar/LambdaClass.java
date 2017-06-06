@@ -384,7 +384,11 @@ final class LambdaClass {
     }
 
     // Ensure access of the referenced symbol(s).
-    abstract boolean ensureAccessibility(Builder builder);
+    abstract boolean ensureAccessibility();
+
+    DexClass definitionFor(DexType type) {
+      return rewriter.converter.appInfo.app.definitionFor(type);
+    }
   }
 
   // Used for targeting methods referenced directly without creating accessors.
@@ -395,7 +399,7 @@ final class LambdaClass {
     }
 
     @Override
-    boolean ensureAccessibility(Builder builder) {
+    boolean ensureAccessibility() {
       return true;
     }
   }
@@ -408,11 +412,11 @@ final class LambdaClass {
     }
 
     @Override
-    boolean ensureAccessibility(Builder builder) {
+    boolean ensureAccessibility() {
       // We already found the static method to be called, just relax its accessibility.
       assert descriptor.getAccessibility() != null;
       descriptor.getAccessibility().unsetPrivate();
-      DexClassPromise promise = builder.classMap.get(descriptor.implHandle.asMethod().holder);
+      DexClassPromise promise = definitionFor(descriptor.implHandle.asMethod().holder);
       assert promise != null;
       DexClass implMethodHolder = promise.get();
       if (implMethodHolder.isInterface()) {
@@ -431,11 +435,11 @@ final class LambdaClass {
     }
 
     @Override
-    boolean ensureAccessibility(Builder builder) {
+    boolean ensureAccessibility() {
       // For all instantiation points for which compiler creates lambda$
       // methods, it creates these methods in the same class/interface.
       DexMethod implMethod = descriptor.implHandle.asMethod();
-      DexClassPromise promise = builder.classMap.get(implMethod.holder);
+      DexClassPromise promise = definitionFor(implMethod.holder);
       assert promise != null;
       DexClass implMethodHolder = promise.get();
 
@@ -476,9 +480,9 @@ final class LambdaClass {
     }
 
     @Override
-    boolean ensureAccessibility(Builder builder) {
+    boolean ensureAccessibility() {
       // Create a static accessor with proper accessibility.
-      DexClassPromise promise = builder.classMap.get(callTarget.holder);
+      DexClassPromise promise = definitionFor(callTarget.holder);
       assert promise != null && promise.isProgramClass();
       DexClass accessorClass = promise.get();
 

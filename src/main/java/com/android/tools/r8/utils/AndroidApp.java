@@ -3,12 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.utils;
 
-import static com.android.tools.r8.utils.FileUtils.CLASS_EXTENSION;
 import static com.android.tools.r8.utils.FileUtils.isArchive;
 import static com.android.tools.r8.utils.FileUtils.isClassFile;
 import static com.android.tools.r8.utils.FileUtils.isDexFile;
 
 import com.android.tools.r8.Resource;
+import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
@@ -52,6 +52,7 @@ public class AndroidApp {
 
   private final ImmutableList<InternalResource> dexSources;
   private final ImmutableList<InternalResource> classSources;
+  private final ImmutableList<ResourceProvider> resourceProviders;
   private final InternalResource proguardMap;
   private final InternalResource proguardSeeds;
   private final InternalResource packageDistribution;
@@ -61,12 +62,14 @@ public class AndroidApp {
   private AndroidApp(
       ImmutableList<InternalResource> dexSources,
       ImmutableList<InternalResource> classSources,
+      ImmutableList<ResourceProvider> resourceProviders,
       InternalResource proguardMap,
       InternalResource proguardSeeds,
       InternalResource packageDistribution,
       InternalResource mainDexList) {
     this.dexSources = dexSources;
     this.classSources = classSources;
+    this.resourceProviders = resourceProviders;
     this.proguardMap = proguardMap;
     this.proguardSeeds = proguardSeeds;
     this.packageDistribution = packageDistribution;
@@ -164,6 +167,11 @@ public class AndroidApp {
   /** Get input streams for all Java-bytecode library resources. */
   public List<InternalResource> getClassLibraryResources() {
     return filter(classSources, Resource.Kind.LIBRARY);
+  }
+
+  /** Get lazy resource providers. */
+  public List<ResourceProvider> getLazyResourceProviders() {
+    return resourceProviders;
   }
 
   private List<InternalResource> filter(
@@ -362,6 +370,7 @@ public class AndroidApp {
 
     private final List<InternalResource> dexSources = new ArrayList<>();
     private final List<InternalResource> classSources = new ArrayList<>();
+    private final List<ResourceProvider> resourceProviders = new ArrayList<>();
     private InternalResource proguardMap;
     private InternalResource proguardSeeds;
     private InternalResource packageDistribution;
@@ -375,6 +384,7 @@ public class AndroidApp {
     private Builder(AndroidApp app) {
       dexSources.addAll(app.dexSources);
       classSources.addAll(app.classSources);
+      resourceProviders.addAll(app.resourceProviders);
       proguardMap = app.proguardMap;
       proguardSeeds = app.proguardSeeds;
       packageDistribution = app.packageDistribution;
@@ -439,6 +449,14 @@ public class AndroidApp {
     }
 
     /**
+     * Add classpath resource provider.
+     */
+    public Builder addClasspathResourceProvider(ResourceProvider provider) {
+      resourceProviders.add(provider);
+      return this;
+    }
+
+    /**
      * Add library file resources.
      */
     public Builder addLibraryFiles(Path... files) throws IOException {
@@ -452,6 +470,14 @@ public class AndroidApp {
       for (Path file : files) {
         addFile(file, Resource.Kind.LIBRARY);
       }
+      return this;
+    }
+
+    /**
+     * Add library resource provider.
+     */
+    public Builder addLibraryResourceProvider(ResourceProvider provider) {
+      resourceProviders.add(provider);
       return this;
     }
 
@@ -551,6 +577,7 @@ public class AndroidApp {
       return new AndroidApp(
           ImmutableList.copyOf(dexSources),
           ImmutableList.copyOf(classSources),
+          ImmutableList.copyOf(resourceProviders),
           proguardMap,
           proguardSeeds,
           packageDistribution,
@@ -585,7 +612,7 @@ public class AndroidApp {
             dexSources.add(InternalResource.fromBytes(kind, ByteStreams.toByteArray(stream)));
           } else if (isClassFile(name)) {
             containsClassData = true;
-            String descriptor = guessTypeDescriptor(name);
+            String descriptor = PreloadedResourceProvider.guessTypeDescriptor(name);
             classSources.add(InternalResource.fromBytes(
                 kind, ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
           }
@@ -600,17 +627,5 @@ public class AndroidApp {
                 + "' containing both DEX and Java-bytecode content");
       }
     }
-  }
-
-  // Guess class descriptor from location of the class file in the archive.
-  private static String guessTypeDescriptor(Path name) {
-    String fileName = name.toString();
-    assert fileName != null;
-    assert fileName.endsWith(CLASS_EXTENSION);
-    String descriptor = fileName.substring(0, fileName.length() - CLASS_EXTENSION.length());
-    if (descriptor.contains(".")) {
-      throw new CompilationError("Unexpected file name in the jar: " + name);
-    }
-    return 'L' + descriptor + ';';
   }
 }

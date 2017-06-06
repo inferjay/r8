@@ -32,10 +32,10 @@ import java.util.function.UnaryOperator;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class D8IncrementalRunExamplesAndroidOTest
+public abstract class D8IncrementalRunExamplesAndroidOTest
     extends RunExamplesAndroidOTest<D8Command.Builder> {
 
-  class D8IncrementalTestRunner extends TestRunner {
+  abstract class D8IncrementalTestRunner extends TestRunner {
 
     D8IncrementalTestRunner(String testName, String packageName, String mainClass) {
       super(testName, packageName, mainClass);
@@ -58,7 +58,7 @@ public class D8IncrementalRunExamplesAndroidOTest
       List<String> classFiles = collectClassFiles(testJarFile);
       for (String classFile : classFiles) {
         AndroidApp app = compileClassFiles(
-            testJarFile.toString(), Collections.singletonList(classFile), null, OutputMode.Indexed);
+            testJarFile, Collections.singletonList(classFile), null, OutputMode.Indexed);
         assert app.getDexProgramResources().size() == 1;
         fileToResource.put(
             makeRelative(testJarFile, Paths.get(classFile)).toString(),
@@ -73,7 +73,7 @@ public class D8IncrementalRunExamplesAndroidOTest
       TreeMap<String, Resource> fileToResource = new TreeMap<>();
       List<String> classFiles = collectClassFiles(testJarFile);
       AndroidApp app = compileClassFiles(
-          testJarFile.toString(), classFiles, output, OutputMode.FilePerClass);
+          testJarFile, classFiles, output, OutputMode.FilePerClass);
       for (InternalResource resource : app.getDexProgramResources()) {
         String classDescriptor = resource.getSingleClassDescriptorOrNull();
         Assert.assertNotNull("Add resources are expected to have a descriptor", classDescriptor);
@@ -100,16 +100,23 @@ public class D8IncrementalRunExamplesAndroidOTest
     private List<String> collectClassFiles(Path testJarFile) {
       List<String> result = new ArrayList<>();
       // Collect Java 8 classes.
-      Path parent = testJarFile.getParent();
-      File packageDir = parent.resolve(Paths.get("classes", packageName)).toFile();
-      collectClassFiles(packageDir, result);
+      collectClassFiles(getClassesRoot(testJarFile).toFile(), result);
       // Collect legacy classes.
-      Path legacyPath = Paths.get("..",
-          parent.getFileName().toString() + "Legacy", "classes", packageName);
-      packageDir = parent.resolve(legacyPath).toFile();
-      collectClassFiles(packageDir, result);
+      collectClassFiles(getLegacyClassesRoot(testJarFile).toFile(), result);
       Collections.sort(result);
       return result;
+    }
+
+    Path getClassesRoot(Path testJarFile) {
+      Path parent = testJarFile.getParent();
+      return parent.resolve(Paths.get("classes", packageName));
+    }
+
+    Path getLegacyClassesRoot(Path testJarFile) {
+      Path parent = testJarFile.getParent();
+      Path legacyPath = Paths.get("..",
+          parent.getFileName().toString() + "Legacy", "classes", packageName);
+      return parent.resolve(legacyPath);
     }
 
     private void collectClassFiles(File dir, List<String> result) {
@@ -125,10 +132,10 @@ public class D8IncrementalRunExamplesAndroidOTest
       }
     }
 
-    AndroidApp compileClassFiles(String classpath,
+    AndroidApp compileClassFiles(Path testJarFile,
         List<String> inputFiles, Path output, OutputMode outputMode) throws Throwable {
       D8Command.Builder builder = D8Command.builder();
-      builder = builder.addClasspathFiles(Paths.get(classpath));
+      addClasspathReference(testJarFile, builder);
       for (String inputFile : inputFiles) {
         builder = builder.addProgramFiles(Paths.get(inputFile));
       }
@@ -141,6 +148,7 @@ public class D8IncrementalRunExamplesAndroidOTest
       if (output != null) {
         builder = builder.setOutputPath(output);
       }
+      addLibraryReference(builder, Paths.get(ToolHelper.getAndroidJar(builder.getMinApiLevel())));
       D8Command command = builder.build();
       try {
         return ToolHelper.runD8(command, this::combinedOptionConsumer);
@@ -173,6 +181,12 @@ public class D8IncrementalRunExamplesAndroidOTest
         throw re.getCause() == null ? re : re.getCause();
       }
     }
+
+    abstract void addClasspathReference(
+        Path testJarFile, D8Command.Builder builder) throws IOException;
+
+    abstract void addLibraryReference(
+        D8Command.Builder builder, Path location) throws IOException;
   }
 
   @Test
@@ -256,10 +270,7 @@ public class D8IncrementalRunExamplesAndroidOTest
     Assert.assertArrayEquals(expectedFileNames, dexFiles);
   }
 
-  @Override
-  D8IncrementalTestRunner test(String testName, String packageName, String mainClass) {
-    return new D8IncrementalTestRunner(testName, packageName, mainClass);
-  }
+  abstract D8IncrementalTestRunner test(String testName, String packageName, String mainClass);
 
   static byte[] readFromResource(Resource resource) throws IOException {
     ByteArrayOutputStream output = new ByteArrayOutputStream();

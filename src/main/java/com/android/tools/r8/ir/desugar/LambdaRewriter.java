@@ -193,12 +193,12 @@ public class LambdaRewriter {
    * Adjust accessibility of referenced application symbols or
    * creates necessary accessors.
    */
-  public void adjustAccessibility(Builder builder) {
+  public void adjustAccessibility() {
     // For each lambda class perform necessary adjustment of the
     // referenced symbols to make them accessible. This can result in
     // method access relaxation or creation of accessor method.
     for (LambdaClass lambdaClass : knownLambdaClasses.values()) {
-      lambdaClass.target.ensureAccessibility(builder);
+      lambdaClass.target.ensureAccessibility();
     }
   }
 

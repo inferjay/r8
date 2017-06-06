@@ -163,7 +163,7 @@ public class IRConverter {
 
   private void synthesizeLambdaClasses(Builder builder) {
     if (lambdaRewriter != null) {
-      lambdaRewriter.adjustAccessibility(builder);
+      lambdaRewriter.adjustAccessibility();
       lambdaRewriter.synthesizeLambdaClasses(builder);
     }
   }

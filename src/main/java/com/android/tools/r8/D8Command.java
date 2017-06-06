@@ -39,6 +39,16 @@ public class D8Command extends BaseCommand {
       super(app, CompilationMode.DEBUG);
     }
 
+    public Builder addClasspathResourceProvider(ResourceProvider provider) {
+      getAppBuilder().addClasspathResourceProvider(provider);
+      return this;
+    }
+
+    public Builder addLibraryResourceProvider(ResourceProvider provider) {
+      getAppBuilder().addLibraryResourceProvider(provider);
+      return this;
+    }
+
     @Override
     Builder self() {
       return this;

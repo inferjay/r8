@@ -11,6 +11,7 @@ import static com.android.tools.r8.dex.Constants.DEFAULT_ANDROID_API;
 import static com.android.tools.r8.utils.FileUtils.DEFAULT_DEX_FILENAME;
 
 import com.android.tools.r8.Resource;
+import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexItemFactory;
@@ -22,6 +23,7 @@ import com.android.tools.r8.naming.ProguardMapReader;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.InternalResource;
+import com.android.tools.r8.utils.LazyClassCollection;
 import com.android.tools.r8.utils.MainDexList;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
@@ -68,6 +70,7 @@ public class ApplicationReader {
       readMainDexList(builder, executorService, futures, closer);
       readDexSources(builder, executorService, futures, closer);
       readClassSources(builder, closer);
+      initializeLazyClassCollection(builder);
       ThreadUtils.awaitFutures(futures);
     } catch (ExecutionException e) {
       // If the reading failed with a valid compilation error, rethrow the unwrapped exception.
@@ -103,6 +106,14 @@ public class ApplicationReader {
       } else {
         reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.LIBRARY, input.getStream(closer));
       }
+    }
+  }
+
+  private void initializeLazyClassCollection(DexApplication.Builder builder) {
+    List<ResourceProvider> providers = inputApp.getLazyResourceProviders();
+    if (!providers.isEmpty()) {
+      builder.setLazyClassCollection(
+          new LazyClassCollection(new JarApplicationReader(options), providers));
     }
   }
 

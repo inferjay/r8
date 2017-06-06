@@ -16,19 +16,19 @@ import java.util.function.BiFunction;
 
 public class AppInfo {
 
+  public final DexApplication app;
   public final DexItemFactory dexItemFactory;
-  final ImmutableMap<DexType, DexClassPromise> classMap;
   private final ConcurrentHashMap<DexType, Map<Descriptor, KeyedDexItem>> definitions =
       new ConcurrentHashMap<>();
 
   public AppInfo(DexApplication application) {
-    this.dexItemFactory = application.dexItemFactory;
-    this.classMap = application.classMap;
+    this.app = application;
+    this.dexItemFactory = app.dexItemFactory;
   }
 
   protected AppInfo(AppInfo previous) {
-    this.dexItemFactory = previous.dexItemFactory;
-    this.classMap = previous.classMap;
+    this.app = previous.app;
+    this.dexItemFactory = app.dexItemFactory;
     this.definitions.putAll(previous.definitions);
   }
 
@@ -40,7 +40,7 @@ public class AppInfo {
 
   private Map<Descriptor, KeyedDexItem> computeDefinitions(DexType type) {
     Builder<Descriptor, KeyedDexItem> builder = ImmutableMap.builder();
-    DexClassPromise promise = classMap.get(type);
+    DexClassPromise promise = app.definitionFor(type);
     if (promise != null) {
       DexClass clazz = promise.get();
       registerDefinitions(builder, clazz.directMethods());
@@ -59,28 +59,15 @@ public class AppInfo {
   }
 
   public Iterable<DexProgramClass> classes() {
-    List<DexProgramClass> result = new ArrayList<>();
-    for (DexClassPromise promise : classMap.values()) {
-      if (promise.isProgramClass()) {
-        result.add(promise.get().asProgramClass());
-      }
-    }
-    return result;
+    return app.classes();
   }
 
   public Iterable<DexLibraryClass> libraryClasses() {
-    List<DexLibraryClass> result = new ArrayList<>();
-    for (DexClassPromise promise : classMap.values()) {
-      if (promise.isLibraryClass()) {
-        result.add(promise.get().asLibraryClass());
-      }
-    }
-    return result;
+    return app.libraryClasses();
   }
 
   public DexClass definitionFor(DexType type) {
-    DexClassPromise promise = classMap.get(type);
-    return promise == null ? null : promise.get();
+    return app.definitionFor(type);
   }
 
   public DexEncodedMethod definitionFor(DexMethod method) {
