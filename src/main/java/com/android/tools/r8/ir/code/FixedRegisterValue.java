@@ -10,7 +10,7 @@ public class FixedRegisterValue extends Value {
 
   public FixedRegisterValue(MoveType type, int register) {
     // Set local info to null since these values are never representatives of live-ranges.
-    super(-1, -1, type, null);
+    super(-1, type, null);
     setNeedsRegister(true);
     this.register = register;
   }

@@ -1726,7 +1726,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   private Value createValue(MoveType type, DebugInfo debugInfo) {
-    Value value = new Value(code.valueNumberGenerator.next(), NO_REGISTER, type, debugInfo);
+    Value value = code.createValue(type, debugInfo);
     value.setNeedsRegister(true);
     return value;
   }

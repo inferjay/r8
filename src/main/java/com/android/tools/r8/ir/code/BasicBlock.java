@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
@@ -632,8 +633,12 @@ public class BasicBlock {
     assert unfilledPredecessorsCount > 0;
     if (--unfilledPredecessorsCount == 0) {
       assert estimatedPredecessorsCount == predecessors.size();
-      for (Phi phi : incompletePhis.values()) {
-        phi.addOperands(builder);
+      for (Entry<Integer, Phi> entry : incompletePhis.entrySet()) {
+        int register = entry.getKey();
+        if (register < 0) {
+          register = onThrowValueRegister(register);
+        }
+        entry.getValue().addOperands(builder, register);
       }
       sealed = true;
       incompletePhis.clear();
@@ -1087,7 +1092,7 @@ public class BasicBlock {
       newPredecessors.add(newBlock);
       if (hasMoveException) {
         Value value = new Value(
-            valueNumberGenerator.next(), -1, MoveType.OBJECT, move.getDebugInfo());
+            valueNumberGenerator.next(), MoveType.OBJECT, move.getDebugInfo());
         values.add(value);
         newBlock.add(new MoveException(value));
       }
@@ -1105,7 +1110,7 @@ public class BasicBlock {
     // Insert a phi for the move-exception value.
     if (hasMoveException) {
       Phi phi = new Phi(valueNumberGenerator.next(),
-          -1, this, MoveType.OBJECT, move.getLocalInfo());
+          this, MoveType.OBJECT, move.getLocalInfo());
       phi.addOperands(values);
       move.outValue().replaceUsers(phi);
     }

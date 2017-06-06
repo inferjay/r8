@@ -349,7 +349,7 @@ public class IRCode {
   }
 
   public Value createValue(MoveType moveType, Value.DebugInfo debugInfo) {
-    return new Value(valueNumberGenerator.next(), -1, moveType, debugInfo);
+    return new Value(valueNumberGenerator.next(), moveType, debugInfo);
   }
 
   public Value createValue(MoveType moveType) {
