@@ -31,7 +31,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
@@ -234,49 +236,43 @@ public class AndroidApp {
   /**
    * Write the dex program resources and proguard resource to @code{output}.
    */
-  public void write(Path output) throws IOException {
-    write(output, false);
+  public void write(Path output, OutputMode outputMode) throws IOException {
+    write(output, outputMode, false);
   }
 
   /**
    * Write the dex program resources and proguard resource to @code{output}.
    */
-  public void write(Path output, boolean overwrite) throws IOException {
+  public void write(Path output, OutputMode outputMode, boolean overwrite) throws IOException {
     if (isArchive(output)) {
-      writeToZip(output);
+      writeToZip(output, outputMode, overwrite);
     } else {
-      writeToDirectory(output);
+      writeToDirectory(output, outputMode, overwrite);
     }
   }
 
   /**
    * Write the dex program resources and proguard resource to @code{directory}.
    */
-  public void writeToDirectory(Path directory) throws IOException {
-    writeToDirectory(directory, false);
+  public void writeToDirectory(Path directory, OutputMode outputMode) throws IOException {
+    writeToDirectory(directory, outputMode, false);
   }
 
   /**
    * Write the dex program resources and proguard resource to @code{directory}.
    */
-  public void writeToDirectory(Path directory, boolean overwrite) throws IOException {
+  public void writeToDirectory(
+      Path directory, OutputMode outputMode, boolean overwrite) throws IOException {
     CopyOption[] options = copyOptions(overwrite);
     try (Closer closer = Closer.create()) {
       List<InternalResource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
-        Files.copy(dexProgramSources.get(i).getStream(closer),
-            directory.resolve(getDexFileName(i)), options);
+        Path fileName = directory.resolve(outputMode.getFileName(dexProgramSources.get(i), i));
+        Files.copy(dexProgramSources.get(i).getStream(closer), fileName, options);
       }
       writeProguardMap(closer, directory, overwrite);
       writeProguardSeeds(closer, directory, overwrite);
     }
-  }
-
-  /**
-   * Write the dex program resources to @code{archive} and the proguard resource as its sibling.
-   */
-  public void writeToZip(Path archive) throws IOException {
-    writeToZip(archive, false);
   }
 
   public List<byte[]> writeToMemory() throws IOException {
@@ -296,13 +292,21 @@ public class AndroidApp {
   /**
    * Write the dex program resources to @code{archive} and the proguard resource as its sibling.
    */
-  public void writeToZip(Path archive, boolean overwrite) throws IOException {
+  public void writeToZip(Path archive, OutputMode outputMode) throws IOException {
+    writeToZip(archive, outputMode, false);
+  }
+
+  /**
+   * Write the dex program resources to @code{archive} and the proguard resource as its sibling.
+   */
+  public void writeToZip(
+      Path archive, OutputMode outputMode, boolean overwrite) throws IOException {
     OpenOption[] options = openOptions(overwrite);
     try (Closer closer = Closer.create()) {
       try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(archive, options))) {
         List<InternalResource> dexProgramSources = getDexProgramResources();
         for (int i = 0; i < dexProgramSources.size(); i++) {
-          ZipEntry zipEntry = new ZipEntry(getDexFileName(i));
+          ZipEntry zipEntry = new ZipEntry(outputMode.getFileName(dexProgramSources.get(i), i));
           byte[] bytes = ByteStreams.toByteArray(dexProgramSources.get(i).getStream(closer));
           zipEntry.setSize(bytes.length);
           out.putNextEntry(zipEntry);
@@ -336,10 +340,6 @@ public class AndroidApp {
     if (input != null) {
       Files.copy(input, parent.resolve(DEFAULT_PROGUARD_SEEDS_FILE), copyOptions(overwrite));
     }
-  }
-
-  private String getDexFileName(int index) {
-    return index == 0 ? "classes.dex" : ("classes" + (index + 1) + ".dex");
   }
 
   private OpenOption[] openOptions(boolean overwrite) {
@@ -452,6 +452,14 @@ public class AndroidApp {
       for (Path file : files) {
         addFile(file, Resource.Kind.LIBRARY);
       }
+      return this;
+    }
+
+    /**
+     * Add dex program-data with class descriptor.
+     */
+    public Builder addDexProgramData(byte[] data, Set<String> classDescriptors) {
+      dexSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, data, classDescriptors));
       return this;
     }
 
@@ -577,8 +585,9 @@ public class AndroidApp {
             dexSources.add(InternalResource.fromBytes(kind, ByteStreams.toByteArray(stream)));
           } else if (isClassFile(name)) {
             containsClassData = true;
+            String descriptor = guessTypeDescriptor(name);
             classSources.add(InternalResource.fromBytes(
-                kind, ByteStreams.toByteArray(stream), guessTypeDescriptor(name)));
+                kind, ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
           }
         }
       } catch (ZipException e) {

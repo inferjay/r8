@@ -18,6 +18,7 @@ import com.android.tools.r8.utils.ArtErrorParser.ArtErrorInfo;
 import com.android.tools.r8.utils.ArtErrorParser.ArtErrorParserException;
 import com.android.tools.r8.utils.DexInspector;
 import com.android.tools.r8.utils.ListUtils;
+import com.android.tools.r8.utils.OutputMode;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -78,7 +79,7 @@ public abstract class CompilationTestBase {
     }
     Path out = temp.getRoot().toPath().resolve("all.zip");
     Path oatFile = temp.getRoot().toPath().resolve("all.oat");
-    outputApp.writeToZip(out);
+    outputApp.writeToZip(out, OutputMode.Indexed);
     try {
       ToolHelper.runDex2Oat(out, oatFile);
       return outputApp;

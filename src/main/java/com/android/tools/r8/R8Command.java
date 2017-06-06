@@ -11,6 +11,7 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -158,6 +159,7 @@ public class R8Command extends BaseCommand {
       return new R8Command(
           getAppBuilder().build(),
           getOutputPath(),
+          getOutputMode(),
           mainDexKeepRules,
           configuration,
           getMode(),
@@ -296,6 +298,7 @@ public class R8Command extends BaseCommand {
   private R8Command(
       AndroidApp inputApp,
       Path outputPath,
+      OutputMode outputMode,
       ImmutableList<ProguardConfigurationRule> mainDexKeepRules,
       ProguardConfiguration proguardConfiguration,
       CompilationMode mode,
@@ -303,9 +306,10 @@ public class R8Command extends BaseCommand {
       boolean useTreeShaking,
       boolean useMinification,
       boolean ignoreMissingClasses) {
-    super(inputApp, outputPath, mode, minApiLevel);
+    super(inputApp, outputPath, outputMode, mode, minApiLevel);
     assert proguardConfiguration != null;
     assert mainDexKeepRules != null;
+    assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";
     this.mainDexKeepRules = mainDexKeepRules;
     this.proguardConfiguration = proguardConfiguration;
     this.useTreeShaking = useTreeShaking;
@@ -373,6 +377,7 @@ public class R8Command extends BaseCommand {
     internal.mainDexKeepRules = mainDexKeepRules;
     internal.keepRules = proguardConfiguration.getRules();
     internal.dontWarnPatterns = proguardConfiguration.getDontWarnPatterns();
+    internal.outputMode = getOutputMode();
     return internal;
   }
 }

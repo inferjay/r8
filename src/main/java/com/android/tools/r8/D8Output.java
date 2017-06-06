@@ -4,18 +4,19 @@
 package com.android.tools.r8;
 
 import com.android.tools.r8.utils.AndroidApp;
+import com.android.tools.r8.utils.OutputMode;
 import java.io.IOException;
 import java.nio.file.Path;
 
 /** Represents the output of a D8 compilation. */
 public class D8Output extends BaseOutput {
 
-  D8Output(AndroidApp app) {
-    super(app);
+  D8Output(AndroidApp app, OutputMode outputMode) {
+    super(app, outputMode);
   }
 
   @Override
   public void write(Path output) throws IOException {
-    getAndroidApp().write(output);
+    getAndroidApp().write(output, getOutputMode());
   }
 }

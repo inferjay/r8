@@ -24,6 +24,7 @@ import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.PackageDistribution;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.google.common.collect.Iterators;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -61,6 +63,7 @@ public class VirtualFile {
   private static final int MAX_PREFILL_ENTRIES = MAX_ENTRIES - 5000;
 
   private final int id;
+  private final Set<String> classDescriptors = new HashSet<>();
   private final VirtualFileIndexedItemCollection indexedItems;
   private final IndexedItemTransaction transaction;
 
@@ -68,6 +71,10 @@ public class VirtualFile {
     this.id = id;
     this.indexedItems = new VirtualFileIndexedItemCollection(id);
     this.transaction = new IndexedItemTransaction(indexedItems, namingLens);
+  }
+
+  public Set<String> getClassDescriptors() {
+    return classDescriptors;
   }
 
   public static Map<Integer, VirtualFile> fileSetFrom(
@@ -81,6 +88,20 @@ public class VirtualFile {
     DexApplication application = writer.application;
     InternalOptions options = writer.options;
     Map<Integer, VirtualFile> nameToFileMap = new LinkedHashMap<>();
+
+    if (options.outputMode == OutputMode.FilePerClass) {
+      assert packageDistribution == null :
+          "Cannot combine package distribution definition with file-per-class option.";
+      // Assign dedicated virtual files for all program classes.
+      for (DexProgramClass clazz : application.classes()) {
+        VirtualFile file = new VirtualFile(nameToFileMap.size(), writer.namingLens);
+        nameToFileMap.put(nameToFileMap.size(), file);
+        file.addClass(clazz);
+        file.commitTransaction();
+      }
+      return nameToFileMap;
+    }
+
     if (packageDistribution != null) {
       int maxReferencedIndex = packageDistribution.maxReferencedIndex();
       for (int index = 0; index <= maxReferencedIndex; index++) {
@@ -268,6 +289,7 @@ public class VirtualFile {
 
   private void addClass(DexProgramClass clazz) {
     transaction.addClassAndDependencies(clazz);
+    classDescriptors.add(clazz.type.descriptor.toString());
   }
 
   private static boolean isFull(int numberOfMethods, int numberOfFields, int maximum) {

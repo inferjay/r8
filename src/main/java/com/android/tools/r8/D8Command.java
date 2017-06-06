@@ -7,6 +7,7 @@ import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
+import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -30,7 +31,6 @@ public class D8Command extends BaseCommand {
    * Builder for constructing a D8Command.
    */
   public static class Builder extends BaseCommand.Builder<D8Command, Builder> {
-
     private Builder() {
       super(CompilationMode.DEBUG);
     }
@@ -52,7 +52,8 @@ public class D8Command extends BaseCommand {
       if (isPrintHelp() || isPrintVersion()) {
         return new D8Command(isPrintHelp(), isPrintVersion());
       }
-      return new D8Command(getAppBuilder().build(), getOutputPath(), getMode(), getMinApiLevel());
+      return new D8Command(getAppBuilder().build(),
+          getOutputPath(), getOutputMode(), getMode(), getMinApiLevel());
     }
   }
 
@@ -67,6 +68,7 @@ public class D8Command extends BaseCommand {
       "  --lib <file>        # Add <file> as a library resource.",
       "  --classpath <file>  # Add <file> as a classpath resource.",
       "  --min-sdk-version   # minimum Android API level compatibility",
+      "  --file-per-class    # produce a separate dex file per class",
       "  --version           # print the version of d8.",
       "  --help              # print this message."));
 
@@ -103,6 +105,8 @@ public class D8Command extends BaseCommand {
         }
         builder.setMode(CompilationMode.RELEASE);
         modeSet = CompilationMode.RELEASE;
+      } else if (arg.equals("--file-per-class")) {
+        builder.setOutputMode(OutputMode.FilePerClass);
       } else if (arg.equals("--output")) {
         String output = args[++i];
         if (outputPath != null) {
@@ -126,8 +130,9 @@ public class D8Command extends BaseCommand {
     return builder.setOutputPath(outputPath);
   }
 
-  private D8Command(AndroidApp inputApp, Path outputPath, CompilationMode mode, int minApiLevel) {
-    super(inputApp, outputPath, mode, minApiLevel);
+  private D8Command(AndroidApp inputApp, Path outputPath,
+      OutputMode outputMode, CompilationMode mode, int minApiLevel) {
+    super(inputApp, outputPath, outputMode, mode, minApiLevel);
   }
 
   private D8Command(boolean printHelp, boolean printVersion) {
@@ -158,6 +163,7 @@ public class D8Command extends BaseCommand {
     internal.outline.enabled = false;
     internal.lazyClasspathLoading = true;
     internal.lazyLibraryLoading = true;
+    internal.outputMode = getOutputMode();
     return internal;
   }
 }

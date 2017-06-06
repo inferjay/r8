@@ -4,6 +4,7 @@
 package com.android.tools.r8;
 
 import com.android.tools.r8.utils.AndroidApp;
+import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -11,14 +12,21 @@ import java.nio.file.Path;
 abstract class BaseOutput {
 
   private final AndroidApp app;
+  private final OutputMode outputMode;
 
-  BaseOutput(AndroidApp app) {
+  BaseOutput(AndroidApp app, OutputMode outputMode) {
     this.app = app;
+    this.outputMode = outputMode;
   }
 
   // Internal access to the underlying app.
   AndroidApp getAndroidApp() {
     return app;
+  }
+
+  // Internal access to the options.
+  public OutputMode getOutputMode() {
+    return outputMode;
   }
 
   /**

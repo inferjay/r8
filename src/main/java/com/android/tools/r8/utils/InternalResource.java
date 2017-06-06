@@ -11,8 +11,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Set;
 
-/** Internal resource class that is not intended for use from the outside.
+/**
+ * Internal resource class that is not intended for use from the outside.
  *
  * <p>This is only here to hide the creation and class descriptor methods
  * from the javadoc for the D8 API. If we decide to expose those methods
@@ -25,9 +27,6 @@ public abstract class InternalResource implements Resource {
   private InternalResource(Kind kind) {
     this.kind = kind;
   }
-
-  /** Returns class descriptor if known, otherwise returns null. */
-  public abstract String getClassDescriptor();
 
   /** Get the kind of the resource. */
   public Kind getKind() {
@@ -45,8 +44,18 @@ public abstract class InternalResource implements Resource {
   }
 
   /** Create an application resource for a given content, kind and type descriptor. */
-  public static InternalResource fromBytes(Kind kind, byte[] bytes, String typeDescriptor) {
-    return new ByteResource(kind, bytes, typeDescriptor);
+  public static InternalResource fromBytes(Kind kind, byte[] bytes, Set<String> typeDescriptors) {
+    return new ByteResource(kind, bytes, typeDescriptors);
+  }
+
+  /**
+   * If the resource represents a single class returns
+   * its descriptor, returns `null` otherwise.
+   */
+  public String getSingleClassDescriptorOrNull() {
+    Set<String> descriptors = getClassDescriptors();
+    return (descriptors == null) || (descriptors.size() != 1)
+        ? null : descriptors.iterator().next();
   }
 
   /** File based application resource. */
@@ -60,7 +69,7 @@ public abstract class InternalResource implements Resource {
     }
 
     @Override
-    public String getClassDescriptor() {
+    public Set<String> getClassDescriptors() {
       return null;
     }
 
@@ -72,19 +81,19 @@ public abstract class InternalResource implements Resource {
 
   /** Byte content based application resource. */
   private static class ByteResource extends InternalResource {
-    final String classDescriptor;
+    final Set<String> classDescriptors;
     final byte[] bytes;
 
-    ByteResource(Kind kind, byte[] bytes, String classDescriptor) {
+    ByteResource(Kind kind, byte[] bytes, Set<String> classDescriptors) {
       super(kind);
       assert bytes != null;
-      this.classDescriptor = classDescriptor;
+      this.classDescriptors = classDescriptors;
       this.bytes = bytes;
     }
 
     @Override
-    public String getClassDescriptor() {
-      return classDescriptor;
+    public Set<String> getClassDescriptors() {
+      return classDescriptors;
     }
 
     @Override

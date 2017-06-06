@@ -28,6 +28,7 @@ import com.android.tools.r8.utils.DexInspector;
 import com.android.tools.r8.utils.DexInspector.ClassSubject;
 import com.android.tools.r8.utils.DexInspector.MethodSubject;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.Smali;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.Iterables;
@@ -452,7 +453,7 @@ public class SmaliTestBase {
       AndroidApp app = writeDex(application, options);
       Path out = temp.getRoot().toPath().resolve("run-art-input.zip");
       // TODO(sgjesse): Pass in a unique temp directory for each run.
-      app.writeToZip(out, true);
+      app.writeToZip(out, OutputMode.Indexed, true);
       return ToolHelper.runArtNoVerificationErrors(out.toString(), DEFAULT_MAIN_CLASS_NAME);
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -464,7 +465,7 @@ public class SmaliTestBase {
       AndroidApp app = writeDex(application, options);
       Path dexOut = temp.getRoot().toPath().resolve("run-dex2oat-input.zip");
       Path oatFile = temp.getRoot().toPath().resolve("oat-file");
-      app.writeToZip(dexOut);
+      app.writeToZip(dexOut, OutputMode.Indexed);
       ToolHelper.runDex2Oat(dexOut, oatFile);
     } catch (IOException e) {
       throw new RuntimeException(e);

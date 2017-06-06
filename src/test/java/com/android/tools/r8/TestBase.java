@@ -11,6 +11,7 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import java.io.File;
@@ -121,7 +122,7 @@ public class TestBase {
    */
   protected String runOnArt(AndroidApp app, Class mainClass) throws IOException {
     Path out = File.createTempFile("junit", ".zip", temp.getRoot()).toPath();
-    app.writeToZip(out, true);
+    app.writeToZip(out, OutputMode.Indexed, true);
     return ToolHelper.runArtNoVerificationErrors(
         ImmutableList.of(out.toString()), mainClass.getCanonicalName(), null);
   }

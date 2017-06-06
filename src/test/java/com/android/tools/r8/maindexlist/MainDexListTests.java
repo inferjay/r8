@@ -49,6 +49,7 @@ import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.MainDexList;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
@@ -108,7 +109,7 @@ public class MainDexListTests {
     }
     AndroidApp generated = generateApplication(TWO_LARGE_CLASSES, MAX_METHOD_COUNT);
     if (regenerateApplications) {
-      generated.write(getTwoLargeClassesAppPath(), true);
+      generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed, true);
     } else {
       AndroidApp cached = AndroidApp.fromProgramFiles(getTwoLargeClassesAppPath());
       compareToCachedVersion(cached, generated, TWO_LARGE_CLASSES_APP);
@@ -123,7 +124,7 @@ public class MainDexListTests {
     }
     AndroidApp generated = generateApplication(MANY_CLASSES, 1);
     if (regenerateApplications) {
-      generated.write(getManyClassesAppPath(), true);
+      generated.write(getManyClassesAppPath(), OutputMode.Indexed, true);
     } else {
       AndroidApp cached = AndroidApp.fromProgramFiles(getManyClassesAppPath());
       compareToCachedVersion(cached, generated, MANY_CLASSES_APP);

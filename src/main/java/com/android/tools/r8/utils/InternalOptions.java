@@ -57,6 +57,9 @@ public class InternalOptions {
   // Defines try-with-resources rewriter behavior.
   public OffOrAuto tryWithResourcesDesugaring = OffOrAuto.Off;
 
+  // Application writing mode.
+  public OutputMode outputMode = OutputMode.Indexed;
+
   public boolean useTreeShaking = true;
 
   public boolean printCfg = false;

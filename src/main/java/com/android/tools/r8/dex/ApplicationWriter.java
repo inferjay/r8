@@ -19,14 +19,12 @@ import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.PackageDistribution;
-import com.android.tools.r8.utils.ThreadUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -117,18 +115,23 @@ public class ApplicationWriter {
           VirtualFile.fileSetFrom(this, packageDistribution, executorService);
 
       // Write the dex files and the Proguard mapping file in parallel.
-      List<Future<byte[]>> dexDataFutures = new ArrayList<>();
+      LinkedHashMap<VirtualFile, Future<byte[]>> dexDataFutures = new LinkedHashMap<>();
       for (Integer index : newFiles.keySet()) {
         VirtualFile newFile = newFiles.get(index);
         if (!newFile.isEmpty()) {
-          dexDataFutures.add(executorService.submit(() -> writeDexFile(newFile)));
+          dexDataFutures.put(newFile, executorService.submit(() -> writeDexFile(newFile)));
         }
       }
 
       // Wait for all the spawned futures to terminate.
-      List<byte[]> dexData = ThreadUtils.awaitFutures(dexDataFutures);
       AndroidApp.Builder builder = AndroidApp.builder();
-      dexData.forEach(builder::addDexProgramData);
+      try {
+        for (Map.Entry<VirtualFile, Future<byte[]>> entry : dexDataFutures.entrySet()) {
+          builder.addDexProgramData(entry.getValue().get(), entry.getKey().getClassDescriptors());
+        }
+      } catch (InterruptedException e) {
+        throw new RuntimeException("Interrupted while waiting for future.", e);
+      }
       // Write the proguard map file after writing the dex files, as the map writer traverses
       // the DexProgramClass structures, which are destructively updated during dex file writing.
       byte[] proguardMapResult = writeProguardMapFile();

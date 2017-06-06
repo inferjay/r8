@@ -12,6 +12,7 @@ import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ProcessResult;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.utils.AndroidApp;
+import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -49,7 +50,7 @@ public class DebugInfoTestBase {
 
   protected String runOnArt(AndroidApp app, String main) throws IOException {
     Path out = temp.getRoot().toPath().resolve("out.zip");
-    app.writeToZip(out, true);
+    app.writeToZip(out, OutputMode.Indexed, true);
     return ToolHelper.runArtNoVerificationErrors(ImmutableList.of(out.toString()), main, null);
   }
 

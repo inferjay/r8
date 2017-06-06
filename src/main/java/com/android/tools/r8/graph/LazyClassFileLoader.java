@@ -83,11 +83,11 @@ public final class LazyClassFileLoader implements DexClassPromise {
       JarClassFileReader reader = new JarClassFileReader(this.reader, this::addClass);
       reader.read(DEFAULT_DEX_FILENAME, resource.getKind(), resource.getStream(closer));
     } catch (IOException e) {
-      throw new CompilationError("Failed to load class: " + resource.getClassDescriptor(), e);
+      throw new CompilationError("Failed to load class: " + type.toSourceString(), e);
     }
 
     if (loadedClass == null) {
-      throw new Unreachable("Class is supposed to be loaded: " + resource.getClassDescriptor());
+      throw new Unreachable("Class is supposed to be loaded: " + type.toSourceString());
     }
 
     if (loadedClass.type != type) {

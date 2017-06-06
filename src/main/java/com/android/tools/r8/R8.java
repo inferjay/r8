@@ -26,7 +26,6 @@ import com.android.tools.r8.shaking.AbstractMethodRemover;
 import com.android.tools.r8.shaking.AnnotationRemover;
 import com.android.tools.r8.shaking.DiscardedChecker;
 import com.android.tools.r8.shaking.Enqueuer;
-import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.shaking.MainDexListBuilder;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.shaking.ProguardTypeMatcher;
@@ -40,6 +39,7 @@ import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.InternalOptions.AttributeRemovalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.PackageDistribution;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
@@ -384,7 +384,7 @@ public class R8 {
     AndroidApp outputApp =
         runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp;
     if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath());
+      outputApp.write(command.getOutputPath(), OutputMode.Indexed);
     }
     return outputApp;
   }
@@ -404,7 +404,7 @@ public class R8 {
     AndroidApp outputApp =
         runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp;
     if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath());
+      outputApp.write(command.getOutputPath(), OutputMode.Indexed);
     }
     return outputApp;
   }

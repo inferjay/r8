@@ -16,6 +16,7 @@ import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.ImmutableList;
 import jasmin.ClassFile;
@@ -121,7 +122,7 @@ public class JasminTestBase {
 
   protected String runOnArt(AndroidApp app, String main) throws IOException {
     Path out = temp.getRoot().toPath().resolve("out.zip");
-    app.writeToZip(out);
+    app.writeToZip(out, OutputMode.Indexed);
     return ToolHelper.runArtNoVerificationErrors(ImmutableList.of(out.toString()), main, null);
   }
 

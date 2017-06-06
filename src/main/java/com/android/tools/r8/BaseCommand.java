@@ -5,6 +5,7 @@ package com.android.tools.r8;
 
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.utils.AndroidApp;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import java.io.IOException;
@@ -19,6 +20,7 @@ abstract class BaseCommand {
 
   private final AndroidApp app;
   private final Path outputPath;
+  private final OutputMode outputMode;
   private final CompilationMode mode;
   private final int minApiLevel;
 
@@ -28,16 +30,19 @@ abstract class BaseCommand {
     // All other fields are initialized with stub/invalid values.
     this.app = null;
     this.outputPath = null;
+    this.outputMode = OutputMode.Indexed;
     this.mode = null;
     this.minApiLevel = 0;
   }
 
-  BaseCommand(AndroidApp app, Path outputPath, CompilationMode mode, int minApiLevel) {
+  BaseCommand(AndroidApp app, Path outputPath,
+      OutputMode outputMode, CompilationMode mode, int minApiLevel) {
     assert app != null;
     assert mode != null;
     assert minApiLevel > 0;
     this.app = app;
     this.outputPath = outputPath;
+    this.outputMode = outputMode;
     this.mode = mode;
     this.minApiLevel = minApiLevel;
     // Print options are not set.
@@ -73,12 +78,17 @@ abstract class BaseCommand {
     return minApiLevel;
   }
 
+  public OutputMode getOutputMode() {
+    return outputMode;
+  }
+
   abstract static class Builder<C extends BaseCommand, B extends Builder<C, B>> {
 
     private boolean printHelp = false;
     private boolean printVersion = false;
     private final AndroidApp.Builder app;
     private Path outputPath = null;
+    private OutputMode outputMode = OutputMode.Indexed;
     private CompilationMode mode;
     private int minApiLevel = Constants.DEFAULT_ANDROID_API;
 
@@ -183,9 +193,20 @@ abstract class BaseCommand {
       return outputPath;
     }
 
+    /** Get the output mode. */
+    public OutputMode getOutputMode() {
+      return outputMode;
+    }
+
     /** Set an output path. Must be an existing directory or a non-existent zip file. */
     public B setOutputPath(Path outputPath) throws CompilationException {
       this.outputPath = FileUtils.validateOutputFile(outputPath);
+      return self();
+    }
+
+    /** Set an output mode. */
+    public B setOutputMode(OutputMode outputMode) {
+      this.outputMode = outputMode;
       return self();
     }
 

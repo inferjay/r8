@@ -6,6 +6,7 @@ package com.android.tools.r8;
 import com.google.common.io.Closer;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
 
 /** Represents application resources. */
 public interface Resource {
@@ -17,6 +18,12 @@ public interface Resource {
 
   /** Get the kind of the resource. */
   Kind getKind();
+
+  /**
+   * Returns the set of class descriptors for classes represented
+   * by the resource if known, or `null' otherwise.
+   */
+  Set<String> getClassDescriptors();
 
   /** Get the resource as a stream. */
   InputStream getStream(Closer closer) throws IOException;

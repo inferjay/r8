@@ -59,8 +59,9 @@ public final class D8 {
    * @return the compilation result.
    */
   public static D8Output run(D8Command command) throws IOException {
-    D8Output output = new D8Output(
-        runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp);
+    CompilationResult result = runForTesting(command.getInputApp(), command.getInternalOptions());
+    assert result != null;
+    D8Output output = new D8Output(result.androidApp, command.getOutputMode());
     if (command.getOutputPath() != null) {
       output.write(command.getOutputPath());
     }
@@ -78,8 +79,10 @@ public final class D8 {
    * @return the compilation result.
    */
   public static D8Output run(D8Command command, ExecutorService executor) throws IOException {
-    D8Output output = new D8Output(
-        runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp);
+    CompilationResult result = runForTesting(
+        command.getInputApp(), command.getInternalOptions(), executor);
+    assert result != null;
+    D8Output output = new D8Output(result.androidApp, command.getOutputMode());
     if (command.getOutputPath() != null) {
       output.write(command.getOutputPath());
     }

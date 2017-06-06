@@ -13,6 +13,7 @@ import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.io.CharStreams;
 import java.io.File;
@@ -180,7 +181,7 @@ public class Bisect {
     AppInfo appInfo = new AppInfo(app);
     ApplicationWriter writer = new ApplicationWriter(app, appInfo, options, null, null);
     AndroidApp outApp = writer.write(null, executor);
-    outApp.writeToDirectory(output);
+    outApp.writeToDirectory(output, OutputMode.Indexed);
   }
 
   public static void main(String[] args) throws Exception {

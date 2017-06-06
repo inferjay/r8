@@ -91,14 +91,14 @@ public class ApplicationReader {
       reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.PROGRAM, input.getStream(closer));
     }
     for (InternalResource input : inputApp.getClassClasspathResources()) {
-      if (options.lazyClasspathLoading && input.getClassDescriptor() != null) {
+      if (options.lazyClasspathLoading && input.getSingleClassDescriptorOrNull() != null) {
         addLazyLoader(application, builder, input);
       } else {
         reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.CLASSPATH, input.getStream(closer));
       }
     }
     for (InternalResource input : inputApp.getClassLibraryResources()) {
-      if (options.lazyLibraryLoading && input.getClassDescriptor() != null) {
+      if (options.lazyLibraryLoading && input.getSingleClassDescriptorOrNull() != null) {
         addLazyLoader(application, builder, input);
       } else {
         reader.read(DEFAULT_DEX_FILENAME, Resource.Kind.LIBRARY, input.getStream(closer));
@@ -109,7 +109,7 @@ public class ApplicationReader {
   private void addLazyLoader(JarApplicationReader application,
       DexApplication.Builder builder, InternalResource resource) {
     // Generate expected DEX type.
-    String classDescriptor = resource.getClassDescriptor();
+    String classDescriptor = resource.getSingleClassDescriptorOrNull();
     assert classDescriptor != null;
     DexType type = options.itemFactory.createType(classDescriptor);
     LazyClassFileLoader newLoader = new LazyClassFileLoader(type, resource, application);
