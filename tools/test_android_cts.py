@@ -260,6 +260,7 @@ def Main():
       CTS_TRADEFED, 'run', 'cts'], cwd = AOSP_ROOT)
 
   emulator_proc.terminate()
+  time.sleep(6) # aosp_helper waits to be killed in looping 'sleep 5'
 
   # find the newest test_result.xml
   result_dirs = \
