@@ -72,6 +72,17 @@ def parse_arguments():
       metavar = 'FILE',
       help = 'Enable logging d8 (compatdx) calls to the specified file. Works'
           ' only with --tool=d8')
+  parser.add_argument('--save-result',
+      metavar = 'FILE',
+      help = 'Save final test_result.xml to the specified file.')
+  parser.add_argument('--no-baseline',
+      action = 'store_true',
+      help = "Don't compare results to baseline hence don't return failure if"
+      ' they differ.')
+  parser.add_argument('--clean-dex',
+      action = 'store_true',
+      help = 'Remove AOSP/dex files always, before the build. By default they'
+      " are removed only if '--tool=d8' and they're older then the D8 tool")
   return parser.parse_args()
 
 # return False on error
@@ -177,7 +188,7 @@ def diff_tree_report(baseline_tree, result_tree):
         print()
   return differ
 
-def setup_and_clean():
+def setup_and_clean(tool_is_d8, clean_dex):
   # Two output dirs, one for the android image and one for cts tests.
   # The output is compiled with d8 and jack, respectively.
   utils.makedirs_if_needed(AOSP_ROOT)
@@ -185,12 +196,18 @@ def setup_and_clean():
   utils.makedirs_if_needed(OUT_CTS)
 
   # remove dex files older than the current d8 tool
-  d8jar_mtime = os.path.getmtime(D8_JAR)
-  dex_files = (chain.from_iterable(glob(join(x[0], '*.dex'))
-    for x in os.walk(OUT_IMG)))
-  for f in dex_files:
-    if os.path.getmtime(f) <= d8jar_mtime:
-      os.remove(f)
+  counter = 0
+  if tool_is_d8 or clean_dex:
+    if not clean_dex:
+      d8jar_mtime = os.path.getmtime(D8_JAR)
+    dex_files = (chain.from_iterable(glob(join(x[0], '*.dex'))
+      for x in os.walk(OUT_IMG)))
+    for f in dex_files:
+      if clean_dex or os.path.getmtime(f) <= d8jar_mtime:
+        os.remove(f)
+        counter += 1
+  if counter > 0:
+    print('Removed {} dex files.'.format(counter))
 
 def checkout_aosp():
   # checkout AOSP source
@@ -216,17 +233,18 @@ def Main():
   jack_option = 'ANDROID_COMPILE_WITH_JACK=' \
       + ('true' if args.tool == 'jack' else 'false')
 
-  alt_jar_option = ''
+  # DX_ALT_JAR need to be cleared if not set, for 'make' to work properly
+  alt_jar_option = 'DX_ALT_JAR='
   if args.tool == 'd8':
     if args.d8log:
-      alt_jar_option = 'DX_ALT_JAR=' + D8LOGGER_JAR
+      alt_jar_option += D8LOGGER_JAR
       os.environ['D8LOGGER_OUTPUT'] = args.d8log
     else:
-      alt_jar_option = 'DX_ALT_JAR=' + COMPATDX_JAR
+      alt_jar_option += COMPATDX_JAR
 
   gradle.RunGradle(['d8','d8logger', 'compatdx'])
 
-  setup_and_clean()
+  setup_and_clean(args.tool == 'd8', args.clean_dex)
 
   checkout_aosp()
 
@@ -239,6 +257,7 @@ def Main():
 
   if not remove_aosp_out():
     return EXIT_FAILURE
+  print("-- Building CTS with 'make {} cts'.".format(J_OPTION))
   os.symlink(OUT_CTS, AOSP_OUT)
   check_call([AOSP_HELPER_SH, AOSP_PRESET, 'make', J_OPTION, 'cts'],
       cwd = AOSP_ROOT)
@@ -246,6 +265,8 @@ def Main():
   # activate OUT_IMG and build the Android image
   if not remove_aosp_out():
     return EXIT_FAILURE
+  print("-- Building Android image with 'make {} {} {}'." \
+    .format(J_OPTION, jack_option, alt_jar_option))
   os.symlink(OUT_IMG, AOSP_OUT)
   check_call([AOSP_HELPER_SH, AOSP_PRESET, 'make', J_OPTION, jack_option,
       alt_jar_option], cwd = AOSP_ROOT)
@@ -272,10 +293,12 @@ def Main():
 
   # print summaries
   re_summary = re.compile('<Summary ')
-  for (title, result_file) in [
-    ('Summary from current test results: ', results_xml),
-    ('Summary from baseline: ', CTS_BASELINE)
-    ]:
+
+  summaries = [('Summary from current test results: ', results_xml)]
+  if not args.no_baseline:
+    summaries.append(('Summary from baseline: ', CTS_BASELINE))
+
+  for (title, result_file) in summaries:
     print(title, result_file)
     with open(result_file) as f:
       for line in f:
@@ -283,12 +306,20 @@ def Main():
           print(line)
           break
 
-  print('Comparing test results to baseline:\n')
+  if args.no_baseline:
+    r = 0
+  else:
+    print('Comparing test results to baseline:\n')
 
-  result_tree = read_test_result_into_tree(results_xml)
-  baseline_tree = read_test_result_into_tree(CTS_BASELINE)
+    result_tree = read_test_result_into_tree(results_xml)
+    baseline_tree = read_test_result_into_tree(CTS_BASELINE)
 
-  return EXIT_FAILURE if diff_tree_report(baseline_tree, result_tree) else 0
+    r = EXIT_FAILURE if diff_tree_report(baseline_tree, result_tree) else 0
+
+  if args.save_result:
+    copy2(results_xml, args.save_result)
+
+  return r
 
 if __name__ == '__main__':
   sys.exit(Main())
