@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +183,9 @@ public class DexApplication {
 
   /** Write smali source for the application code on the provided PrintStream. */
   public void smali(InternalOptions options, PrintStream ps) {
-    for (DexClass clazz : classes()) {
+    List<DexProgramClass> classes = (List<DexProgramClass>) classes();
+    classes.sort(Comparator.comparing(DexProgramClass::toSourceString));
+    for (DexClass clazz : classes) {
       boolean classHeaderWritten = false;
       for (DexEncodedMethod method : clazz.virtualMethods()) {
         if (options.methodMatchesFilter(method)) {
