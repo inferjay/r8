@@ -57,58 +57,58 @@ public class R8RunExamplesTest {
 
   @Parameters(name = "{0}{1}")
   public static Collection<String[]> data() {
-    String[][] tests = {
-        {"arithmetic.Arithmetic", null},
-        {"arrayaccess.ArrayAccess", "37=37"},
-        {"barray.BArray", "bits 42 and bool true"},
-        {"bridge.BridgeMethod", null},
-        {"cse.CommonSubexpressionElimination", "1\n1\n2 2\n2\n3\n3\n4 4\n4\nA\nB\n"},
-        {"constants.Constants", null},
-        {"controlflow.ControlFlow", null},
-        {"conversions.Conversions", null},
-        {"floating_point_annotations.FloatingPointValuedAnnotationTest", null},
-        {"filledarray.FilledArray", null},
-        {"hello.Hello", "Hello, world"},
-        {"ifstatements.IfStatements", null},
-        {"instancevariable.InstanceVariable", "144=144"},
-        {"instanceofstring.InstanceofString", "is-string:true"},
-        {"invoke.Invoke", null},
-        {"jumbostring.JumboString", null},
-        {"loadconst.LoadConst", null},
-        {"newarray.NewArray", null},
-        {"regalloc.RegAlloc", null},
-        {"returns.Returns", null},
-        {"staticfield.StaticField", "101010\n101010\nABC\nABC\n"},
-        {"stringbuilding.StringBuilding",
-            "a2c-xyz-abc7xyz\ntrueABCDE1234232.21.101an Xstringbuilder"},
-        {"switches.Switches", null},
-        {"sync.Sync", null},
-        {"throwing.Throwing", "Throwing"},
-        {"trivial.Trivial", null},
-        {"trycatch.TryCatch", "Success!"},
-        {"nestedtrycatches.NestedTryCatches", "EXCEPTION: PRIMARY"},
-        {"trycatchmany.TryCatchMany", "Success!"},
-        {"invokeempty.InvokeEmpty", "AB"},
-        {"regress.Regress", null},
-        {"regress2.Regress2", "START\nLOOP\nLOOP\nLOOP\nLOOP\nLOOP\nEND"},
-        {"regress_37726195.Regress", null},
-        {"regress_37658666.Regress", null},
-        {"regress_37875803.Regress", null},
-        {"regress_37955340.Regress", null},
-        {"memberrebinding2.Test", Integer.toString((8 * 9) / 2)},
-        {"memberrebinding3.Test", null},
-        {"minification.Minification", null},
-        {"enclosingmethod.Main", null},
-        {"interfaceinlining.Main", null},
-        {"switchmaps.Switches", null},
+    String[] tests = {
+        "arithmetic.Arithmetic",
+        "arrayaccess.ArrayAccess",
+        "barray.BArray",
+        "bridge.BridgeMethod",
+        "cse.CommonSubexpressionElimination",
+        "constants.Constants",
+        "controlflow.ControlFlow",
+        "conversions.Conversions",
+        "floating_point_annotations.FloatingPointValuedAnnotationTest",
+        "filledarray.FilledArray",
+        "hello.Hello",
+        "ifstatements.IfStatements",
+        "instancevariable.InstanceVariable",
+        "instanceofstring.InstanceofString",
+        "invoke.Invoke",
+        "jumbostring.JumboString",
+        "loadconst.LoadConst",
+        "newarray.NewArray",
+        "regalloc.RegAlloc",
+        "returns.Returns",
+        "staticfield.StaticField",
+        "stringbuilding.StringBuilding",
+        "switches.Switches",
+        "sync.Sync",
+        "throwing.Throwing",
+        "trivial.Trivial",
+        "trycatch.TryCatch",
+        "nestedtrycatches.NestedTryCatches",
+        "trycatchmany.TryCatchMany",
+        "invokeempty.InvokeEmpty",
+        "regress.Regress",
+        "regress2.Regress2",
+        "regress_37726195.Regress",
+        "regress_37658666.Regress",
+        "regress_37875803.Regress",
+        "regress_37955340.Regress",
+        "regress_62300145.Regress",
+        "memberrebinding2.Test",
+        "memberrebinding3.Test",
+        "minification.Minification",
+        "enclosingmethod.Main",
+        "interfaceinlining.Main",
+        "switchmaps.Switches",
     };
 
     List<String[]> fullTestList = new ArrayList<>(tests.length * 2);
-    for (String[] test : tests) {
-      String qualified = test[0];
+    for (String test : tests) {
+      String qualified = test;
       String pkg = qualified.substring(0, qualified.lastIndexOf('.'));
-      fullTestList.add(new String[]{pkg, DEX_EXTENSION, qualified, test[1]});
-      fullTestList.add(new String[]{pkg, JAR_EXTENSION, qualified, test[1]});
+      fullTestList.add(new String[]{pkg, DEX_EXTENSION, qualified});
+      fullTestList.add(new String[]{pkg, JAR_EXTENSION, qualified});
     }
     return fullTestList;
   }
@@ -118,7 +118,6 @@ public class R8RunExamplesTest {
   private final String name;
 
   private final String mainClass;
-  private final String expectedOutput;
   private final String fileType;
   private static Map<DexVm, List<String>> failsOn =
       ImmutableMap.of(
@@ -150,11 +149,10 @@ public class R8RunExamplesTest {
           )
       );
 
-  public R8RunExamplesTest(String name, String fileType, String mainClass, String expectedOutput) {
+  public R8RunExamplesTest(String name, String fileType, String mainClass) {
     this.name = name;
     this.fileType = fileType;
     this.mainClass = mainClass;
-    this.expectedOutput = expectedOutput;
   }
 
   private Path getInputFile() {
@@ -249,10 +247,6 @@ public class R8RunExamplesTest {
       }
       String output =
           ToolHelper.checkArtOutputIdentical(original, generated.toString(), mainClass, version);
-      if (expectedOutput != null && !expectedToFail) {
-        assertTrue("'" + output + "' lacks '" + expectedOutput + "'",
-            output.contains(expectedOutput));
-      }
     }
   }
 }

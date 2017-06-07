@@ -24,7 +24,6 @@ import com.android.tools.r8.graph.DexValue.DexValueShort;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.DexValue.DexValueType;
 import com.android.tools.r8.graph.JarCode.ReparseContext;
-import com.android.tools.r8.utils.InternalResource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -396,6 +395,7 @@ public class JarClassFileReader {
     private final int parameterCount;
     private List<DexAnnotation> annotations = null;
     private DexValue defaultAnnotation = null;
+    private int fakeParameterAnnotations = 0;
     private List<List<DexAnnotation>> parameterAnnotations = null;
     private List<DexValue> parameterNames = null;
     private List<DexValue> parameterFlags = null;
@@ -447,15 +447,28 @@ public class JarClassFileReader {
 
     @Override
     public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+      // ASM decided to workaround a javac bug that incorrectly deals with synthesized parameter
+      // annotations. However, that leads us to have different behavior than javac+jvm and
+      // dx+art. The workaround is to use a non-existing descriptor "Ljava/lang/Synthetic;" for
+      // exactly this case. In order to remove the workaround we ignore all annotations
+      // with that descriptor. If javac is fixed, the ASM workaround will not be hit and we will
+      // never see this non-existing annotation descriptor. ASM uses the same check to make
+      // sure to undo their workaround for the javac bug in their MethodWriter.
+      if (desc.equals("Ljava/lang/Synthetic;")) {
+        assert parameterAnnotations == null;
+        fakeParameterAnnotations++;
+        return null;
+      }
       if (parameterAnnotations == null) {
-        parameterAnnotations = new ArrayList<>(parameterCount);
-        for (int i = 0; i < parameterCount; i++) {
+        int adjustedParameterCount = parameterCount - fakeParameterAnnotations;
+        parameterAnnotations = new ArrayList<>(adjustedParameterCount);
+        for (int i = 0; i < adjustedParameterCount; i++) {
           parameterAnnotations.add(new ArrayList<>());
         }
       }
       return createAnnotationVisitor(desc, visible,
           mv == null ? null : mv.visitParameterAnnotation(parameter, desc, visible),
-          parameterAnnotations.get(parameter), parent.application);
+          parameterAnnotations.get(parameter - fakeParameterAnnotations), parent.application);
     }
 
     @Override
