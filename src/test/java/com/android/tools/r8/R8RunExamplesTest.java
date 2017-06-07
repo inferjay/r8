@@ -4,22 +4,20 @@
 package com.android.tools.r8;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
+import com.android.tools.r8.R8RunArtTestsTest.DexTool;
 import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
-import com.android.tools.r8.utils.DexInspector;
 import com.android.tools.r8.utils.JarBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -42,18 +40,20 @@ public class R8RunExamplesTest {
   private static final String DEX_EXTENSION = ".dex";
   private static final String DEFAULT_DEX_FILENAME = "classes.dex";
 
-  private static final String[] failsWithJar = {};
+  private static final Map<String, TestCondition> outputNotIdenticalToJVMOutput =
+      new ImmutableMap.Builder<String, TestCondition>()
+          // Traverses stack frames that contain Art specific frames.
+          .put("throwing.Throwing", TestCondition.any())
+          // Early art versions incorrectly print Float.MIN_VALUE.
+          .put(
+              "filledarray.FilledArray",
+              TestCondition.match(
+                  TestCondition.runtimes(DexVm.ART_6_0_1, DexVm.ART_5_1_1, DexVm.ART_4_4_4)))
+          .build();
 
   // For local testing on a specific Art version(s) change this set. e.g. to
   // ImmutableSet.of("default") or pass the option -Ddex_vm=<version> to the Java VM.
   private static Set<DexVm> artVersions = ToolHelper.getArtVersions();
-
-  // A set of class names for examples that might produce bigger output and thus are excluded from
-  // size testing.
-  private static Set<String> mayBeBigger = ImmutableSet.of(
-      // Contains a reference to an extra type due to member rebinding.
-      "throwing.Throwing"
-  );
 
   @Parameters(name = "{0}{1}")
   public static Collection<String[]> data() {
@@ -156,12 +156,16 @@ public class R8RunExamplesTest {
   }
 
   private Path getInputFile() {
-    if (fileType == JAR_EXTENSION) {
-      return Paths.get(EXAMPLE_DIR, name + JAR_EXTENSION);
+    if (fileType.equals(JAR_EXTENSION)) {
+      return getOriginalJarFile();
     } else {
-      assert fileType == DEX_EXTENSION;
+      assert fileType.equals(DEX_EXTENSION);
       return getOriginalDexFile();
     }
+  }
+
+  public Path getOriginalJarFile() {
+    return Paths.get(EXAMPLE_DIR, name + JAR_EXTENSION);
   }
 
   private Path getOriginalDexFile() {
@@ -182,39 +186,8 @@ public class R8RunExamplesTest {
   @Before
   public void generateR8Version()
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    if (fileType == JAR_EXTENSION && Arrays.asList(failsWithJar).contains(name)) {
-      thrown.expect(Throwable.class);
-    }
     String out = temp.getRoot().getCanonicalPath();
     ToolHelper.runR8(getInputFile().toString(), out);
-  }
-
-  @Test
-  public void processedFileIsSmaller() throws IOException {
-    if (mayBeBigger.contains(mainClass)) {
-      return;
-    }
-    long original = Files.size(getOriginalDexFile());
-    long generated = Files.size(getGeneratedDexFile());
-
-    if (generated > original) {
-      DexInspector inspectOriginal = null;
-      DexInspector inspectGenerated = null;
-      try {
-        inspectOriginal = new DexInspector(getOriginalDexFile());
-        inspectGenerated = new DexInspector(getGeneratedDexFile());
-      } catch (Throwable e) {
-        System.err.println("Failed to parse dex files for post-failure processing");
-        e.printStackTrace();
-      }
-      if (inspectGenerated != null && inspectOriginal != null) {
-        assertEquals("Generated file is larger than original: " + generated + " vs. " + original,
-            inspectOriginal.clazz(mainClass).dumpMethods(),
-            inspectGenerated.clazz(mainClass).dumpMethods());
-      }
-    }
-    assertTrue("Generated file is larger than original: " + generated + " vs. " + original,
-        generated <= original);
   }
 
   @Test
@@ -237,16 +210,40 @@ public class R8RunExamplesTest {
       generated = temp.getRoot().toPath().resolve(name + ".jar").toFile();
       JarBuilder.buildJar(outputFiles, generated);
     }
+
+    ToolHelper.ProcessResult javaResult =
+        ToolHelper.runJava(ImmutableList.of(getOriginalJarFile().toString()), mainClass);
+    if (javaResult.exitCode != 0) {
+      fail("JVM failed for: " + mainClass);
+    }
+
     // TODO(ager): Once we have a bot running using dalvik (version 4.4.4) we should remove
     // this explicit loop to get rid of repeated testing on the buildbots.
     for (DexVm version : artVersions) {
-      boolean expectedToFail = false;
       if (failsOn.containsKey(version) && failsOn.get(version).contains(getTestName())) {
-        expectedToFail = true;
         thrown.expect(Throwable.class);
       }
+
+      // Check output against Art output on original dex file.
       String output =
           ToolHelper.checkArtOutputIdentical(original, generated.toString(), mainClass, version);
+
+      // Check output against JVM output.
+      if (shouldMatchJVMOutput(version)) {
+        String javaOutput = javaResult.stdout;
+        assertEquals(
+            "JVM and Art output differ:\n" + "JVM:\n" + javaOutput + "\nArt:\n" + output,
+            output,
+            javaOutput);
+      }
     }
+  }
+
+  private boolean shouldMatchJVMOutput(DexVm version) {
+    TestCondition condition = outputNotIdenticalToJVMOutput.get(mainClass);
+    if (condition == null) {
+      return true;
+    }
+    return !condition.test(DexTool.NONE, CompilerUnderTest.R8, version, CompilationMode.RELEASE);
   }
 }

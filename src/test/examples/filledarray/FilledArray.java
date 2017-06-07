@@ -106,7 +106,7 @@ public class FilledArray {
       System.out.println("ints = " + Arrays.toString(ints));
       System.out.println("ints2 = " + Arrays.toString(ints2));
     } catch (Throwable t) {
-      t.printStackTrace(System.out);
+      System.out.println("Exception: " + t.getClass().toString());
     }
 
     try {
@@ -122,7 +122,7 @@ public class FilledArray {
       System.out.println("i = " + i);
       System.out.println("ints = " + Arrays.toString(ints));
     } catch (Throwable t) {
-      t.printStackTrace(System.out);
+      System.out.println("Exception: " + t.getClass().toString());
     }
   }
 

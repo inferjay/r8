@@ -6,7 +6,6 @@ package com.android.tools.r8.jdwp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assume.assumeTrue;
 
 import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.CompilationMode;
