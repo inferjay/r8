@@ -472,6 +472,11 @@ public class IRConverter {
     codeRewriter.shortenLiveRanges(code);
     codeRewriter.identifyReturnsArgument(method, code);
 
+    // Insert code to log arguments if requested.
+    if (options.methodMatchesLogArgumentsFilter(method)) {
+      codeRewriter.logArgumentTypes(method, code);
+    }
+
     printMethod(code, "Optimized IR (SSA)");
     // Perform register allocation.
     RegisterAllocator registerAllocator = performRegisterAllocation(code, method);

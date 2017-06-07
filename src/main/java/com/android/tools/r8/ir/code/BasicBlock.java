@@ -884,6 +884,21 @@ public class BasicBlock {
     return block;
   }
 
+  /**
+   * Create a new basic block with a single if instruction.
+   *
+   * <p>The constructed basic block has no predecessors and no successors.
+   *
+   * @param blockNumber the block number of the goto block
+   */
+  public static BasicBlock createIfBlock(int blockNumber, If theIf) {
+    BasicBlock block = new BasicBlock();
+    block.add(theIf);
+    block.close(null);
+    block.setNumber(blockNumber);
+    return block;
+  }
+
   public boolean isTrivialGoto() {
     return instructions.size() == 1 && exit().isGoto();
   }

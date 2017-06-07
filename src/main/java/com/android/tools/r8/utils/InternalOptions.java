@@ -51,6 +51,7 @@ public class InternalOptions {
 
   public List<String> methodsFilter = ImmutableList.of();
   public int minApiLevel = Constants.DEFAULT_ANDROID_API;
+  public List<String> logArgumentsFilter = ImmutableList.of();
 
   // Defines interface method rewriter behavior.
   public OffOrAuto interfaceMethodDesugaring = OffOrAuto.Off;
@@ -108,6 +109,16 @@ public class InternalOptions {
     // Currently the filter is simple string equality on the qualified name.
     String qualifiedName = method.qualifiedName();
     return methodsFilter.indexOf(qualifiedName) >= 0;
+  }
+
+  public boolean methodMatchesLogArgumentsFilter(DexEncodedMethod method) {
+    // Not specifying a filter matches no methods.
+    if (logArgumentsFilter.size() == 0) {
+      return false;
+    }
+    // Currently the filter is simple string equality on the qualified name.
+    String qualifiedName = method.qualifiedName();
+    return logArgumentsFilter.indexOf(qualifiedName) >= 0;
   }
 
   public static class OutlineOptions {

@@ -12,6 +12,7 @@ import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
+import com.android.tools.r8.graph.DexProto;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.ArrayGet;
 import com.android.tools.r8.ir.code.ArrayPut;
@@ -21,6 +22,7 @@ import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.Cmp;
 import com.android.tools.r8.ir.code.Cmp.Bias;
 import com.android.tools.r8.ir.code.ConstNumber;
+import com.android.tools.r8.ir.code.ConstString;
 import com.android.tools.r8.ir.code.ConstType;
 import com.android.tools.r8.ir.code.DominatorTree;
 import com.android.tools.r8.ir.code.Goto;
@@ -34,6 +36,7 @@ import com.android.tools.r8.ir.code.InvokeDirect;
 import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.InvokeVirtual;
 import com.android.tools.r8.ir.code.JumpInstruction;
+import com.android.tools.r8.ir.code.MemberType;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.NewArrayEmpty;
 import com.android.tools.r8.ir.code.NewArrayFilledData;
@@ -1276,5 +1279,115 @@ public class CodeRewriter {
       type = dexClass.superType;
     }
     return false;
+  }
+
+  private Value addConstString(IRCode code, InstructionListIterator iterator, String s) {
+    Value value = code.createValue(MoveType.OBJECT);;
+    iterator.add(new ConstString(value, dexItemFactory.createString(s)));
+    return value;
+  }
+
+  /**
+   * Insert code into <code>method</code> to log the argument types to System.out.
+   *
+   * The type is determined by calling getClass() on the argument.
+   */
+  public void logArgumentTypes(DexEncodedMethod method, IRCode code) {
+    List<Value> arguments = code.collectArguments();
+    BasicBlock block = code.blocks.getFirst();
+    InstructionListIterator iterator = block.listIterator();
+
+    // Split arguments into their own block.
+    iterator.nextUntil(instruction -> !instruction.isArgument());
+    iterator.previous();
+    iterator.split(code);
+    iterator.previous();
+
+    // Now that the block is split there should not be any catch handlers in the block.
+    assert !block.hasCatchHandlers();
+    Value out = code.createValue(MoveType.OBJECT);
+    DexType javaLangSystemType = dexItemFactory.createType("Ljava/lang/System;");
+    DexType javaIoPrintStreamType = dexItemFactory.createType("Ljava/io/PrintStream;");
+
+    DexProto proto = dexItemFactory.createProto(
+        dexItemFactory.voidType, new DexType[]{dexItemFactory.objectType});
+    DexMethod print = dexItemFactory.createMethod(javaIoPrintStreamType, proto, "print");
+    DexMethod printLn = dexItemFactory.createMethod(javaIoPrintStreamType, proto, "println");
+
+    iterator.add(
+        new StaticGet(MemberType.OBJECT, out,
+            dexItemFactory.createField(javaLangSystemType, javaIoPrintStreamType, "out")));
+
+    Value value = code.createValue(MoveType.OBJECT);
+    iterator.add(new ConstString(value, dexItemFactory.createString("INVOKE ")));
+    iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, value)));
+
+    value = code.createValue(MoveType.OBJECT);;
+    iterator.add(
+        new ConstString(value, dexItemFactory.createString(method.method.qualifiedName())));
+    iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, value)));
+
+    Value openParenthesis = addConstString(code, iterator, "(");
+    Value comma = addConstString(code, iterator, ",");
+    Value closeParenthesis = addConstString(code, iterator, ")");
+    Value indent = addConstString(code, iterator, "  ");
+    Value nul = addConstString(code, iterator, "(null)");
+    Value primitive = addConstString(code, iterator, "(primitive)");
+    Value empty = addConstString(code, iterator, "");
+
+    iterator.add(new InvokeVirtual(printLn, null, ImmutableList.of(out, openParenthesis)));
+    for (int i = 0; i < arguments.size(); i++) {
+      iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, indent)));
+
+      // Add a block for end-of-line printing.
+      BasicBlock eol = BasicBlock.createGotoBlock(code.blocks.size());
+      code.blocks.add(eol);
+
+      BasicBlock successor = block.unlinkSingleSuccessor();
+      block.link(eol);
+      eol.link(successor);
+
+      Value argument = arguments.get(i);
+      if (argument.outType() != MoveType.OBJECT) {
+        iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, primitive)));
+      } else {
+        // Insert "if (argument != null) ...".
+        successor = block.unlinkSingleSuccessor();
+        If theIf = new If(If.Type.NE, argument);
+        BasicBlock ifBlock = BasicBlock.createIfBlock(code.blocks.size(), theIf);
+        code.blocks.add(ifBlock);
+        // Fallthrough block must be added right after the if.
+        BasicBlock isNullBlock = BasicBlock.createGotoBlock(code.blocks.size());
+        code.blocks.add(isNullBlock);
+        BasicBlock isNotNullBlock = BasicBlock.createGotoBlock(code.blocks.size());
+        code.blocks.add(isNotNullBlock);
+
+        // Link the added blocks together.
+        block.link(ifBlock);
+        ifBlock.link(isNotNullBlock);
+        ifBlock.link(isNullBlock);
+        isNotNullBlock.link(successor);
+        isNullBlock.link(successor);
+
+        // Fill code into the blocks.
+        iterator = isNullBlock.listIterator();
+        iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, nul)));
+        iterator = isNotNullBlock.listIterator();
+        value = code.createValue(MoveType.OBJECT);
+        iterator.add(new InvokeVirtual(dexItemFactory.objectMethods.getClass, value,
+            ImmutableList.of(arguments.get(i))));
+        iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, value)));
+      }
+
+      iterator = eol.listIterator();
+      if (i == arguments.size() - 1) {
+        iterator.add(new InvokeVirtual(printLn, null, ImmutableList.of(out, closeParenthesis)));
+      } else {
+        iterator.add(new InvokeVirtual(printLn, null, ImmutableList.of(out, comma)));
+      }
+      block = eol;
+    }
+    // When we fall out of the loop the iterator is in the last eol block.
+    iterator.add(new InvokeVirtual(printLn, null, ImmutableList.of(out, empty)));
   }
 }

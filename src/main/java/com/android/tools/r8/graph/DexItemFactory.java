@@ -291,20 +291,24 @@ public class DexItemFactory {
     return canonicalize(fields, field);
   }
 
-  public DexProto createProto(DexString shorty, DexType type, DexTypeList parameters) {
+  public DexField createField(DexType clazz, DexType type, String name) {
+    return createField(clazz, type, createString(name));
+  }
+
+  public DexProto createProto(DexString shorty, DexType returnType, DexTypeList parameters) {
     assert !sorted;
-    DexProto proto = new DexProto(shorty, type, parameters);
+    DexProto proto = new DexProto(shorty, returnType, parameters);
     return canonicalize(protos, proto);
   }
 
-  public DexProto createProto(DexString shorty, DexType type, DexType[] parameters) {
+  public DexProto createProto(DexString shorty, DexType returnType, DexType[] parameters) {
     assert !sorted;
-    return createProto(shorty, type,
+    return createProto(shorty, returnType,
         parameters.length == 0 ? DexTypeList.empty() : new DexTypeList(parameters));
   }
 
-  public DexProto createProto(DexType type, DexType[] parameters) {
-    return createProto(createShorty(type, parameters), type, parameters);
+  public DexProto createProto(DexType returnType, DexType[] parameters) {
+    return createProto(createShorty(returnType, parameters), returnType, parameters);
   }
 
   public DexString createShorty(DexType returnType, DexType[] argumentTypes) {
@@ -320,6 +324,10 @@ public class DexItemFactory {
     assert !sorted;
     DexMethod method = new DexMethod(holder, proto, name);
     return canonicalize(methods, method);
+  }
+
+  public DexMethod createMethod(DexType holder, DexProto proto, String name) {
+    return createMethod(holder, proto, createString(name));
   }
 
   public DexMethodHandle createMethodHandle(

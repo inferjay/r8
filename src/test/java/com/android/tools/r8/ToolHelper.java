@@ -19,6 +19,7 @@ import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
@@ -392,9 +393,16 @@ public class ToolHelper {
   }
 
   public static Path getClassFileForTestClass(Class clazz) {
-    String[] parts = clazz.getCanonicalName().split("\\.");
-    parts[parts.length - 1] = parts[parts.length - 1] + ".class";
-    return getClassPathForTests().resolve(Paths.get("", parts));
+    List<String> parts = Lists.newArrayList(clazz.getCanonicalName().split("\\."));
+    Class enclosing = clazz;
+    while (enclosing.getEnclosingClass() != null) {
+      parts.set(parts.size() - 2, parts.get(parts.size() - 2) + "$" + parts.get(parts.size() - 1));
+      parts.remove(parts.size() - 1);
+      enclosing = clazz.getEnclosingClass();
+    }
+    parts.set(parts.size() - 1, parts.get(parts.size() - 1) + ".class");
+    return getClassPathForTests().resolve(
+        Paths.get("", parts.toArray(new String[parts.size() - 1])));
   }
 
   public static DexApplication buildApplication(List<String> fileNames)
