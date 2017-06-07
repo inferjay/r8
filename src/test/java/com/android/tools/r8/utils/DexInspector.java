@@ -66,8 +66,10 @@ import com.android.tools.r8.naming.ProguardMapReader;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -158,6 +160,9 @@ public class DexInspector {
     }
   }
 
+  public ClassSubject clazz(Class clazz) {
+    return clazz(clazz.getTypeName());
+  }
 
   public ClassSubject clazz(String name) {
     ClassNaming naming = null;
@@ -186,6 +191,14 @@ public class DexInspector {
       }
       return new FoundClassSubject(clazz, naming);
     }, inspection);
+  }
+
+  public MethodSubject method(Method method) {
+    ClassSubject clazz = clazz(method.getDeclaringClass());
+    if (!clazz.isPresent()) {
+      return new AbsentMethodSubject();
+    }
+    return clazz.method(method);
   }
 
   private String getObfuscatedTypeName(String originalTypeName) {
@@ -243,6 +256,14 @@ public class DexInspector {
   public abstract class ClassSubject extends Subject {
 
     public abstract void forAllMethods(Consumer<FoundMethodSubject> inspection);
+
+    public MethodSubject method(Method method) {
+      List<String> parameters = new ArrayList<>();
+      for (Class<?> parameterType : method.getParameterTypes()) {
+        parameters.add(parameterType.getTypeName());
+      }
+      return method(method.getReturnType().getTypeName(), method.getName(), parameters);
+    }
 
     public abstract MethodSubject method(String returnType, String name, List<String> parameters);
 
@@ -468,6 +489,11 @@ public class DexInspector {
     public boolean isRenamed() {
       return naming == null || !getFinalDescriptor().equals(getOriginalDescriptor());
     }
+
+    @Override
+    public String toString() {
+      return dexClass.toSourceString();
+    }
   }
 
   public abstract class MemberSubject extends Subject {
@@ -488,6 +514,8 @@ public class DexInspector {
   public abstract class MethodSubject extends MemberSubject {
 
     public abstract boolean isAbstract();
+
+    public abstract boolean isBridge();
 
     public abstract DexEncodedMethod getMethod();
 
@@ -537,6 +565,11 @@ public class DexInspector {
 
     @Override
     public boolean isAbstract() {
+      return false;
+    }
+
+    @Override
+    public boolean isBridge() {
       return false;
     }
 
@@ -602,6 +635,11 @@ public class DexInspector {
     }
 
     @Override
+    public boolean isBridge() {
+      return dexMethod.accessFlags.isBridge();
+    }
+
+    @Override
     public DexEncodedMethod getMethod() {
       return dexMethod;
     }
@@ -628,6 +666,11 @@ public class DexInspector {
     public <T extends InstructionSubject> Iterator<T> iterateInstructions(
         Predicate<InstructionSubject> filter) {
       return new FilteredInstructionIterator<>(this, filter);
+    }
+
+    @Override
+    public String toString() {
+      return dexMethod.toSourceString();
     }
   }
 

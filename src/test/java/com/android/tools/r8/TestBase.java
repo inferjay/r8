@@ -87,12 +87,27 @@ public class TestBase {
   /**
    * Compile an application with R8.
    */
+  protected AndroidApp compileWithR8(List<Class> classes)
+      throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
+    R8Command command = ToolHelper.prepareR8CommandBuilder(readClasses(classes)).build();
+    return ToolHelper.runR8(command);
+  }
+
+  /**
+   * Compile an application with R8.
+   */
   protected AndroidApp compileWithR8(AndroidApp app, Consumer<InternalOptions> optionsConsumer)
       throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
-    R8Command command =
-        ToolHelper.prepareR8CommandBuilder(app)
-            .build();
+    R8Command command = ToolHelper.prepareR8CommandBuilder(app).build();
     return ToolHelper.runR8(command, optionsConsumer);
+  }
+
+  /**
+   * Compile an application with R8 using the supplied proguard configuration.
+   */
+  protected AndroidApp compileWithR8(List<Class> classes, String proguardConfig)
+      throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
+    return compileWithR8(readClasses(classes), writeTextToTempFile(proguardConfig));
   }
 
   /**
@@ -126,6 +141,28 @@ public class TestBase {
             .addProguardConfigurationFiles(proguardConfig)
             .build();
     return ToolHelper.runR8(command, optionsConsumer);
+  }
+
+  /**
+   * Generate a Proguard configuration for keeping the "public static void main(String[])" method
+   * of the specified class.
+   */
+  public String keepMainProguardConfiguration(Class clazz) {
+    return "-keep public class " + clazz.getCanonicalName() + " {\n"
+        + "  public static void main(java.lang.String[]);\n"
+        + "}\n";
+  }
+
+  /**
+   * Generate a Proguard configuration for keeping the "public static void main(String[])" method
+   * of the specified class and specify if -allowaccessmodification and -dontobfuscate are added
+   * as well.
+   */
+  public String keepMainProguardConfiguration(
+      Class clazz, boolean allowaccessmodification, boolean obfuscate) {
+    return keepMainProguardConfiguration(clazz)
+        + (allowaccessmodification ? "-allowaccessmodification\n" : "")
+        + (obfuscate ? "" : "-dontobfuscate\n");
   }
 
   /**
