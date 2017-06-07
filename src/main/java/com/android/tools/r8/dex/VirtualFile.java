@@ -63,7 +63,6 @@ public class VirtualFile {
   private static final int MAX_PREFILL_ENTRIES = MAX_ENTRIES - 5000;
 
   private final int id;
-  private final Set<String> classDescriptors = new HashSet<>();
   private final VirtualFileIndexedItemCollection indexedItems;
   private final IndexedItemTransaction transaction;
 
@@ -74,6 +73,11 @@ public class VirtualFile {
   }
 
   public Set<String> getClassDescriptors() {
+    Set<String> classDescriptors = new HashSet<>();
+    for (DexProgramClass clazz : indexedItems.classes) {
+      boolean added = classDescriptors.add(clazz.type.descriptor.toString());
+      assert added;
+    }
     return classDescriptors;
   }
 
@@ -289,7 +293,6 @@ public class VirtualFile {
 
   private void addClass(DexProgramClass clazz) {
     transaction.addClassAndDependencies(clazz);
-    classDescriptors.add(clazz.type.descriptor.toString());
   }
 
   private static boolean isFull(int numberOfMethods, int numberOfFields, int maximum) {
