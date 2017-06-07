@@ -10,7 +10,6 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InternalCompilerError;
 import com.android.tools.r8.errors.Unimplemented;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.utils.InternalResource;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.android.tools.r8.utils.OutputMode;
 import com.beust.jcommander.internal.Lists;
@@ -26,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
@@ -74,9 +74,11 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
       List<String> classFiles = collectClassFiles(testJarFile);
       AndroidApp app = compileClassFiles(
           testJarFile, classFiles, output, OutputMode.FilePerClass);
-      for (InternalResource resource : app.getDexProgramResources()) {
-        String classDescriptor = resource.getSingleClassDescriptorOrNull();
-        Assert.assertNotNull("Add resources are expected to have a descriptor", classDescriptor);
+      for (Resource resource : app.getDexProgramResources()) {
+        Set<String> descriptors = resource.getClassDescriptors();
+        Assert.assertNotNull(descriptors);
+        Assert.assertEquals(1, descriptors.size());
+        String classDescriptor = descriptors.iterator().next();
         classDescriptor = classDescriptor.substring(1, classDescriptor.length() - 1);
         fileToResource.put(classDescriptor + ".class", resource);
       }

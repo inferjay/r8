@@ -22,13 +22,15 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
-/** Lazy resource provider based on preloaded/prebuilt context. */
+/**
+ * Lazy resource provider based on preloaded/prebuilt context.
+ *
+ * NOTE: only handles classfile resources.
+ */
 public final class PreloadedResourceProvider implements ResourceProvider {
-  private final Resource.Kind kind;
   private final Map<String, byte[]> content;
 
-  private PreloadedResourceProvider(Resource.Kind kind, Map<String, byte[]> content) {
-    this.kind = kind;
+  private PreloadedResourceProvider(Map<String, byte[]> content) {
     this.content = content;
   }
 
@@ -38,12 +40,11 @@ public final class PreloadedResourceProvider implements ResourceProvider {
     if (bytes == null) {
       return null;
     }
-    return InternalResource.fromBytes(kind, bytes, Collections.singleton(descriptor));
+    return Resource.fromBytes(Resource.Kind.CLASSFILE, bytes, Collections.singleton(descriptor));
   }
 
   /** Create preloaded content resource provider from archive file. */
-  public static ResourceProvider fromArchive(
-      Resource.Kind kind, Path archive) throws IOException {
+  public static ResourceProvider fromArchive(Path archive) throws IOException {
     assert isArchive(archive);
     Builder builder = builder();
     try (ZipInputStream stream = new ZipInputStream(new FileInputStream(archive.toFile()))) {
@@ -59,7 +60,7 @@ public final class PreloadedResourceProvider implements ResourceProvider {
           "Zip error while reading '" + archive + "': " + e.getMessage(), e);
     }
 
-    return builder.build(kind);
+    return builder.build();
   }
 
   // Guess class descriptor from location of the class file.
@@ -99,10 +100,9 @@ public final class PreloadedResourceProvider implements ResourceProvider {
       return this;
     }
 
-    public PreloadedResourceProvider build(Resource.Kind kind) {
+    public PreloadedResourceProvider build() {
       assert content != null;
-      assert kind != null;
-      PreloadedResourceProvider provider = new PreloadedResourceProvider(kind, content);
+      PreloadedResourceProvider provider = new PreloadedResourceProvider(content);
       content = null;
       return provider;
     }

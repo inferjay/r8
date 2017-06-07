@@ -7,27 +7,14 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.utils.InternalResource;
 import com.google.common.base.MoreObjects;
 
 public abstract class DexClass extends DexItem implements DexClassPromise {
 
-  public interface Factory {
-
-    DexClass create(DexType type, Origin origin, DexAccessFlags accessFlags, DexType superType,
-        DexTypeList interfaces, DexString sourceFile, DexAnnotationSet annotations,
-        DexEncodedField[] staticFields, DexEncodedField[] instanceFields,
-        DexEncodedMethod[] directMethods, DexEncodedMethod[] virtualMethods);
-  }
-
-  public enum Origin {
-    Dex, ClassFile, Synthetic
-  }
-
   private static final DexEncodedMethod[] NO_METHODS = {};
   private static final DexEncodedField[] NO_FIELDS = {};
 
-  public final Origin origin;
+  public final Resource.Kind origin;
   public final DexType type;
   public final DexAccessFlags accessFlags;
   public DexType superType;
@@ -43,7 +30,7 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
       DexString sourceFile, DexTypeList interfaces, DexAccessFlags accessFlags, DexType superType,
       DexType type, DexEncodedField[] staticFields, DexEncodedField[] instanceFields,
       DexEncodedMethod[] directMethods, DexEncodedMethod[] virtualMethods,
-      DexAnnotationSet annotations, Origin origin) {
+      DexAnnotationSet annotations, Resource.Kind origin) {
     this.origin = origin;
     this.sourceFile = sourceFile;
     this.interfaces = interfaces;
@@ -168,7 +155,7 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
   }
 
   @Override
-  public Origin getOrigin() {
+  public Resource.Kind getOrigin() {
     return this.origin;
   }
 
@@ -180,19 +167,6 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
   @Override
   public DexType getType() {
     return type;
-  }
-
-  /** Get a class factory for a particular resource kind */
-  public static Factory factoryForResourceKind(Resource.Kind kind) {
-    switch (kind) {
-      case PROGRAM:
-        return DexProgramClass::new;
-      case CLASSPATH:
-        return DexClasspathClass::new;
-      case LIBRARY:
-        return DexLibraryClass::new;
-    }
-    throw new Unreachable();
   }
 
   public boolean hasClassInitializer() {

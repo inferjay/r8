@@ -4,12 +4,12 @@
 
 package com.android.tools.r8.ir.desugar;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unimplemented;
 import com.android.tools.r8.graph.DexApplication.Builder;
 import com.android.tools.r8.graph.DexCallSite;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexClassPromise;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
@@ -217,7 +217,7 @@ public final class InterfaceMethodRewriter {
 
   private static boolean shouldProcess(
       DexProgramClass clazz, Flavor flavour, boolean mustBeInterface) {
-    return (clazz.getOrigin() != DexClass.Origin.Dex || flavour == Flavor.IncludeAllResources)
+    return (clazz.getOrigin() != Resource.Kind.DEX || flavour == Flavor.IncludeAllResources)
         && clazz.isInterface() == mustBeInterface;
   }
 

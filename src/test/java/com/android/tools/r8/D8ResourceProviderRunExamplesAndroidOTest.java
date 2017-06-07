@@ -25,14 +25,13 @@ public class D8ResourceProviderRunExamplesAndroidOTest
 
     private void addClasspathPath(Path location, D8Command.Builder builder) {
       builder.addClasspathResourceProvider(
-          DirectoryResourceProvider.fromDirectory(
-              Resource.Kind.CLASSPATH, location.resolve("..")));
+          DirectoryResourceProvider.fromDirectory(location.resolve("..")));
     }
 
     @Override
     void addLibraryReference(D8Command.Builder builder, Path location) throws IOException {
       builder.addLibraryResourceProvider(
-          PreloadedResourceProvider.fromArchive(Resource.Kind.LIBRARY, location));
+          PreloadedResourceProvider.fromArchive(location));
     }
   }
 

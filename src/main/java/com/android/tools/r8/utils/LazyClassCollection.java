@@ -7,6 +7,7 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexClassPromise;
@@ -39,7 +40,8 @@ public final class LazyClassCollection {
   private final Map<DexType, DexClassPromise> classes = new IdentityHashMap<>();
 
   // Available lazy resource providers.
-  private final List<ResourceProvider> providers;
+  private final List<ResourceProvider> classpathProviders;
+  private final List<ResourceProvider> libraryProviders;
 
   // Application reader to be used. Note that the reader may be reused in
   // many loaders and may be used concurrently, it is considered to be
@@ -48,8 +50,10 @@ public final class LazyClassCollection {
   // which is thread-safe).
   private final JarApplicationReader reader;
 
-  public LazyClassCollection(JarApplicationReader reader, List<ResourceProvider> providers) {
-    this.providers = ImmutableList.copyOf(providers);
+  public LazyClassCollection(JarApplicationReader reader,
+      List<ResourceProvider> classpathProviders, List<ResourceProvider> libraryProviders) {
+    this.classpathProviders = ImmutableList.copyOf(classpathProviders);
+    this.libraryProviders = ImmutableList.copyOf(libraryProviders);
     this.reader = reader;
   }
 
@@ -92,25 +96,30 @@ public final class LazyClassCollection {
   // provided resource for this type.
   private DexClassPromise buildPromiseChain(DexType type) {
     String descriptor = type.descriptor.toString();
-    DexClassPromise promise = null;
-    int size = providers.size();
-    for (int i = size - 1; i >= 0; i--) {
-      Resource resource = providers.get(i).getResource(descriptor);
+    DexClassPromise promise = buildPromiseChain(
+        type, descriptor, null, classpathProviders, ClassKind.CLASSPATH);
+    promise = buildPromiseChain(
+        type, descriptor, promise, libraryProviders, ClassKind.LIBRARY);
+    return promise == null ? EmptyPromise.INSTANCE : promise;
+  }
+
+  private DexClassPromise buildPromiseChain(DexType type, String descriptor,
+      DexClassPromise promise, List<ResourceProvider> providers, ClassKind classKind) {
+    for (ResourceProvider provider : providers) {
+      Resource resource = provider.getResource(descriptor);
       if (resource == null) {
         continue;
       }
 
-      if (resource.getKind() == Resource.Kind.PROGRAM) {
-        throw new CompilationError("Attempt to load program class " +
-            type.toSourceString() + " via lazy resource provider");
+      if (resource.kind != Resource.Kind.CLASSFILE) {
+        throw new CompilationError("Resource returned by resource provider for type " +
+            type.toSourceString() + " must be a class file resource.");
       }
 
-      assert resource instanceof InternalResource;
-      LazyClassFileLoader loader =
-          new LazyClassFileLoader(type, (InternalResource) resource, reader);
+      LazyClassFileLoader loader = new LazyClassFileLoader(type, resource, classKind, reader);
       promise = (promise == null) ? loader : new DexClassPromiseChain(loader, promise);
     }
-    return promise == null ? EmptyPromise.INSTANCE : promise;
+    return promise;
   }
 
   // Chooses the proper promise. Recursion is not expected to be deep.
@@ -130,7 +139,7 @@ public final class LazyClassCollection {
     }
 
     @Override
-    public DexClass.Origin getOrigin() {
+    public Resource.Kind getOrigin() {
       throw new Unreachable();
     }
 
@@ -172,7 +181,7 @@ public final class LazyClassCollection {
     }
 
     @Override
-    public DexClass.Origin getOrigin() {
+    public Resource.Kind getOrigin() {
       return promise.getOrigin();
     }
 

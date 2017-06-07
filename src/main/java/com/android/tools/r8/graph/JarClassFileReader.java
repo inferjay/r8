@@ -58,10 +58,10 @@ public class JarClassFileReader {
     this.classConsumer = classConsumer;
   }
 
-  public void read(String file, Resource.Kind kind, InputStream input) throws IOException {
+  public void read(String file, ClassKind classKind, InputStream input) throws IOException {
     ClassReader reader = new ClassReader(input);
     reader.accept(new CreateDexClassVisitor(
-        file, kind, reader.b, application, classConsumer), SKIP_FRAMES);
+        file, classKind, reader.b, application, classConsumer), SKIP_FRAMES);
   }
 
   private static DexAccessFlags createAccessFlags(int access) {
@@ -92,7 +92,7 @@ public class JarClassFileReader {
 
   private static class CreateDexClassVisitor extends ClassVisitor {
     private final String file;
-    private final Resource.Kind kind;
+    private final ClassKind classKind;
     private final JarApplicationReader application;
     private final Consumer<DexClass> classConsumer;
     private final ReparseContext context = new ReparseContext();
@@ -115,13 +115,13 @@ public class JarClassFileReader {
 
     public CreateDexClassVisitor(
         String file,
-        Resource.Kind kind,
+        ClassKind classKind,
         byte[] classCache,
         JarApplicationReader application,
         Consumer<DexClass> classConsumer) {
       super(ASM5);
       this.file = file;
-      this.kind = kind;
+      this.classKind = classKind;
       this.classConsumer = classConsumer;
       this.context.classCache = classCache;
       this.application = application;
@@ -247,9 +247,9 @@ public class JarClassFileReader {
         addAnnotation(DexAnnotation.createAnnotationDefaultAnnotation(
             type, defaultAnnotations, application.getFactory()));
       }
-      DexClass clazz = DexClass.factoryForResourceKind(kind).create(
+      DexClass clazz = classKind.create(
           type,
-          DexClass.Origin.ClassFile,
+          Resource.Kind.CLASSFILE, 
           accessFlags,
           superType,
           interfaces,
@@ -259,7 +259,7 @@ public class JarClassFileReader {
           instanceFields.toArray(new DexEncodedField[instanceFields.size()]),
           directMethods.toArray(new DexEncodedMethod[directMethods.size()]),
           virtualMethods.toArray(new DexEncodedMethod[virtualMethods.size()]));
-      if (kind == Resource.Kind.PROGRAM) {
+      if (classKind == ClassKind.PROGRAM) {
         context.owner = clazz.asProgramClass();
       }
       classConsumer.accept(clazz);
@@ -512,7 +512,7 @@ public class JarClassFileReader {
       Code code = null;
       if (!flags.isAbstract()
           && !flags.isNative()
-          && parent.kind == Resource.Kind.PROGRAM) {
+          && parent.classKind == ClassKind.PROGRAM) {
         code = new JarCode(method, parent.context, parent.application);
       }
       DexAnnotationSetRefList parameterAnnotationSets;

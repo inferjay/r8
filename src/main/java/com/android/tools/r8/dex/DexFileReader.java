@@ -11,6 +11,7 @@ import static com.android.tools.r8.utils.EncodedValueUtils.parseUnsigned;
 import com.android.tools.r8.Resource;
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.code.InstructionFactory;
+import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.Descriptor;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexAnnotation;
@@ -68,12 +69,12 @@ public class DexFileReader {
   private DexFile file;
   private final Segment[] segments;
   private int[] stringIDs;
-  private final Resource.Kind fileKind;
+  private final ClassKind classKind;
 
   public static Segment[] parseMapFrom(Path file) throws IOException {
     DexFileReader reader =
         new DexFileReader(
-            new DexFile(file.toString()), Resource.Kind.PROGRAM, new DexItemFactory());
+            new DexFile(file.toString()), ClassKind.PROGRAM, new DexItemFactory());
     return reader.parseMap();
   }
 
@@ -98,14 +99,13 @@ public class DexFileReader {
   // Factory to canonicalize certain dexitems.
   private final DexItemFactory dexItemFactory;
 
-  public DexFileReader(
-      DexFile file, Resource.Kind fileKind, DexItemFactory dexItemFactory) {
+  public DexFileReader(DexFile file, ClassKind classKind, DexItemFactory dexItemFactory) {
     this.file = file;
     this.dexItemFactory = dexItemFactory;
     file.setByteOrder();
     segments = parseMap();
     parseStringIDs();
-    this.fileKind = fileKind;
+    this.classKind = classKind;
   }
 
   public OffsetToObjectMapping getIndexedItemsMap() {
@@ -113,7 +113,7 @@ public class DexFileReader {
   }
 
   void addCodeItemsTo() {
-    if (fileKind == Resource.Kind.LIBRARY) {
+    if (classKind == ClassKind.LIBRARY) {
       // Ignore contents of library files.
       return;
     }
@@ -644,17 +644,17 @@ public class DexFileReader {
                 directMethodsSize,
                 annotationsDirectory.methods,
                 annotationsDirectory.parameters,
-                fileKind != Resource.Kind.PROGRAM);
+                classKind != ClassKind.PROGRAM);
         virtualMethods =
             readMethods(
                 virtualMethodsSize,
                 annotationsDirectory.methods,
                 annotationsDirectory.parameters,
-                fileKind != Resource.Kind.PROGRAM);
+                classKind != ClassKind.PROGRAM);
       }
-      clazz = DexClass.factoryForResourceKind(fileKind).create(
+      clazz = classKind.create(
           type,
-          DexClass.Origin.Dex,
+          Resource.Kind.DEX, 
           flags,
           superclass,
           typeListAt(interfacesOffsets[i]),

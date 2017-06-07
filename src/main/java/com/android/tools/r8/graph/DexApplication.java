@@ -6,6 +6,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.ir.desugar.LambdaRewriter;
 import com.android.tools.r8.logging.Log;
@@ -387,8 +388,8 @@ public class DexApplication {
 
   private static boolean allowProgramClassConflict(DexClassPromise a, DexClassPromise b) {
     // Currently only allow collapsing synthetic lambda classes.
-    return a.getOrigin() == DexClass.Origin.Dex
-        && b.getOrigin() == DexClass.Origin.Dex
+    return a.getOrigin() == Resource.Kind.DEX
+        && b.getOrigin() == Resource.Kind.DEX
         && a.get().accessFlags.isSynthetic()
         && b.get().accessFlags.isSynthetic()
         && LambdaRewriter.hasLambdaClassPrefix(a.getType())

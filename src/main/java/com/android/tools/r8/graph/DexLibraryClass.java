@@ -3,14 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.Unreachable;
 
 public class DexLibraryClass extends DexClass {
 
-  public DexLibraryClass(DexType type, Origin origin, DexAccessFlags accessFlags, DexType superType,
-      DexTypeList interfaces, DexString sourceFile, DexAnnotationSet annotations,
+  public DexLibraryClass(DexType type, Resource.Kind origin, DexAccessFlags accessFlags,
+      DexType superType, DexTypeList interfaces, DexString sourceFile, DexAnnotationSet annotations,
       DexEncodedField[] staticFields, DexEncodedField[] instanceFields,
       DexEncodedMethod[] directMethods, DexEncodedMethod[] virtualMethods) {
     super(sourceFile, interfaces, accessFlags, superType, type,

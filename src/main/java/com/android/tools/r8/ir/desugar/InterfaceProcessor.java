@@ -9,7 +9,6 @@ import com.android.tools.r8.errors.Unimplemented;
 import com.android.tools.r8.graph.Code;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexAnnotationSet;
-import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -128,7 +127,7 @@ final class InterfaceProcessor {
     DexType companionClassType = rewriter.getCompanionClassType(iface.type);
     DexProgramClass companionClass = new DexProgramClass(
         companionClassType,
-        DexClass.Origin.Synthetic,
+        null,
         companionClassFlags,
         rewriter.factory.objectType,
         DexTypeList.empty(),

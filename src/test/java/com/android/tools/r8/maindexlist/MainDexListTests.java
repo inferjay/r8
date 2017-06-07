@@ -24,7 +24,6 @@ import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexApplication;
-import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
@@ -291,7 +290,7 @@ public class MainDexListTests {
       builder.addClassPromise(
           new DexProgramClass(
               type,
-              DexClass.Origin.Synthetic,
+              null,
               new DexAccessFlags(),
               factory.objectType,
               DexTypeList.empty(),

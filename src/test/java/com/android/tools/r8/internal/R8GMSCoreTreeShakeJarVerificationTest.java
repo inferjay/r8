@@ -10,7 +10,7 @@ import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.utils.InternalResource;
+import com.android.tools.r8.Resource;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
@@ -33,7 +33,7 @@ public class R8GMSCoreTreeShakeJarVerificationTest extends GMSCoreCompilationTes
         ImmutableList.of());
     int bytes = 0;
     try (Closer closer = Closer.create()) {
-      for (InternalResource dex : app.getDexProgramResources()) {
+      for (Resource dex : app.getDexProgramResources()) {
         bytes += ByteStreams.toByteArray(dex.getStream(closer)).length;
       }
     }

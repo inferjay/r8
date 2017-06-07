@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import java.util.Arrays;
@@ -12,7 +13,7 @@ public class DexProgramClass extends DexClass {
   private DexEncodedArray staticValues;
 
   public DexProgramClass(DexType type,
-      Origin origin,
+      Resource.Kind origin,
       DexAccessFlags accessFlags,
       DexType superType,
       DexTypeList interfaces,

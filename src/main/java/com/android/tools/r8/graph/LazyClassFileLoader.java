@@ -9,14 +9,15 @@ import static com.android.tools.r8.utils.FileUtils.DEFAULT_DEX_FILENAME;
 import com.android.tools.r8.Resource;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.utils.InternalResource;
 import com.google.common.io.Closer;
 import java.io.IOException;
 
 // Lazily loads a class file represented by resource.
 public final class LazyClassFileLoader implements DexClassPromise {
   // Resource representing file definition.
-  private final InternalResource resource;
+  private final Resource resource;
+  // Class kind to be created.
+  private final ClassKind classKind;
 
   // Application reader to be used. Note that the reader may be reused in
   // many loaders and may be used concurrently, it is considered to be
@@ -32,10 +33,13 @@ public final class LazyClassFileLoader implements DexClassPromise {
   // field is only accessed in context synchronized on `this`.
   private DexClass loadedClass = null;
 
-  public LazyClassFileLoader(DexType type, InternalResource resource, JarApplicationReader reader) {
+  public LazyClassFileLoader(DexType type,
+      Resource resource, ClassKind classKind, JarApplicationReader reader) {
     this.resource = resource;
     this.reader = reader;
     this.type = type;
+    this.classKind = classKind;
+    assert classKind != ClassKind.PROGRAM;
   }
 
   // Callback method for JarClassFileReader, is always called in synchronized context.
@@ -51,23 +55,23 @@ public final class LazyClassFileLoader implements DexClassPromise {
   }
 
   @Override
-  public DexClass.Origin getOrigin() {
-    return DexClass.Origin.ClassFile;
+  public Resource.Kind getOrigin() {
+    return Resource.Kind.CLASSFILE;
   }
 
   @Override
   public boolean isProgramClass() {
-    return resource.getKind() == Resource.Kind.PROGRAM;
+    return false;
   }
 
   @Override
   public boolean isClasspathClass() {
-    return resource.getKind() == Resource.Kind.CLASSPATH;
+    return classKind == ClassKind.CLASSPATH;
   }
 
   @Override
   public boolean isLibraryClass() {
-    return resource.getKind() == Resource.Kind.LIBRARY;
+    return classKind == ClassKind.LIBRARY;
   }
 
   // Loads the class from the resource. Synchronized on `this` to avoid
@@ -81,7 +85,7 @@ public final class LazyClassFileLoader implements DexClassPromise {
 
     try (Closer closer = Closer.create()) {
       JarClassFileReader reader = new JarClassFileReader(this.reader, this::addClass);
-      reader.read(DEFAULT_DEX_FILENAME, resource.getKind(), resource.getStream(closer));
+      reader.read(DEFAULT_DEX_FILENAME, classKind, resource.getStream(closer));
     } catch (IOException e) {
       throw new CompilationError("Failed to load class: " + type.toSourceString(), e);
     }

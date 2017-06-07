@@ -10,13 +10,15 @@ import com.android.tools.r8.ResourceProvider;
 import java.io.File;
 import java.nio.file.Path;
 
-/** Lazy resource provider based on filesystem directory content. */
+/**
+ * Lazy resource provider based on filesystem directory content.
+ *
+ * NOTE: only handles classfile resources.
+ */
 public final class DirectoryResourceProvider implements ResourceProvider {
-  private final Resource.Kind kind;
   private final Path root;
 
-  private DirectoryResourceProvider(Resource.Kind kind, Path root) {
-    this.kind = kind;
+  private DirectoryResourceProvider(Path root) {
     this.root = root;
   }
 
@@ -30,11 +32,11 @@ public final class DirectoryResourceProvider implements ResourceProvider {
     File file = filePath.toFile();
 
     return (file.exists() && !file.isDirectory())
-        ? InternalResource.fromFile(kind, filePath) : null;
+        ? Resource.fromFile(Resource.Kind.CLASSFILE, filePath) : null;
   }
 
   /** Create resource provider from directory path. */
-  public static ResourceProvider fromDirectory(Resource.Kind kind, Path dir) {
-    return new DirectoryResourceProvider(kind, dir.toAbsolutePath());
+  public static ResourceProvider fromDirectory(Path dir) {
+    return new DirectoryResourceProvider(dir.toAbsolutePath());
   }
 }

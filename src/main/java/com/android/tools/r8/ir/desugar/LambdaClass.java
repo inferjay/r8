@@ -10,7 +10,6 @@ import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
-import com.android.tools.r8.graph.DexApplication.Builder;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexClassPromise;
 import com.android.tools.r8.graph.DexCode;
@@ -114,7 +113,7 @@ final class LambdaClass {
   final DexProgramClass synthesizeLambdaClass() {
     return new DexProgramClass(
         type,
-        DexClass.Origin.Synthetic,
+        null,
         new DexAccessFlags(Constants.ACC_FINAL | Constants.ACC_SYNTHETIC),
         rewriter.factory.objectType,
         buildInterfaces(),

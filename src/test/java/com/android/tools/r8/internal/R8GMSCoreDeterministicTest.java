@@ -8,10 +8,10 @@ import static org.junit.Assert.assertEquals;
 
 import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.R8Command;
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.utils.InternalResource;
 import com.android.tools.r8.utils.OutputMode;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
@@ -43,8 +43,8 @@ public class R8GMSCoreDeterministicTest extends GMSCoreCompilationTestBase {
 
     // Verify that the result of the two compilations was the same.
     try (Closer closer = Closer.create()) {
-      List<InternalResource> files1 = app1.getDexProgramResources();
-      List<InternalResource> files2 = app2.getDexProgramResources();
+      List<Resource> files1 = app1.getDexProgramResources();
+      List<Resource> files2 = app2.getDexProgramResources();
       assertEquals(files1.size(), files2.size());
       for (int index = 0; index < files1.size(); index++) {
         InputStream file1 = files1.get(index).getStream(closer);

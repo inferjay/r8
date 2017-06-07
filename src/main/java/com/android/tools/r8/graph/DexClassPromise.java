@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.Resource;
+
 /**
  * Provides a way for delayed DexClass discovery.
  *
@@ -15,7 +17,7 @@ package com.android.tools.r8.graph;
 public interface DexClassPromise {
   DexType getType();
 
-  DexClass.Origin getOrigin();
+  Resource.Kind getOrigin();
 
   boolean isProgramClass();
 

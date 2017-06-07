@@ -1028,7 +1028,7 @@ public class Outliner {
     DexAccessFlags accessFlags = new DexAccessFlags(Constants.ACC_PUBLIC);
     DexProgramClass clazz = new DexProgramClass(
         type,
-        DexClass.Origin.Synthetic,
+        null,
         accessFlags,
         superType,
         interfaces,

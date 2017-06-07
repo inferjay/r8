@@ -4,6 +4,7 @@
 package com.android.tools.r8.utils;
 
 import com.android.tools.r8.Resource;
+import java.util.Set;
 
 /** Defines way the output is formed. */
 public enum OutputMode {
@@ -16,9 +17,10 @@ public enum OutputMode {
   FilePerClass {
     @Override
     String getFileName(Resource resource, int index) {
-      assert resource instanceof InternalResource;
-      String classDescriptor = ((InternalResource) resource).getSingleClassDescriptorOrNull();
-      assert classDescriptor != null;
+      Set<String> classDescriptors = resource.getClassDescriptors();
+      assert classDescriptors != null;
+      assert classDescriptors.size() == 1;
+      String classDescriptor = classDescriptors.iterator().next();
       assert !classDescriptor.contains(".");
       return DescriptorUtils.descriptorToJavaType(classDescriptor) + ".dex";
     }

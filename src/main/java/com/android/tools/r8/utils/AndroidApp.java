@@ -10,6 +10,8 @@ import static com.android.tools.r8.utils.FileUtils.isDexFile;
 import com.android.tools.r8.Resource;
 import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.ClassKind;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
@@ -50,26 +52,32 @@ public class AndroidApp {
   public static final String DEFAULT_PROGUARD_SEEDS_FILE = "proguard.seeds";
   public static final String DEFAULT_PACKAGE_DISTRIBUTION_FILE = "package.map";
 
-  private final ImmutableList<InternalResource> dexSources;
-  private final ImmutableList<InternalResource> classSources;
-  private final ImmutableList<ResourceProvider> resourceProviders;
-  private final InternalResource proguardMap;
-  private final InternalResource proguardSeeds;
-  private final InternalResource packageDistribution;
-  private final InternalResource mainDexList;
+  private final ImmutableList<Resource> programResources;
+  private final ImmutableList<Resource> classpathResources;
+  private final ImmutableList<Resource> libraryResources;
+  private final ImmutableList<ResourceProvider> classpathResourceProviders;
+  private final ImmutableList<ResourceProvider> libraryResourceProviders;
+  private final Resource proguardMap;
+  private final Resource proguardSeeds;
+  private final Resource packageDistribution;
+  private final Resource mainDexList;
 
   // See factory methods and AndroidApp.Builder below.
   private AndroidApp(
-      ImmutableList<InternalResource> dexSources,
-      ImmutableList<InternalResource> classSources,
-      ImmutableList<ResourceProvider> resourceProviders,
-      InternalResource proguardMap,
-      InternalResource proguardSeeds,
-      InternalResource packageDistribution,
-      InternalResource mainDexList) {
-    this.dexSources = dexSources;
-    this.classSources = classSources;
-    this.resourceProviders = resourceProviders;
+      ImmutableList<Resource> programResources,
+      ImmutableList<Resource> classpathResources,
+      ImmutableList<Resource> libraryResources,
+      ImmutableList<ResourceProvider> classpathResourceProviders,
+      ImmutableList<ResourceProvider> libraryResourceProviders,
+      Resource proguardMap,
+      Resource proguardSeeds,
+      Resource packageDistribution,
+      Resource mainDexList) {
+    this.programResources = programResources;
+    this.classpathResources = classpathResources;
+    this.libraryResources = libraryResources;
+    this.classpathResourceProviders = classpathResourceProviders;
+    this.libraryResourceProviders = libraryResourceProviders;
     this.proguardMap = proguardMap;
     this.proguardSeeds = proguardSeeds;
     this.packageDistribution = packageDistribution;
@@ -140,45 +148,49 @@ public class AndroidApp {
   }
 
   /** Get input streams for all dex program resources. */
-  public List<InternalResource> getDexProgramResources() {
-    return filter(dexSources, Resource.Kind.PROGRAM);
+  public List<Resource> getDexProgramResources() {
+    return filter(programResources, Resource.Kind.DEX);
   }
 
   /** Get input streams for all Java-bytecode program resources. */
-  public List<InternalResource> getClassProgramResources() {
-    return filter(classSources, Resource.Kind.PROGRAM);
+  public List<Resource> getClassProgramResources() {
+    return filter(programResources, Resource.Kind.CLASSFILE);
   }
 
   /** Get input streams for all dex program classpath resources. */
-  public List<InternalResource> getDexClasspathResources() {
-    return filter(dexSources, Resource.Kind.CLASSPATH);
+  public List<Resource> getDexClasspathResources() {
+    return filter(classpathResources, Resource.Kind.DEX);
   }
 
   /** Get input streams for all Java-bytecode classpath resources. */
-  public List<InternalResource> getClassClasspathResources() {
-    return filter(classSources, Resource.Kind.CLASSPATH);
+  public List<Resource> getClassClasspathResources() {
+    return filter(classpathResources, Resource.Kind.CLASSFILE);
   }
 
   /** Get input streams for all dex library resources. */
-  public List<InternalResource> getDexLibraryResources() {
-    return filter(dexSources, Resource.Kind.LIBRARY);
+  public List<Resource> getDexLibraryResources() {
+    return filter(libraryResources, Resource.Kind.DEX);
   }
 
   /** Get input streams for all Java-bytecode library resources. */
-  public List<InternalResource> getClassLibraryResources() {
-    return filter(classSources, Resource.Kind.LIBRARY);
+  public List<Resource> getClassLibraryResources() {
+    return filter(libraryResources, Resource.Kind.CLASSFILE);
   }
 
-  /** Get lazy resource providers. */
-  public List<ResourceProvider> getLazyResourceProviders() {
-    return resourceProviders;
+  /** Get classpath resource providers. */
+  public List<ResourceProvider> getClasspathResourceProviders() {
+    return classpathResourceProviders;
   }
 
-  private List<InternalResource> filter(
-      List<InternalResource> resources, Resource.Kind kind) {
-    List<InternalResource> out = new ArrayList<>(resources.size());
-    for (InternalResource resource : resources) {
-      if (kind == resource.getKind()) {
+  /** Get library resource providers. */
+  public List<ResourceProvider> getLibraryResourceProviders() {
+    return libraryResourceProviders;
+  }
+
+  private List<Resource> filter(List<Resource> resources, Resource.Kind kind) {
+    List<Resource> out = new ArrayList<>(resources.size());
+    for (Resource resource : resources) {
+      if (kind == resource.kind) {
         out.add(resource);
       }
     }
@@ -273,7 +285,7 @@ public class AndroidApp {
       Path directory, OutputMode outputMode, boolean overwrite) throws IOException {
     CopyOption[] options = copyOptions(overwrite);
     try (Closer closer = Closer.create()) {
-      List<InternalResource> dexProgramSources = getDexProgramResources();
+      List<Resource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
         Path fileName = directory.resolve(outputMode.getFileName(dexProgramSources.get(i), i));
         Files.copy(dexProgramSources.get(i).getStream(closer), fileName, options);
@@ -286,7 +298,7 @@ public class AndroidApp {
   public List<byte[]> writeToMemory() throws IOException {
     List<byte[]> dex = new ArrayList<>();
     try (Closer closer = Closer.create()) {
-      List<InternalResource> dexProgramSources = getDexProgramResources();
+      List<Resource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteStreams.copy(dexProgramSources.get(i).getStream(closer), out);
@@ -312,7 +324,7 @@ public class AndroidApp {
     OpenOption[] options = openOptions(overwrite);
     try (Closer closer = Closer.create()) {
       try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(archive, options))) {
-        List<InternalResource> dexProgramSources = getDexProgramResources();
+        List<Resource> dexProgramSources = getDexProgramResources();
         for (int i = 0; i < dexProgramSources.size(); i++) {
           ZipEntry zipEntry = new ZipEntry(outputMode.getFileName(dexProgramSources.get(i), i));
           byte[] bytes = ByteStreams.toByteArray(dexProgramSources.get(i).getStream(closer));
@@ -368,13 +380,15 @@ public class AndroidApp {
    */
   public static class Builder {
 
-    private final List<InternalResource> dexSources = new ArrayList<>();
-    private final List<InternalResource> classSources = new ArrayList<>();
-    private final List<ResourceProvider> resourceProviders = new ArrayList<>();
-    private InternalResource proguardMap;
-    private InternalResource proguardSeeds;
-    private InternalResource packageDistribution;
-    private InternalResource mainDexList;
+    private final List<Resource> programResources = new ArrayList<>();
+    private final List<Resource> classpathResources = new ArrayList<>();
+    private final List<Resource> libraryResources = new ArrayList<>();
+    private final List<ResourceProvider> classpathResourceProviders = new ArrayList<>();
+    private final List<ResourceProvider> libraryResourceProviders = new ArrayList<>();
+    private Resource proguardMap;
+    private Resource proguardSeeds;
+    private Resource packageDistribution;
+    private Resource mainDexList;
 
     // See AndroidApp::builder().
     private Builder() {
@@ -382,9 +396,11 @@ public class AndroidApp {
 
     // See AndroidApp::builder(AndroidApp).
     private Builder(AndroidApp app) {
-      dexSources.addAll(app.dexSources);
-      classSources.addAll(app.classSources);
-      resourceProviders.addAll(app.resourceProviders);
+      programResources.addAll(app.programResources);
+      classpathResources.addAll(app.classpathResources);
+      libraryResources.addAll(app.libraryResources);
+      classpathResourceProviders.addAll(app.classpathResourceProviders);
+      libraryResourceProviders.addAll(app.libraryResourceProviders);
       proguardMap = app.proguardMap;
       proguardSeeds = app.proguardSeeds;
       packageDistribution = app.packageDistribution;
@@ -405,7 +421,7 @@ public class AndroidApp {
     public Builder addProgramDirectory(Path directory) throws IOException {
       File[] resources = directory.toFile().listFiles(file -> isDexFile(file.toPath()));
       for (File source : resources) {
-        addFile(source.toPath(), Resource.Kind.PROGRAM);
+        addFile(source.toPath(), ClassKind.PROGRAM);
       }
       File mapFile = new File(directory.toFile(), DEFAULT_PROGUARD_MAP_FILE);
       if (mapFile.exists()) {
@@ -426,7 +442,7 @@ public class AndroidApp {
      */
     public Builder addProgramFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
-        addFile(file, Resource.Kind.PROGRAM);
+        addFile(file, ClassKind.PROGRAM);
       }
       return this;
     }
@@ -443,7 +459,7 @@ public class AndroidApp {
      */
     public Builder addClasspathFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
-        addFile(file, Resource.Kind.CLASSPATH);
+        addFile(file, ClassKind.CLASSPATH);
       }
       return this;
     }
@@ -452,7 +468,7 @@ public class AndroidApp {
      * Add classpath resource provider.
      */
     public Builder addClasspathResourceProvider(ResourceProvider provider) {
-      resourceProviders.add(provider);
+      classpathResourceProviders.add(provider);
       return this;
     }
 
@@ -468,7 +484,7 @@ public class AndroidApp {
      */
     public Builder addLibraryFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
-        addFile(file, Resource.Kind.LIBRARY);
+        addFile(file, ClassKind.LIBRARY);
       }
       return this;
     }
@@ -477,7 +493,7 @@ public class AndroidApp {
      * Add library resource provider.
      */
     public Builder addLibraryResourceProvider(ResourceProvider provider) {
-      resourceProviders.add(provider);
+      libraryResourceProviders.add(provider);
       return this;
     }
 
@@ -485,7 +501,8 @@ public class AndroidApp {
      * Add dex program-data with class descriptor.
      */
     public Builder addDexProgramData(byte[] data, Set<String> classDescriptors) {
-      dexSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, data, classDescriptors));
+      resources(ClassKind.PROGRAM).add(
+          Resource.fromBytes(Resource.Kind.DEX, data, classDescriptors));
       return this;
     }
 
@@ -501,7 +518,7 @@ public class AndroidApp {
      */
     public Builder addDexProgramData(Collection<byte[]> data) {
       for (byte[] datum : data) {
-        dexSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, datum));
+        resources(ClassKind.PROGRAM).add(Resource.fromBytes(Resource.Kind.DEX, datum));
       }
       return this;
     }
@@ -518,7 +535,7 @@ public class AndroidApp {
      */
     public Builder addClassProgramData(Collection<byte[]> data) {
       for (byte[] datum : data) {
-        classSources.add(InternalResource.fromBytes(Resource.Kind.PROGRAM, datum));
+        resources(ClassKind.PROGRAM).add(Resource.fromBytes(Resource.Kind.CLASSFILE, datum));
       }
       return this;
     }
@@ -527,7 +544,7 @@ public class AndroidApp {
      * Set proguard-map file.
      */
     public Builder setProguardMapFile(Path file) {
-      proguardMap = file == null ? null : InternalResource.fromFile(null, file);
+      proguardMap = file == null ? null : Resource.fromFile(null, file);
       return this;
     }
 
@@ -542,7 +559,7 @@ public class AndroidApp {
      * Set proguard-map data.
      */
     public Builder setProguardMapData(byte[] content) {
-      proguardMap = content == null ? null : InternalResource.fromBytes(null, content);
+      proguardMap = content == null ? null : Resource.fromBytes(null, content);
       return this;
     }
 
@@ -550,7 +567,7 @@ public class AndroidApp {
      * Set proguard-seeds data.
      */
     public Builder setProguardSeedsData(byte[] content) {
-      proguardSeeds = content == null ? null : InternalResource.fromBytes(null, content);
+      proguardSeeds = content == null ? null : Resource.fromBytes(null, content);
       return this;
     }
 
@@ -558,7 +575,7 @@ public class AndroidApp {
      * Set the package-distribution file.
      */
     public Builder setPackageDistributionFile(Path file) {
-      packageDistribution = file == null ? null : InternalResource.fromFile(null, file);
+      packageDistribution = file == null ? null : Resource.fromFile(null, file);
       return this;
     }
 
@@ -566,7 +583,7 @@ public class AndroidApp {
      * Set the main-dex list file.
      */
     public Builder setMainDexListFile(Path file) {
-      mainDexList = file == null ? null : InternalResource.fromFile(null, file);
+      mainDexList = file == null ? null : Resource.fromFile(null, file);
       return this;
     }
 
@@ -575,31 +592,45 @@ public class AndroidApp {
      */
     public AndroidApp build() {
       return new AndroidApp(
-          ImmutableList.copyOf(dexSources),
-          ImmutableList.copyOf(classSources),
-          ImmutableList.copyOf(resourceProviders),
+          ImmutableList.copyOf(programResources),
+          ImmutableList.copyOf(classpathResources),
+          ImmutableList.copyOf(libraryResources),
+          ImmutableList.copyOf(classpathResourceProviders),
+          ImmutableList.copyOf(libraryResourceProviders),
           proguardMap,
           proguardSeeds,
           packageDistribution,
           mainDexList);
     }
 
-    private void addFile(Path file, Resource.Kind kind) throws IOException {
+    private List<Resource> resources(ClassKind classKind) {
+      switch (classKind) {
+        case PROGRAM:
+          return programResources;
+        case CLASSPATH:
+          return classpathResources;
+        case LIBRARY:
+          return libraryResources;
+      }
+      throw new Unreachable();
+    }
+
+    private void addFile(Path file, ClassKind classKind) throws IOException {
       if (!Files.exists(file)) {
         throw new FileNotFoundException("Non-existent input file: " + file);
       }
       if (isDexFile(file)) {
-        dexSources.add(InternalResource.fromFile(kind, file));
+        resources(classKind).add(Resource.fromFile(Resource.Kind.DEX, file));
       } else if (isClassFile(file)) {
-        classSources.add(InternalResource.fromFile(kind, file));
+        resources(classKind).add(Resource.fromFile(Resource.Kind.CLASSFILE, file));
       } else if (isArchive(file)) {
-        addArchive(file, kind);
+        addArchive(file, classKind);
       } else {
         throw new CompilationError("Unsupported source file type for file: " + file);
       }
     }
 
-    private void addArchive(Path archive, Resource.Kind kind) throws IOException {
+    private void addArchive(Path archive, ClassKind classKind) throws IOException {
       assert isArchive(archive);
       boolean containsDexData = false;
       boolean containsClassData = false;
@@ -609,12 +640,13 @@ public class AndroidApp {
           Path name = Paths.get(entry.getName());
           if (isDexFile(name)) {
             containsDexData = true;
-            dexSources.add(InternalResource.fromBytes(kind, ByteStreams.toByteArray(stream)));
+            resources(classKind).add(Resource.fromBytes(
+                Resource.Kind.DEX, ByteStreams.toByteArray(stream)));
           } else if (isClassFile(name)) {
             containsClassData = true;
             String descriptor = PreloadedResourceProvider.guessTypeDescriptor(name);
-            classSources.add(InternalResource.fromBytes(
-                kind, ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
+            resources(classKind).add(Resource.fromBytes(Resource.Kind.CLASSFILE,
+                ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
           }
         }
       } catch (ZipException e) {
