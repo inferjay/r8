@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.shaking;
 
+import static com.android.tools.r8.utils.AndroidApp.DEFAULT_PROGUARD_MAP_FILE;
+
 import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
@@ -770,13 +772,13 @@ public class TreeShakingTest {
     if (dexComparator != null) {
       DexInspector ref = new DexInspector(Paths.get(originalDex));
       DexInspector inspector = new DexInspector(generated,
-          minify ? temp.getRoot().toPath().resolve("proguard.map").toString() : null);
+          minify ? temp.getRoot().toPath().resolve(DEFAULT_PROGUARD_MAP_FILE).toString() : null);
       dexComparator.accept(ref, inspector);
     }
 
     if (inspection != null) {
       DexInspector inspector = new DexInspector(generated,
-          minify ? temp.getRoot().toPath().resolve("proguard.map").toString() : null);
+          minify ? temp.getRoot().toPath().resolve(DEFAULT_PROGUARD_MAP_FILE).toString() : null);
       inspection.accept(inspector);
     }
   }
