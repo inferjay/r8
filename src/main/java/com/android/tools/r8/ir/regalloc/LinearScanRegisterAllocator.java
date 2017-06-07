@@ -870,7 +870,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     assert leftReg != NO_REGISTER && rightReg != NO_REGISTER;
     // The dalvik bug is actually only for overlap with the second operand, For now we
     // make sure that there is no overlap with either operand.
-    if ((leftReg + 1) == register|| (rightReg + 1) == register) {
+    if ((leftReg + 1) == register || (rightReg + 1) == register) {
       return true;
     }
     return false;
@@ -977,14 +977,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
 
     // Get the register (pair) that is free the longest. That is the register with the largest
     // free position.
-    int candidate = getLargestCandidate(registerConstraint, freePositions, needsRegisterPair);
-    if (needsOverlappingLongRegisterWorkaround(unhandledInterval)) {
-      while (hasOverlappingLongRegisters(unhandledInterval, candidate)) {
-        // Make the overlapping register unavailable for allocation and try again.
-        freePositions.set(candidate, 0);
-        candidate = getLargestCandidate(registerConstraint, freePositions, needsRegisterPair);
-      }
-    }
+    int candidate = getLargestValidCandidate(
+        unhandledInterval, registerConstraint, needsRegisterPair, freePositions);
     int largestFreePosition = freePositions.get(candidate);
     if (needsRegisterPair) {
       largestFreePosition = Math.min(largestFreePosition, freePositions.get(candidate + 1));
@@ -1162,6 +1156,19 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     return candidate;
   }
 
+  private int getLargestValidCandidate(LiveIntervals unhandledInterval, int registerConstraint,
+      boolean needsRegisterPair, RegisterPositions freePositions) {
+    int candidate = getLargestCandidate(registerConstraint, freePositions, needsRegisterPair);
+    if (needsOverlappingLongRegisterWorkaround(unhandledInterval)) {
+      while (hasOverlappingLongRegisters(unhandledInterval, candidate)) {
+        // Make the overlapping register unavailable for allocation and try again.
+        freePositions.set(candidate, 0);
+        candidate = getLargestCandidate(registerConstraint, freePositions, needsRegisterPair);
+      }
+    }
+    return candidate;
+  }
+
   private void allocateBlockedRegister(LiveIntervals unhandledInterval) {
     int registerConstraint = unhandledInterval.getRegisterLimit();
     if (registerConstraint < Constants.U16BIT_MAX) {
@@ -1225,9 +1232,9 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         inactive, unhandledInterval, registerConstraint, usePositions, blockedPositions);
 
     // Get the register (pair) that has the highest use position.
-    assert unhandledInterval.requiredRegisters() <= 2;
     boolean needsRegisterPair = unhandledInterval.requiredRegisters() == 2;
-    int candidate = getLargestCandidate(registerConstraint, usePositions, needsRegisterPair);
+    int candidate = getLargestValidCandidate(
+        unhandledInterval, registerConstraint, needsRegisterPair, usePositions);
     int largestUsePosition = usePositions.get(candidate);
     int blockedPosition = blockedPositions.get(candidate);
     if (needsRegisterPair) {

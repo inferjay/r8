@@ -151,6 +151,7 @@ def x20Dependencies = [
         "gmscore/v8.tar.gz",
         "gmscore/gmscore_v9.tar.gz",
         "gmscore/gmscore_v10.tar.gz",
+        "photos/2017-06-06.tar.gz",
         "youtube/youtube.android_11.47.tar.gz",
         "youtube/youtube.android_12.10.tar.gz",
         "youtube/youtube.android_12.17.tar.gz",
