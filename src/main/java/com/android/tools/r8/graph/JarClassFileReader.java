@@ -70,11 +70,11 @@ public class JarClassFileReader {
   }
 
   private static AnnotationVisitor createAnnotationVisitor(String desc, boolean visible,
-      AnnotationVisitor annotationVisitor, List<DexAnnotation> annotations,
+      List<DexAnnotation> annotations,
       JarApplicationReader application) {
     assert annotations != null;
     int visiblity = visible ? DexAnnotation.VISIBILITY_RUNTIME : DexAnnotation.VISIBILITY_BUILD;
-    return new CreateAnnotationVisitor(annotationVisitor, application, (names, values) ->
+    return new CreateAnnotationVisitor(application, (names, values) ->
         annotations.add(new DexAnnotation(visiblity,
             createEncodedAnnotation(desc, names, values, application))));
   }
@@ -210,7 +210,7 @@ public class JarClassFileReader {
 
     @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-      return createAnnotationVisitor(desc, visible, null, getAnnotations(), application);
+      return createAnnotationVisitor(desc, visible, getAnnotations(), application);
     }
 
     @Override
@@ -314,7 +314,7 @@ public class JarClassFileReader {
 
     @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-      return createAnnotationVisitor(desc, visible, null, getAnnotations(), parent.application);
+      return createAnnotationVisitor(desc, visible, getAnnotations(), parent.application);
     }
 
     @Override
@@ -424,15 +424,12 @@ public class JarClassFileReader {
 
     @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-      return createAnnotationVisitor(desc, visible,
-          mv == null ? null : mv.visitAnnotation(desc, visible),
-          getAnnotations(), parent.application);
+      return createAnnotationVisitor(desc, visible, getAnnotations(), parent.application);
     }
 
     @Override
     public AnnotationVisitor visitAnnotationDefault() {
-      return new CreateAnnotationVisitor(mv == null ? null : mv.visitAnnotationDefault(),
-          parent.application, (names, elements) -> {
+      return new CreateAnnotationVisitor(parent.application, (names, elements) -> {
         assert elements.size() == 1;
         defaultAnnotation = elements.get(0);
       });
@@ -455,8 +452,12 @@ public class JarClassFileReader {
       // never see this non-existing annotation descriptor. ASM uses the same check to make
       // sure to undo their workaround for the javac bug in their MethodWriter.
       if (desc.equals("Ljava/lang/Synthetic;")) {
-        assert parameterAnnotations == null;
-        fakeParameterAnnotations++;
+        // We can iterate through all the parameters twice. Once for visible and once for
+        // invisible parameter annotations. We only record the number of fake parameter
+        // annotations once.
+        if (parameterAnnotations == null) {
+          fakeParameterAnnotations++;
+        }
         return null;
       }
       if (parameterAnnotations == null) {
@@ -466,8 +467,8 @@ public class JarClassFileReader {
           parameterAnnotations.add(new ArrayList<>());
         }
       }
+      assert mv == null;
       return createAnnotationVisitor(desc, visible,
-          mv == null ? null : mv.visitParameterAnnotation(parameter, desc, visible),
           parameterAnnotations.get(parameter - fakeParameterAnnotations), parent.application);
     }
 
@@ -584,10 +585,9 @@ public class JarClassFileReader {
     private List<DexString> names = null;
     private final List<DexValue> values = new ArrayList<>();
 
-    public CreateAnnotationVisitor(AnnotationVisitor annotationVisitor,
-        JarApplicationReader application,
-        BiConsumer<List<DexString>, List<DexValue>> onVisitEnd) {
-      super(ASM5, annotationVisitor);
+    public CreateAnnotationVisitor(
+        JarApplicationReader application, BiConsumer<List<DexString>, List<DexValue>> onVisitEnd) {
+      super(ASM5);
       this.application = application;
       this.onVisitEnd = onVisitEnd;
     }
@@ -605,14 +605,14 @@ public class JarClassFileReader {
 
     @Override
     public AnnotationVisitor visitAnnotation(String name, String desc) {
-      return new CreateAnnotationVisitor(av, application, (names, values) ->
+      return new CreateAnnotationVisitor(application, (names, values) ->
           addElement(name, new DexValueAnnotation(
               createEncodedAnnotation(desc, names, values, application))));
     }
 
     @Override
     public AnnotationVisitor visitArray(String name) {
-      return new CreateAnnotationVisitor(av, application, (names, values) -> {
+      return new CreateAnnotationVisitor(application, (names, values) -> {
         assert names == null;
         addElement(name, new DexValueArray(values.toArray(new DexValue[values.size()])));
       });
