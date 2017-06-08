@@ -11,7 +11,6 @@ import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexClassPromise;
 import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -388,6 +387,10 @@ final class LambdaClass {
     DexClass definitionFor(DexType type) {
       return rewriter.converter.appInfo.app.definitionFor(type);
     }
+
+    DexProgramClass programDefinitionFor(DexType type) {
+      return rewriter.converter.appInfo.app.programDefinitionFor(type);
+    }
   }
 
   // Used for targeting methods referenced directly without creating accessors.
@@ -415,9 +418,7 @@ final class LambdaClass {
       // We already found the static method to be called, just relax its accessibility.
       assert descriptor.getAccessibility() != null;
       descriptor.getAccessibility().unsetPrivate();
-      DexClassPromise promise = definitionFor(descriptor.implHandle.asMethod().holder);
-      assert promise != null;
-      DexClass implMethodHolder = promise.get();
+      DexClass implMethodHolder = definitionFor(descriptor.implHandle.asMethod().holder);
       if (implMethodHolder.isInterface()) {
         descriptor.getAccessibility().setPublic();
       }
@@ -438,9 +439,7 @@ final class LambdaClass {
       // For all instantiation points for which compiler creates lambda$
       // methods, it creates these methods in the same class/interface.
       DexMethod implMethod = descriptor.implHandle.asMethod();
-      DexClassPromise promise = definitionFor(implMethod.holder);
-      assert promise != null;
-      DexClass implMethodHolder = promise.get();
+      DexClass implMethodHolder = definitionFor(implMethod.holder);
 
       DexEncodedMethod[] directMethods = implMethodHolder.directMethods;
       for (int i = 0; i < directMethods.length; i++) {
@@ -481,9 +480,8 @@ final class LambdaClass {
     @Override
     boolean ensureAccessibility() {
       // Create a static accessor with proper accessibility.
-      DexClassPromise promise = definitionFor(callTarget.holder);
-      assert promise != null && promise.isProgramClass();
-      DexClass accessorClass = promise.get();
+      DexProgramClass accessorClass = programDefinitionFor(callTarget.holder);
+      assert accessorClass != null;
 
       DexAccessFlags accessorFlags = new DexAccessFlags(
           Constants.ACC_SYNTHETIC | Constants.ACC_STATIC |

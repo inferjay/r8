@@ -226,7 +226,7 @@ public final class InterfaceMethodRewriter {
     InterfaceProcessor processor = new InterfaceProcessor(this);
     for (DexProgramClass clazz : builder.getProgramClasses()) {
       if (shouldProcess(clazz, flavour, true)) {
-        processor.process(clazz.get().asProgramClass());
+        processor.process(clazz.asProgramClass());
       }
     }
     return processor.companionClasses;
@@ -236,7 +236,7 @@ public final class InterfaceMethodRewriter {
     ClassProcessor processor = new ClassProcessor(this);
     for (DexProgramClass clazz : builder.getProgramClasses()) {
       if (shouldProcess(clazz, flavour, false)) {
-        processor.process(clazz.get());
+        processor.process(clazz);
       }
     }
     return processor.getForwardMethods();

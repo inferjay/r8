@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class D8RegularLazyRunExamplesAndroidOTest
+public class D8NonLazyRunExamplesAndroidOTest
     extends D8IncrementalRunExamplesAndroidOTest {
   class D8LazyTestRunner extends D8IncrementalTestRunner {
 

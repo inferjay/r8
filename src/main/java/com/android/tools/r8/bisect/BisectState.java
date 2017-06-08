@@ -8,7 +8,7 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexApplication.Builder;
-import com.android.tools.r8.graph.DexClassPromise;
+import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexLibraryClass;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexType;
@@ -261,7 +261,7 @@ public class BisectState {
     System.out.println("Next bisection range: " + nextRange);
     int goodClasses = 0;
     int badClasses = 0;
-    Map<DexType, DexClassPromise> classes = new HashMap<>();
+    Map<DexType, DexClass> classes = new HashMap<>();
     for (DexLibraryClass clazz : badApp.libraryClasses()) {
       classes.put(clazz.type, clazz);
     }

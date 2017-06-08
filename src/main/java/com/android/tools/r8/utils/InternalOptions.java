@@ -35,9 +35,6 @@ public class InternalOptions {
   public boolean skipDebugLineNumberOpt = false;
   public boolean skipClassMerging = true;
 
-  public boolean lazyClasspathLoading = false;
-  public boolean lazyLibraryLoading = false;
-
   // Number of threads to use while processing the dex files.
   public int numberOfThreads = NOT_SPECIFIED;
   // Print smali disassembly.

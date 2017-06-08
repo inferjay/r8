@@ -287,7 +287,7 @@ public class MainDexListTests {
         method.setCode(ir, allocator, factory);
         virtualMethods[i] = method;
       }
-      builder.addClassPromise(
+      builder.addClass(
           new DexProgramClass(
               type,
               null,

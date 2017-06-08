@@ -84,22 +84,17 @@ public class AppInfoWithSubtyping extends AppInfo {
     }
   }
 
-  private void populateSubtypeMap(
-      Map<DexType, DexClassPromise> classes, DexItemFactory dexItemFactory) {
+  private void populateSubtypeMap(Map<DexType, DexClass> classes, DexItemFactory dexItemFactory) {
     dexItemFactory.clearSubtypeInformation();
     dexItemFactory.objectType.tagAsSubtypeRoot();
     Hashtable<DexType, Set<DexType>> map = new Hashtable<>();
-    Function<DexType, DexClass> typeToClass = type -> {
-      DexClassPromise promise = classes.get(type);
-      return promise == null ? null : promise.get();
-    };
-    for (Map.Entry<DexType, DexClassPromise> entry : classes.entrySet()) {
-      populateAllSuperTypes(map, entry.getKey(), entry.getValue().get(), typeToClass);
+    for (Map.Entry<DexType, DexClass> entry : classes.entrySet()) {
+      populateAllSuperTypes(map, entry.getKey(), entry.getValue(), classes::get);
     }
     for (Map.Entry<DexType, Set<DexType>> entry : map.entrySet()) {
       subtypeMap.put(entry.getKey(), ImmutableSet.copyOf(entry.getValue()));
     }
-    assert DexType.validateLevelsAreCorrect(typeToClass, dexItemFactory);
+    assert DexType.validateLevelsAreCorrect(classes::get, dexItemFactory);
   }
 
   // For mapping invoke virtual instruction to target methods.

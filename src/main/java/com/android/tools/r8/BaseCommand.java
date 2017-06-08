@@ -5,13 +5,12 @@ package com.android.tools.r8;
 
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.List;
 
 abstract class BaseCommand {
 
@@ -147,7 +146,7 @@ abstract class BaseCommand {
     }
 
     /** Add library file resources. */
-    public B addLibraryFiles(List<Path> files) throws IOException {
+    public B addLibraryFiles(Collection<Path> files) throws IOException {
       app.addLibraryFiles(files);
       return self();
     }

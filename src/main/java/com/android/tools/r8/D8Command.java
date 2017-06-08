@@ -3,15 +3,20 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
+import static com.android.tools.r8.utils.FileUtils.isArchive;
+
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.android.tools.r8.utils.OutputMode;
+import com.android.tools.r8.utils.PreloadedResourceProvider;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * Immutable command structure for an invocation of the {@code D8} compiler.
@@ -37,6 +42,40 @@ public class D8Command extends BaseCommand {
 
     private Builder(AndroidApp app) {
       super(app, CompilationMode.DEBUG);
+    }
+
+    /** Add classpath file resources. */
+    public Builder addClasspathFiles(Path... files) throws IOException {
+      return addClasspathFiles(Arrays.asList(files));
+    }
+
+    /** Add classpath file resources. */
+    public Builder addClasspathFiles(Collection<Path> files) throws IOException {
+      for (Path file : files) {
+        if (isArchive(file)) {
+          addClasspathResourceProvider(PreloadedResourceProvider.fromArchive(file));
+        } else {
+          super.addClasspathFiles(file);
+        }
+      }
+      return this;
+    }
+
+    /** Add library file resources. */
+    public Builder addLibraryFiles(Path... files) throws IOException {
+      return addLibraryFiles(Arrays.asList(files));
+    }
+
+    /** Add library file resources. */
+    public Builder addLibraryFiles(Collection<Path> files) throws IOException {
+      for (Path file : files) {
+        if (isArchive(file)) {
+          addLibraryResourceProvider(PreloadedResourceProvider.fromArchive(file));
+        } else {
+          super.addLibraryFiles(file);
+        }
+      }
+      return this;
     }
 
     public Builder addClasspathResourceProvider(ResourceProvider provider) {
@@ -171,8 +210,6 @@ public class D8Command extends BaseCommand {
     internal.removeSwitchMaps = false;
     assert internal.outline.enabled;
     internal.outline.enabled = false;
-    internal.lazyClasspathLoading = true;
-    internal.lazyLibraryLoading = true;
     internal.outputMode = getOutputMode();
     return internal;
   }
