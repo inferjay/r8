@@ -64,12 +64,6 @@ public class IncludeDescriptorClassesTest extends TestBase {
     return result;
   }
 
-  private String keepMain(Class clazz) {
-    return "-keep public class " + clazz.getCanonicalName() + " {\n"
-        + "  public static void main(java.lang.String[]);\n"
-        + "}";
-  }
-
   private class Result {
     final DexInspector inspector;
     final Set<String> classesAfterProguard;
@@ -135,7 +129,7 @@ public class IncludeDescriptorClassesTest extends TestBase {
       allClasses.add(mainClass);
 
       Path proguardConfig = writeTextToTempFile(
-          keepMain(mainClass),
+          keepMainProguardConfiguration(mainClass),
           "-keepclasseswithmembers class * {   ",
           "  <fields>;                         ",
           "  native <methods>;                 ",
@@ -158,7 +152,7 @@ public class IncludeDescriptorClassesTest extends TestBase {
   public void testKeepClassesWithMembers() throws Exception {
     for (Class mainClass : mainClasses) {
       Path proguardConfig = writeTextToTempFile(
-          keepMain(mainClass),
+          keepMainProguardConfiguration(mainClass),
           "-keepclasseswithmembers,includedescriptorclasses class * {  ",
           "  <fields>;                                                 ",
           "  native <methods>;                                         ",
@@ -181,7 +175,7 @@ public class IncludeDescriptorClassesTest extends TestBase {
   public void testKeepClassMembers() throws Exception {
     for (Class mainClass : mainClasses) {
       Path proguardConfig = writeTextToTempFile(
-          keepMain(mainClass),
+          keepMainProguardConfiguration(mainClass),
           "-keepclassmembers,includedescriptorclasses class * {  ",
           "  <fields>;                                           ",
           "  native <methods>;                                   ",
@@ -204,7 +198,7 @@ public class IncludeDescriptorClassesTest extends TestBase {
     public void testKeepClassMemberNames() throws Exception {
       for (Class mainClass : mainClasses) {
         Path proguardConfig = writeTextToTempFile(
-            keepMain(mainClass),
+            keepMainProguardConfiguration(mainClass),
             // same as -keepclassmembers,allowshrinking,includedescriptorclasses
             "-keepclassmembernames,includedescriptorclasses class * {  ",
             "  <fields>;                                               ",

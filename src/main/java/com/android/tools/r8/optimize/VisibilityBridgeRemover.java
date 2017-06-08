@@ -35,7 +35,7 @@ public class VisibilityBridgeRemover {
         DexMethod target = targetExtractor.getTarget();
         InvokeKind kind = targetExtractor.getKind();
         if (target != null &&
-            target.proto.parameters.values.length == method.method.proto.parameters.values.length) {
+            target.proto == method.method.proto) {
           assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
           if (kind == InvokeKind.SUPER) {
             // This is a visibility forward, so check for the direct target.
