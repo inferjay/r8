@@ -5,13 +5,22 @@ package com.android.tools.r8;
 
 /**
  * Represents a provider for application resources. All resources returned
- * via this provider should be class file resources and will be loaded on-demand
- * or not loaded at all.
+ * via this provider should be class file resources, other resource kinds
+ * are not yet supported.
  *
- * NOTE: currently only resources representing Java class files can be loaded
- * with lazy resource providers.
+ * Note that the classes will only be created for resources provided by
+ * resource providers on-demand when they are needed by the tool. If
+ * never needed, the resource will never be loaded.
  */
 public interface ResourceProvider {
-  /** Get the class resource associated with the descriptor, or null. */
+  // TODO: Consider adding support for DEX resources.
+
+  /**
+   * Get the class resource associated with the descriptor, or null if
+   * this provider does not have one.
+   *
+   * Method may be called several times for the same resource, and should
+   * support concurrent calls from different threads.
+   */
   Resource getResource(String descriptor);
 }

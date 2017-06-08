@@ -3,41 +3,41 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.utils;
 
+import static com.android.tools.r8.utils.FileUtils.DEFAULT_DEX_FILENAME;
+
 import com.android.tools.r8.Resource;
 import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
-import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexClassPromise;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.JarApplicationReader;
-import com.android.tools.r8.graph.LazyClassFileLoader;
+import com.android.tools.r8.graph.JarClassFileReader;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closer;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Represents a collection of classes loaded lazily from a set of lazy resource
- * providers. The collection is autonomous, it lazily collects promises but
+ * providers. The collection is autonomous, it lazily collects classes but
  * does not choose the classes in cases of conflicts, delaying it until
  * the class is asked for.
  *
  * NOTE: only java class resources are allowed to be lazy loaded.
  */
 public final class LazyClassCollection {
-  // Stores promises for types which have ever been asked for before. Special value
-  // EmptyPromise.INSTANCE indicates there were no resources for this type in any of
-  // the resource providers.
-  //
-  // Promises are potentially coming from different providers and chained, but in majority
-  // of the cases there will only be one promise per type. We store promises for all
-  // the resource providers and resolve the classes at the time it is queried.
+  // For each type which has ever been queried stores one or several classes loaded
+  // from resources provided by different resource providers. In majority of the
+  // cases there will only be one class per type. We store classes for all the
+  // resource providers and resolve the classes at the time it is queried.
   //
   // Must be synchronized on `classes`.
-  private final Map<DexType, DexClassPromise> classes = new IdentityHashMap<>();
+  private final Map<DexType, DexClass[]> classes = new IdentityHashMap<>();
 
   // Available lazy resource providers.
   private final List<ResourceProvider> classpathProviders;
@@ -59,150 +59,112 @@ public final class LazyClassCollection {
 
   /**
    * Returns a definition for a class or `null` if there is no such class.
-   * Parameter `dominator` represents the class promise that is considered
+   * Parameter `dominator` represents a class that is considered
    * to be already loaded, it may be null but if specified it may affect
    * the conflict resolution. For example non-lazy loaded classpath class
    * provided as `dominator` will conflict with lazy-loaded classpath classes.
    */
-  public DexClassPromise get(DexType type, DexClassPromise dominator) {
-    DexClassPromise promise;
-
-    // Check if the promise already exists.
+  public DexClass get(DexType type, DexClass dominator) {
+    DexClass[] candidates;
     synchronized (classes) {
-      promise = classes.get(type);
+      candidates = classes.get(type);
     }
 
-    if (promise == null) {
-      // Building a promise may be time consuming, we do it outside
-      // the lock so others don't have to wait.
-      promise = buildPromiseChain(type);
+    if (candidates == null) {
+      String descriptor = type.descriptor.toString();
 
+      // Loading resources and constructing classes may be time consuming, we do it
+      // outside the global lock so others don't have to wait.
+      List<Resource> classpathResources = collectResources(classpathProviders, descriptor);
+      List<Resource> libraryResources = collectResources(libraryProviders, descriptor);
+
+      candidates = new DexClass[classpathResources.size() + libraryResources.size()];
+
+      // Check if someone else has already added the array for this type.
       synchronized (classes) {
-        DexClassPromise existing = classes.get(type);
+        DexClass[] existing = classes.get(type);
         if (existing != null) {
-          promise = existing;
+          assert candidates.length == existing.length;
+          candidates = existing;
         } else {
-          classes.put(type, promise);
+          classes.put(type, candidates);
         }
       }
 
-      assert promise != EmptyPromise.INSTANCE;
+      if (candidates.length > 0) {
+        // Load classes in synchronized content unique for the type.
+        synchronized (candidates) {
+          // Either all or none of the array classes will be loaded, so we use this
+          // as a criteria for checking if we need to load classes.
+          if (candidates[0] == null) {
+            new ClassLoader(type, candidates, reader, classpathResources, libraryResources).load();
+          }
+        }
+      }
     }
 
-    return promise == EmptyPromise.INSTANCE ? dominator : chooseClass(dominator, promise);
+    // Choose class in case there are conflicts.
+    DexClass candidate = dominator;
+    for (DexClass clazz : candidates) {
+      candidate = (candidate == null) ? clazz
+          : DexApplication.chooseClass(candidate, clazz, /* skipLibDups: */ true);
+    }
+    return candidate;
   }
 
-  // Build chain of lazy promises or `null` if none of the providers
-  // provided resource for this type.
-  private DexClassPromise buildPromiseChain(DexType type) {
-    String descriptor = type.descriptor.toString();
-    DexClassPromise promise = buildPromiseChain(
-        type, descriptor, null, classpathProviders, ClassKind.CLASSPATH);
-    promise = buildPromiseChain(
-        type, descriptor, promise, libraryProviders, ClassKind.LIBRARY);
-    return promise == null ? EmptyPromise.INSTANCE : promise;
-  }
-
-  private DexClassPromise buildPromiseChain(DexType type, String descriptor,
-      DexClassPromise promise, List<ResourceProvider> providers, ClassKind classKind) {
+  private List<Resource> collectResources(List<ResourceProvider> providers, String descriptor) {
+    List<Resource> resources = new ArrayList<>();
     for (ResourceProvider provider : providers) {
       Resource resource = provider.getResource(descriptor);
-      if (resource == null) {
-        continue;
+      if (resource != null) {
+        resources.add(resource);
       }
+    }
+    return resources;
+  }
 
-      if (resource.kind != Resource.Kind.CLASSFILE) {
-        throw new CompilationError("Resource returned by resource provider for type " +
-            type.toSourceString() + " must be a class file resource.");
+  private static final class ClassLoader {
+    int index = 0;
+    final DexType type;
+    final DexClass[] classes;
+    final JarApplicationReader reader;
+    final List<Resource> classpathResources;
+    final List<Resource> libraryResources;
+
+    ClassLoader(DexType type, DexClass[] classes, JarApplicationReader reader,
+        List<Resource> classpathResources, List<Resource> libraryResources) {
+      this.type = type;
+      this.classes = classes;
+      this.reader = reader;
+      this.classpathResources = classpathResources;
+      this.libraryResources = libraryResources;
+    }
+
+    void addClass(DexClass clazz) {
+      assert index < classes.length;
+      assert clazz != null;
+      if (clazz.type != type) {
+        throw new CompilationError("Class content provided for type descriptor "
+            + type.toSourceString() + " actually defines class " + clazz.type
+            .toSourceString());
       }
-
-      LazyClassFileLoader loader = new LazyClassFileLoader(type, resource, classKind, reader);
-      promise = (promise == null) ? loader : new DexClassPromiseChain(loader, promise);
-    }
-    return promise;
-  }
-
-  // Chooses the proper promise. Recursion is not expected to be deep.
-  private DexClassPromise chooseClass(DexClassPromise dominator, DexClassPromise candidate) {
-    DexClassPromise best = (dominator == null) ? candidate
-        : DexApplication.chooseClass(dominator, candidate, /* skipLibDups: */ true);
-    return (candidate instanceof DexClassPromiseChain)
-        ? chooseClass(best, ((DexClassPromiseChain) candidate).next) : best;
-  }
-
-  private static final class EmptyPromise implements DexClassPromise {
-    static final EmptyPromise INSTANCE = new EmptyPromise();
-
-    @Override
-    public DexType getType() {
-      throw new Unreachable();
+      classes[index++] = clazz;
     }
 
-    @Override
-    public Resource.Kind getOrigin() {
-      throw new Unreachable();
-    }
-
-    @Override
-    public boolean isProgramClass() {
-      throw new Unreachable();
-    }
-
-    @Override
-    public boolean isClasspathClass() {
-      throw new Unreachable();
-    }
-
-    @Override
-    public boolean isLibraryClass() {
-      throw new Unreachable();
-    }
-
-    @Override
-    public DexClass get() {
-      throw new Unreachable();
-    }
-  }
-
-  private static final class DexClassPromiseChain implements DexClassPromise {
-    final DexClassPromise promise;
-    final DexClassPromise next;
-
-    private DexClassPromiseChain(DexClassPromise promise, DexClassPromise next) {
-      assert promise != null;
-      assert next != null;
-      this.promise = promise;
-      this.next = next;
-    }
-
-    @Override
-    public DexType getType() {
-      return promise.getType();
-    }
-
-    @Override
-    public Resource.Kind getOrigin() {
-      return promise.getOrigin();
-    }
-
-    @Override
-    public boolean isProgramClass() {
-      return promise.isProgramClass();
-    }
-
-    @Override
-    public boolean isClasspathClass() {
-      return promise.isClasspathClass();
-    }
-
-    @Override
-    public boolean isLibraryClass() {
-      return promise.isLibraryClass();
-    }
-
-    @Override
-    public DexClass get() {
-      return promise.get();
+    void load() {
+      try (Closer closer = Closer.create()) {
+        for (Resource resource : classpathResources) {
+          JarClassFileReader classReader = new JarClassFileReader(reader, this::addClass);
+          classReader.read(DEFAULT_DEX_FILENAME, ClassKind.CLASSPATH, resource.getStream(closer));
+        }
+        for (Resource resource : libraryResources) {
+          JarClassFileReader classReader = new JarClassFileReader(reader, this::addClass);
+          classReader.read(DEFAULT_DEX_FILENAME, ClassKind.LIBRARY, resource.getStream(closer));
+        }
+      } catch (IOException e) {
+        throw new CompilationError("Failed to load class: " + type.toSourceString(), e);
+      }
+      assert index == classes.length;
     }
   }
 }

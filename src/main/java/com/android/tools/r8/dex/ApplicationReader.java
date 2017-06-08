@@ -16,10 +16,8 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexItemFactory;
-import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.JarApplicationReader;
 import com.android.tools.r8.graph.JarClassFileReader;
-import com.android.tools.r8.graph.LazyClassFileLoader;
 import com.android.tools.r8.naming.ProguardMapReader;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
@@ -32,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,18 +92,10 @@ public class ApplicationReader {
       reader.read(DEFAULT_DEX_FILENAME, ClassKind.PROGRAM, input.getStream(closer));
     }
     for (Resource input : inputApp.getClassClasspathResources()) {
-      if (options.lazyClasspathLoading && getResourceClassDescriptorOrNull(input) != null) {
-        addLazyLoader(application, ClassKind.CLASSPATH, builder, input);
-      } else {
-        reader.read(DEFAULT_DEX_FILENAME, ClassKind.CLASSPATH, input.getStream(closer));
-      }
+      reader.read(DEFAULT_DEX_FILENAME, ClassKind.CLASSPATH, input.getStream(closer));
     }
     for (Resource input : inputApp.getClassLibraryResources()) {
-      if (options.lazyLibraryLoading && getResourceClassDescriptorOrNull(input) != null) {
-        addLazyLoader(application, ClassKind.LIBRARY, builder, input);
-      } else {
-        reader.read(DEFAULT_DEX_FILENAME, ClassKind.LIBRARY, input.getStream(closer));
-      }
+      reader.read(DEFAULT_DEX_FILENAME, ClassKind.LIBRARY, input.getStream(closer));
     }
   }
 
@@ -117,16 +106,6 @@ public class ApplicationReader {
       builder.setLazyClassCollection(new LazyClassCollection(
           new JarApplicationReader(options), classpathProviders, libraryProviders));
     }
-  }
-
-  private void addLazyLoader(JarApplicationReader application,
-      ClassKind classKind, DexApplication.Builder builder, Resource resource) {
-    // Generate expected DEX type.
-    String classDescriptor = getResourceClassDescriptorOrNull(resource);
-    assert classDescriptor != null;
-    DexType type = options.itemFactory.createType(classDescriptor);
-    LazyClassFileLoader newLoader = new LazyClassFileLoader(type, resource, classKind, application);
-    builder.addClassPromise(newLoader, true);
   }
 
   private void readDexSources(DexApplication.Builder builder, ExecutorService executorService,
@@ -162,7 +141,7 @@ public class ApplicationReader {
       for (DexFileReader reader : fileReaders) {
         futures.add(executorService.submit(() -> {
           reader.addCodeItemsTo();  // Depends on Everything for parsing.
-          reader.addClassDefsTo(builder::addClassPromise);  // Depends on Methods, Code items etc.
+          reader.addClassDefsTo(builder::addClass);  // Depends on Methods, Code items etc.
         }));
       }
     }
@@ -230,11 +209,5 @@ public class ApplicationReader {
         }
       }));
     }
-  }
-
-  private static String getResourceClassDescriptorOrNull(Resource resource) {
-    Set<String> descriptors = resource.getClassDescriptors();
-    return (descriptors == null) || (descriptors.size() != 1)
-        ? null : descriptors.iterator().next();
   }
 }

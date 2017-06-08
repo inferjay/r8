@@ -40,9 +40,8 @@ public class AppInfo {
 
   private Map<Descriptor, KeyedDexItem> computeDefinitions(DexType type) {
     Builder<Descriptor, KeyedDexItem> builder = ImmutableMap.builder();
-    DexClassPromise promise = app.definitionFor(type);
-    if (promise != null) {
-      DexClass clazz = promise.get();
+    DexClass clazz = app.definitionFor(type);
+    if (clazz != null) {
       registerDefinitions(builder, clazz.directMethods());
       registerDefinitions(builder, clazz.virtualMethods());
       registerDefinitions(builder, clazz.instanceFields());

@@ -162,12 +162,12 @@ public class MemberRebindingAnalysis {
     }
     DexProgramClass newHolder = null;
     // Recurse through supertype chain.
-    if (originalClass.superType.isSubtypeOf(targetClass.getType(), appInfo)) {
+    if (originalClass.superType.isSubtypeOf(targetClass.type, appInfo)) {
       DexClass superClass = appInfo.definitionFor(originalClass.superType);
       newHolder = findBridgeMethodHolder(superClass, targetClass, packageDescriptor);
     } else {
       for (DexType iface : originalClass.interfaces.values) {
-        if (iface.isSubtypeOf(targetClass.getType(), appInfo)) {
+        if (iface.isSubtypeOf(targetClass.type, appInfo)) {
           DexClass interfaceClass = appInfo.definitionFor(iface);
           newHolder = findBridgeMethodHolder(interfaceClass, targetClass, packageDescriptor);
         }

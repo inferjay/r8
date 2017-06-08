@@ -9,7 +9,7 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.google.common.base.MoreObjects;
 
-public abstract class DexClass extends DexItem implements DexClassPromise {
+public abstract class DexClass extends DexItem {
 
   private static final DexEncodedMethod[] NO_METHODS = {};
   private static final DexEncodedField[] NO_FIELDS = {};
@@ -118,7 +118,6 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
 
   public abstract void addDependencies(MixedSectionCollection collector);
 
-  @Override
   public boolean isProgramClass() {
     return false;
   }
@@ -127,7 +126,6 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
     return null;
   }
 
-  @Override
   public boolean isClasspathClass() {
     return false;
   }
@@ -136,7 +134,6 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
     return null;
   }
 
-  @Override
   public boolean isLibraryClass() {
     return false;
   }
@@ -154,19 +151,8 @@ public abstract class DexClass extends DexItem implements DexClassPromise {
     return null;
   }
 
-  @Override
   public Resource.Kind getOrigin() {
     return this.origin;
-  }
-
-  @Override
-  public DexClass get() {
-    return this;
-  }
-
-  @Override
-  public DexType getType() {
-    return type;
   }
 
   public boolean hasClassInitializer() {

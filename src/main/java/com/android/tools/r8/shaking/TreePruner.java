@@ -5,7 +5,6 @@ package com.android.tools.r8.shaking;
 
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexClassPromise;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexLibraryClass;
@@ -55,8 +54,8 @@ public class TreePruner {
     return new DexApplication.Builder(application, removeUnusedClassStructure(application));
   }
 
-  private Map<DexType, DexClassPromise> removeUnusedClassStructure(DexApplication application) {
-    Map<DexType, DexClassPromise> classMap = new IdentityHashMap<>();
+  private Map<DexType, DexClass> removeUnusedClassStructure(DexApplication application) {
+    Map<DexType, DexClass> classMap = new IdentityHashMap<>();
     for (DexLibraryClass clazz : application.libraryClasses()) {
       classMap.put(clazz.type, clazz);
     }

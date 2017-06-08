@@ -9,7 +9,7 @@ import com.android.tools.r8.utils.PreloadedResourceProvider;
 import java.io.IOException;
 import java.nio.file.Path;
 
-public class D8ResourceProviderRunExamplesAndroidOTest
+public class D8LazyRunExamplesAndroidOTest
     extends D8IncrementalRunExamplesAndroidOTest {
   class D8LazyTestRunner extends D8IncrementalTestRunner {
 
