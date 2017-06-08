@@ -182,6 +182,16 @@ task downloadProguard {
     }
 }
 
+task downloadAndroidCts {
+    cloudDependencies.each { entry ->
+        entry.value.each { entryFile ->
+            if (entryFile.contains("android_cts_baseline")) {
+                dependsOn "download_deps_${entry.key}/${entryFile}"
+            }
+        }
+    }
+}
+
 task downloadDeps {
     cloudDependencies.each { entry ->
         entry.value.each { entryFile ->
