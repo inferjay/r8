@@ -36,6 +36,11 @@ public class IdenticalAfterRegisterAllocationTest {
     public boolean argumentValueUsesHighRegister(Value value, int instructionNumber) {
       return false;
     }
+
+    @Override
+    public int getRegisterForRangedArgument(Value value, int instructionNumber) {
+      return value.getNumber();
+    }
   }
 
   @Test

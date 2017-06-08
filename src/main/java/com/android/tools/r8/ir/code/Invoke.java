@@ -92,7 +92,7 @@ public abstract class Invoke extends Instruction {
 
   protected int argumentRegisterValue(int i, DexBuilder builder) {
     if (i < arguments().size()) {
-      return builder.allocatedRegister(arguments().get(i), getNumber());
+      return builder.allocatedRegisterForRangedArgument(arguments().get(i), getNumber());
     }
     return 0;
   }
@@ -120,10 +120,10 @@ public abstract class Invoke extends Instruction {
 
   protected boolean argumentsConsecutive(DexBuilder builder) {
     Value value = arguments().get(0);
-    int next = builder.allocatedRegister(value, getNumber()) + value.requiredRegisters();
+    int next = builder.allocatedRegisterForRangedArgument(value, getNumber()) + value.requiredRegisters();
     for (int i = 1; i < arguments().size(); i++) {
       value = arguments().get(i);
-      assert next == builder.allocatedRegister(value, getNumber());
+      assert next == builder.allocatedRegisterForRangedArgument(value, getNumber());
       next += value.requiredRegisters();
     }
     return true;

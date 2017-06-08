@@ -318,6 +318,10 @@ public class DexBuilder {
     return registerAllocator.getRegisterForValue(value, instructionNumber);
   }
 
+  public int allocatedRegisterForRangedArgument(Value value, int instructionNumber) {
+    return registerAllocator.getRegisterForRangedArgument(value, instructionNumber);
+  }
+
   public boolean argumentValueUsesHighRegister(Value value, int instructionNumber) {
     return registerAllocator.argumentValueUsesHighRegister(value, instructionNumber);
   }

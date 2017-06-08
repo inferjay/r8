@@ -420,6 +420,19 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     return getRegisterForIntervals(intervals);
   }
 
+  @Override
+  public int getRegisterForRangedArgument(Value value, int instructionNumber) {
+    // If argument values flow into ranged invokes, all the ranged invoke arguments
+    // are arguments to this method in order. Therefore, we use the incoming registers
+    // for the ranged invoke arguments. We know that arguments are always available there.
+    // If argument reuse is allowed there is no splitting and if argument reuse is disallowed
+    // the argument registers are never overwritten.
+    if (value.isArgument()) {
+      return getRegisterForIntervals(value.getLiveIntervals());
+    }
+    return getRegisterForValue(value, instructionNumber);
+  }
+
   private BasicBlock[] computeLivenessInformation() {
     BasicBlock[] blocks = code.numberInstructions();
     computeLiveAtEntrySets();
@@ -1748,7 +1761,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   private void generateArgumentMoves(Invoke invoke, InstructionListIterator insertAt) {
     // If the invoke instruction require more than 5 registers we link the inputs because they
     // need to be in consecutive registers.
-    if (invoke.requiredArgumentRegisters() > 5) {
+    if (invoke.requiredArgumentRegisters() > 5 && !argumentsAreAlreadyLinked(invoke)) {
       List<Value> arguments = invoke.arguments();
       Value previous = null;
       for (int i = 0; i < arguments.size(); i++) {
@@ -1764,6 +1777,19 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         previous = newArgument;
       }
     }
+  }
+
+  private boolean argumentsAreAlreadyLinked(Invoke invoke) {
+    Iterator<Value> it = invoke.arguments().iterator();
+    Value current = it.next();
+    while (it.hasNext()) {
+      Value next = it.next();
+      if (!current.isLinked() || current.getNextConsecutive() != next) {
+        return false;
+      }
+      current = next;
+    }
+    return true;
   }
 
   private Value createSentinelRegisterValue() {
