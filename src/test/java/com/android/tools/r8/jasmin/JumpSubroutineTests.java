@@ -8,6 +8,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ProcessResult;
 import com.android.tools.r8.utils.AndroidApp;
 import com.google.common.collect.ImmutableList;
@@ -308,7 +309,8 @@ public class JumpSubroutineTests extends JasminTestBase {
         "  invokestatic Test/foo()V",
         "  return");
 
-    runTest(builder, clazz.name, "Got zero\nGot non-zero\n");
+    runTest(builder, clazz.name, "Got zero" + ToolHelper.LINE_SEPARATOR + "Got non-zero"
+            + ToolHelper.LINE_SEPARATOR);
   }
 
   @Test
@@ -351,7 +353,9 @@ public class JumpSubroutineTests extends JasminTestBase {
         "  invokestatic Test/foo()V",
         "  return");
 
-    runTest(builder, clazz.name, "Got zero\nGot non-zero, calling nested\nIn nested subroutine\n");
+    runTest(builder, clazz.name, "Got zero" + ToolHelper.LINE_SEPARATOR
+            + "Got non-zero, calling nested" + ToolHelper.LINE_SEPARATOR + "In nested subroutine"
+            + ToolHelper.LINE_SEPARATOR);
   }
 
   @Test
@@ -527,7 +531,8 @@ public class JumpSubroutineTests extends JasminTestBase {
         "  invokestatic Test/foo()V",
         "  return");
 
-    runTest(builder, clazz.name, "Divided by zero\nDivided by non-zero\n");
+    runTest(builder, clazz.name, "Divided by zero" + ToolHelper.LINE_SEPARATOR
+            + "Divided by non-zero" + ToolHelper.LINE_SEPARATOR);
   }
 
   @Test

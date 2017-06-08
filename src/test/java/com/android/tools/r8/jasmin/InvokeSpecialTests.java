@@ -5,7 +5,9 @@ package com.android.tools.r8.jasmin;
 
 import static org.junit.Assert.assertEquals;
 
+import com.android.tools.r8.ToolHelper;
 import com.google.common.collect.ImmutableList;
+import org.junit.AssumptionViolatedException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -72,7 +74,9 @@ public class InvokeSpecialTests extends JasminTestBase {
 
     // TODO(zerny): Should we fail early on the above code? Art fails with a verification error
     // because Test.foo is expected to be in the direct method table.
-    thrown.expect(AssertionError.class);
+    if (ToolHelper.artSupported()) {
+      thrown.expect(AssertionError.class);
+    }
     String artResult = runOnArt(builder, clazz.name);
     assertEquals(expected, artResult);
   }

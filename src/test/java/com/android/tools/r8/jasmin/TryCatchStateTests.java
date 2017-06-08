@@ -5,6 +5,7 @@ package com.android.tools.r8.jasmin;
 
 import static org.junit.Assert.assertEquals;
 
+import com.android.tools.r8.ToolHelper;
 import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 
@@ -49,7 +50,7 @@ public class TryCatchStateTests extends JasminTestBase {
         "  invokevirtual java/io/PrintStream/print(I)V",
         "  return");
 
-    String expected = "0\n6";
+    String expected = "0" + ToolHelper.LINE_SEPARATOR + "6";
     String javaResult = runOnJava(builder, clazz.name);
     assertEquals(expected, javaResult);
     String artResult = runOnArt(builder, clazz.name);
@@ -97,7 +98,7 @@ public class TryCatchStateTests extends JasminTestBase {
         "  invokevirtual java/io/PrintStream/print(I)V",
         "  return");
 
-    String expected = "12\n21";
+    String expected = "12" + ToolHelper.LINE_SEPARATOR + "21";
     String javaResult = runOnJava(builder, clazz.name);
     assertEquals(expected, javaResult);
     String artResult = runOnArt(builder, clazz.name);
@@ -148,7 +149,7 @@ public class TryCatchStateTests extends JasminTestBase {
         "  invokevirtual java/io/PrintStream/print(I)V",
         "  return");
 
-    String expected = "12\n21";
+    String expected = "12" + ToolHelper.LINE_SEPARATOR + "21";
     String javaResult = runOnJava(builder, clazz.name);
     assertEquals(expected, javaResult);
     String artResult = runOnArt(builder, clazz.name);

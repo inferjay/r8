@@ -98,7 +98,8 @@ dependencies {
     examplesAndroidOCompile group: 'org.ow2.asm', name: 'asm', version: '5.1'
 }
 
-def osString = OperatingSystem.current().isLinux() ? "linux" : "mac"
+def osString = OperatingSystem.current().isLinux() ? "linux" :
+        OperatingSystem.current().isMacOsX() ? "mac" : "windows"
 
 def cloudDependencies = [
         "tests"      : [
@@ -370,7 +371,11 @@ task buildDebugInfoExamplesDex {
     }
     task "dex_debuginfo_examples"(type: Exec,
             dependsOn: ["jar_debuginfo_examples", "downloadDeps"]) {
-        executable file("tools/linux/dx/bin/dx");
+        if (OperatingSystem.current().isWindows()) {
+            executable file("tools/windows/dx/bin/dx.bat")
+        } else {
+            executable file("tools/linux/dx/bin/dx");
+        }
         args "--dex"
         args "--output=build/test/${hostDexJar}"
         args "build/test/${hostJar}"
@@ -560,11 +565,12 @@ task buildExampleAndroidOJars {
 }
 
 task buildExamples {
-    if (OperatingSystem.current().isMacOsX()) {
-        logger.lifecycle("WARNING: Testing (including building examples) is only partially supported on Mac OS.")
+    if (OperatingSystem.current().isMacOsX() || OperatingSystem.current().isWindows()) {
+        logger.lifecycle("WARNING: Testing (including building examples) is only partially supported on your " +
+                "platform (" + OperatingSystem.current().getName() + ").")
     } else if (!OperatingSystem.current().isLinux()) {
       logger.lifecycle("WARNING: Testing (including building examples) is not supported on your platform. " +
-          "It is fully supported on Linux and partially supported on Mac OS")
+          "It is fully supported on Linux and partially supported on Mac OS and Windows")
       return;
     }
     dependsOn buildDebugTestResourcesJars
@@ -725,11 +731,17 @@ test {
         systemProperty 'jctf_compile_only', '1'
     }
 
-    if (OperatingSystem.current().isLinux() || OperatingSystem.current().isMacOsX()) {
+    if (OperatingSystem.current().isLinux()
+            || OperatingSystem.current().isMacOsX()
+            || OperatingSystem.current().isWindows()) {
         if (OperatingSystem.current().isMacOsX()) {
             logger.lifecycle("WARNING: Testing in only partially supported on Mac OS. " +
                 "Art only runs on Linux and tests requiring Art runs in a Docker container, which must be present. " +
                 "See tools/docker/README.md for details.")
+        }
+        if (OperatingSystem.current().isWindows()) {
+            logger.lifecycle("WARNING: Testing in only partially supported on Windows. " +
+                    "Art only runs on Linux and tests requiring Art will be skipped")
         }
         dependsOn downloadDeps
         dependsOn buildExamples
@@ -740,7 +752,7 @@ test {
         dependsOn buildPreNJdwpTestsJar
     } else {
         logger.lifecycle("WARNING: Testing in not supported on your platform. Testing is only fully supported on " +
-            "Linux and partially supported on Mac OS. Art does not run on other platforms.")
+            "Linux and partially supported on Mac OS and Windows. Art does not run on other platforms.")
     }
 }
 

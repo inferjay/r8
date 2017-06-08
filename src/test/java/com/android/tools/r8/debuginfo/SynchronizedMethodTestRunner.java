@@ -5,6 +5,7 @@ package com.android.tools.r8.debuginfo;
 
 import static org.junit.Assert.assertEquals;
 
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.utils.AndroidApp;
 import org.junit.Test;
 
@@ -17,7 +18,7 @@ public class SynchronizedMethodTestRunner extends DebugInfoTestBase {
     AndroidApp d8App = compileWithD8(clazz);
     AndroidApp dxApp = getDxCompiledSources();
 
-    String expected = "42\n42\n";
+    String expected = "42" + ToolHelper.LINE_SEPARATOR + "42" + ToolHelper.LINE_SEPARATOR;
     assertEquals(expected, runOnJava(clazz));
     assertEquals(expected, runOnArt(d8App, clazz.getCanonicalName()));
     assertEquals(expected, runOnArt(dxApp, clazz.getCanonicalName()));

@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.android.tools.r8.TestBase;
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexItemFactory;
 import java.io.IOException;
@@ -45,6 +46,8 @@ public class ProguardConfigurationParserTest extends TestBase {
       INVALID_PROGUARD_DIR + "including-2.flags";
   private static final String LIBRARY_JARS =
       VALID_PROGUARD_DIR + "library-jars.flags";
+  private static final String LIBRARY_JARS_WIN =
+          VALID_PROGUARD_DIR + "library-jars-win.flags";
   private static final String SEEDS =
       VALID_PROGUARD_DIR + "seeds.flags";
   private static final String SEEDS_2 =
@@ -281,7 +284,11 @@ public class ProguardConfigurationParserTest extends TestBase {
   @Test
   public void parseLibraryJars() throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
-    parser.parse(Paths.get(LIBRARY_JARS));
+    if (!ToolHelper.isLinux() && !ToolHelper.isMac()) {
+      parser.parse(Paths.get(LIBRARY_JARS_WIN));
+    } else {
+      parser.parse(Paths.get(LIBRARY_JARS));
+    }
     assertEquals(4, parser.getConfig().getLibraryjars().size());
   }
 
