@@ -77,6 +77,7 @@ public class CompatDx {
     public final int dumpWidth;
     public final String dumpMethod;
     public final boolean verboseDump;
+    public final boolean dump;
     public final boolean noFiles;
     public final boolean coreLibrary;
     public final int numThreads;
@@ -150,6 +151,7 @@ public class CompatDx {
       final OptionSpec<String> dumpTo;
       final OptionSpec<Integer> dumpWidth;
       final OptionSpec<String> dumpMethod;
+      final OptionSpec<Void> dump;
       final OptionSpec<Void> verboseDump;
       final OptionSpec<Void> noFiles;
       final OptionSpec<Void> coreLibrary;
@@ -208,6 +210,7 @@ public class CompatDx {
             .accepts("dump-method", "Method to dump information for")
             .withRequiredArg()
             .describedAs(METHOD_ARG);
+        dump = parser.accepts("dump", "Dump information");
         verboseDump = parser.accepts("verbose-dump", "Dump verbose information");
         noFiles = parser.accepts("no-files", "Don't fail if given no files");
         coreLibrary = parser.accepts("core-library", "Construct a core library");
@@ -280,6 +283,7 @@ public class CompatDx {
       dumpTo = options.valueOf(spec.dumpTo);
       dumpWidth = options.valueOf(spec.dumpWidth);
       dumpMethod = options.valueOf(spec.dumpMethod);
+      dump = options.has(spec.dump);
       verboseDump = options.has(spec.verboseDump);
       noFiles = options.has(spec.noFiles);
       coreLibrary = options.has(spec.coreLibrary);
@@ -350,6 +354,10 @@ public class CompatDx {
       System.out.println("Warning: logging is not enabled for this build.");
     }
 
+    if (dexArgs.dump) {
+      System.out.println("Warning: dump is not supported");
+    }
+
     if (dexArgs.verboseDump) {
       throw new Unimplemented("verbose dump file not yet supported");
     }
@@ -408,7 +416,7 @@ public class CompatDx {
     }
 
     if (dexArgs.statistics) {
-      throw new Unimplemented("no support for printing statistics yet");
+      System.out.println("Warning: no support for printing statistics");
     }
 
     if (dexArgs.numThreads > 1) {
