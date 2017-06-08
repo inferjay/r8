@@ -3,12 +3,16 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
+import static com.android.tools.r8.TestCondition.R8_COMPILER;
+import static com.android.tools.r8.TestCondition.match;
+import static com.android.tools.r8.utils.FileUtils.JAR_EXTENSION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.R8RunArtTestsTest.DexTool;
 import com.android.tools.r8.ToolHelper.DexVm;
+import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.JarBuilder;
 import com.google.common.collect.ImmutableList;
@@ -36,9 +40,17 @@ import org.junit.runners.Parameterized.Parameters;
 public class R8RunExamplesTest {
 
   private static final String EXAMPLE_DIR = ToolHelper.EXAMPLES_BUILD_DIR;
-  private static final String JAR_EXTENSION = ".jar";
-  private static final String DEX_EXTENSION = ".dex";
   private static final String DEFAULT_DEX_FILENAME = "classes.dex";
+
+  // For local testing on a specific Art version(s) change this set. e.g. to
+  // ImmutableSet.of(DexVm.ART_DEFAULT) or pass the option -Ddex_vm=<version> to the Java VM.
+  private static final Set<DexVm> artVersions = ToolHelper.getArtVersions();
+
+  // Tests failing to run.
+  private static final Map<String, TestCondition> failingRun =
+      new ImmutableMap.Builder<String, TestCondition>()
+          .put("memberrebinding2.Test", match(R8_COMPILER)) // b/38187737
+          .build();
 
   private static final Map<String, TestCondition> outputNotIdenticalToJVMOutput =
       new ImmutableMap.Builder<String, TestCondition>()
@@ -51,11 +63,7 @@ public class R8RunExamplesTest {
                   TestCondition.runtimes(DexVm.ART_6_0_1, DexVm.ART_5_1_1, DexVm.ART_4_4_4)))
           .build();
 
-  // For local testing on a specific Art version(s) change this set. e.g. to
-  // ImmutableSet.of("default") or pass the option -Ddex_vm=<version> to the Java VM.
-  private static Set<DexVm> artVersions = ToolHelper.getArtVersions();
-
-  @Parameters(name = "{0}{1}")
+  @Parameters(name = "{0}_{1}_{2}_{3}")
   public static Collection<String[]> data() {
     String[] tests = {
         "arithmetic.Arithmetic",
@@ -105,89 +113,84 @@ public class R8RunExamplesTest {
 
     List<String[]> fullTestList = new ArrayList<>(tests.length * 2);
     for (String test : tests) {
-      String qualified = test;
-      String pkg = qualified.substring(0, qualified.lastIndexOf('.'));
-      fullTestList.add(new String[]{pkg, DEX_EXTENSION, qualified});
-      fullTestList.add(new String[]{pkg, JAR_EXTENSION, qualified});
+      fullTestList.add(makeTest(DexTool.NONE, CompilerUnderTest.D8, CompilationMode.DEBUG, test));
+      fullTestList.add(makeTest(DexTool.NONE, CompilerUnderTest.R8, CompilationMode.RELEASE, test));
+      fullTestList.add(makeTest(DexTool.DX, CompilerUnderTest.R8, CompilationMode.RELEASE, test));
     }
     return fullTestList;
   }
 
+  private static String[] makeTest(
+      DexTool tool, CompilerUnderTest compiler, CompilationMode mode, String clazz) {
+    String pkg = clazz.substring(0, clazz.lastIndexOf('.'));
+    return new String[] {pkg, tool.name(), compiler.name(), mode.name(), clazz};
+  }
+
   @Rule
   public TemporaryFolder temp = ToolHelper.getTemporaryFolderForTest();
-  private final String name;
 
+  private final DexTool tool;
+  private final CompilerUnderTest compiler;
+  private final CompilationMode mode;
+  private final String pkg;
   private final String mainClass;
-  private final String fileType;
-  private static Map<DexVm, List<String>> failsOn =
-      ImmutableMap.of(
-          DexVm.ART_4_4_4, ImmutableList.of(
-              "vmdebug.dex",
-              "vmdebug.jar",
-              "memberrebinding2.dex", // b/38187737
-              "memberrebinding2.jar" // b/38187737
-          ),
-          DexVm.ART_5_1_1, ImmutableList.of(
-              "vmdebug.dex",
-              "vmdebug.jar",
-              "memberrebinding2.dex", // b/38187737
-              "memberrebinding2.jar" // b/38187737
-          ),
-          DexVm.ART_6_0_1, ImmutableList.of(
-              "vmdebug.dex",
-              "vmdebug.jar",
-              "memberrebinding2.dex", // b/38187737
-              "memberrebinding2.jar" // b/38187737
-          ),
-          DexVm.ART_7_0_0, ImmutableList.of(
-              "memberrebinding2.dex", // b/38187737
-              "memberrebinding2.jar" // b/38187737
-          ),
-          DexVm.ART_DEFAULT, ImmutableList.of(
-              "memberrebinding2.dex", // b/38187737
-              "memberrebinding2.jar" // b/38187737
-          )
-      );
 
-  public R8RunExamplesTest(String name, String fileType, String mainClass) {
-    this.name = name;
-    this.fileType = fileType;
+  public R8RunExamplesTest(
+      String pkg,
+      String tool,
+      String compiler,
+      String mode,
+      String mainClass) {
+    this.pkg = pkg;
+    this.tool = DexTool.valueOf(tool);
+    this.compiler = CompilerUnderTest.valueOf(compiler);
+    this.mode = CompilationMode.valueOf(mode);
     this.mainClass = mainClass;
   }
 
   private Path getInputFile() {
-    if (fileType.equals(JAR_EXTENSION)) {
+    if (tool == DexTool.NONE) {
       return getOriginalJarFile();
-    } else {
-      assert fileType.equals(DEX_EXTENSION);
-      return getOriginalDexFile();
     }
+    assert tool == DexTool.DX;
+    return getOriginalDexFile();
   }
 
   public Path getOriginalJarFile() {
-    return Paths.get(EXAMPLE_DIR, name + JAR_EXTENSION);
+    return Paths.get(EXAMPLE_DIR, pkg + JAR_EXTENSION);
   }
 
   private Path getOriginalDexFile() {
-    return Paths.get(EXAMPLE_DIR, name, DEFAULT_DEX_FILENAME);
-  }
-
-  private Path getGeneratedDexFile() throws IOException {
-    return Paths.get(temp.getRoot().getCanonicalPath(), DEFAULT_DEX_FILENAME);
-  }
-
-  private String getTestName() {
-    return this.name + this.fileType;
+    return Paths.get(EXAMPLE_DIR, pkg, DEFAULT_DEX_FILENAME);
   }
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
   @Before
-  public void generateR8Version()
+  public void compile()
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    String out = temp.getRoot().getCanonicalPath();
-    ToolHelper.runR8(getInputFile().toString(), out);
+    Path out = temp.getRoot().toPath();
+    switch (compiler) {
+      case D8: {
+        ToolHelper.runD8(D8Command.builder()
+            .addProgramFiles(getInputFile())
+            .setOutputPath(out)
+            .setMode(mode)
+            .build());
+        break;
+      }
+      case R8: {
+        ToolHelper.runR8(R8Command.builder()
+            .addProgramFiles(getInputFile())
+            .setOutputPath(out)
+            .setMode(mode)
+            .build());
+        break;
+      }
+      default:
+        throw new Unreachable();
+    }
   }
 
   @Test
@@ -207,7 +210,7 @@ public class R8RunExamplesTest {
       generated = outputFiles[0];
     } else {
       // Run Art on JAR file with multiple dex files.
-      generated = temp.getRoot().toPath().resolve(name + ".jar").toFile();
+      generated = temp.getRoot().toPath().resolve(pkg + ".jar").toFile();
       JarBuilder.buildJar(outputFiles, generated);
     }
 
@@ -220,8 +223,11 @@ public class R8RunExamplesTest {
     // TODO(ager): Once we have a bot running using dalvik (version 4.4.4) we should remove
     // this explicit loop to get rid of repeated testing on the buildbots.
     for (DexVm version : artVersions) {
-      if (failsOn.containsKey(version) && failsOn.get(version).contains(getTestName())) {
+      TestCondition condition = failingRun.get(mainClass);
+      if (condition != null && condition.test(tool, compiler, version, mode)) {
         thrown.expect(Throwable.class);
+      } else {
+        thrown = ExpectedException.none();
       }
 
       // Check output against Art output on original dex file.
@@ -241,9 +247,6 @@ public class R8RunExamplesTest {
 
   private boolean shouldMatchJVMOutput(DexVm version) {
     TestCondition condition = outputNotIdenticalToJVMOutput.get(mainClass);
-    if (condition == null) {
-      return true;
-    }
-    return !condition.test(DexTool.NONE, CompilerUnderTest.R8, version, CompilationMode.RELEASE);
+    return condition == null || !condition.test(tool, compiler, version, mode);
   }
 }
