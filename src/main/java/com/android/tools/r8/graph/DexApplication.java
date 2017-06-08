@@ -202,8 +202,12 @@ public class DexApplication {
     if (clazz.type != dexItemFactory.objectType) {
       builder.append(".super ");
       builder.append(clazz.superType.toSmaliString());
-      // TODO(sgjesse): Add implemented interfaces
       builder.append("\n");
+      for (DexType iface : clazz.interfaces.values) {
+        builder.append(".implements ");
+        builder.append(iface.toSmaliString());
+        builder.append("\n");
+      }
     }
     ps.append(builder.toString());
   }

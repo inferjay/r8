@@ -31,6 +31,7 @@ import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.Smali;
 import com.android.tools.r8.utils.Timing;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -77,11 +78,27 @@ public class SmaliTestBase {
     abstract class Builder {
       String name;
       String superName;
+      List<String> implementedInterfaces;
       List<String> source = new ArrayList<>();
 
-      Builder(String name, String superName) {
+      Builder(String name, String superName, List<String> implementedInterfaces) {
         this.name = name;
         this.superName = superName;
+        this.implementedInterfaces = implementedInterfaces;
+      }
+
+      protected void appendSuper(StringBuilder builder) {
+        builder.append(".super ");
+        builder.append(DescriptorUtils.javaTypeToDescriptor(superName));
+        builder.append("\n");
+      }
+
+      protected void appendImplementedInterfaces(StringBuilder builder) {
+        for (String implementedInterface : implementedInterfaces) {
+          builder.append(".implements ");
+          builder.append(DescriptorUtils.javaTypeToDescriptor(implementedInterface));
+          builder.append("\n");
+        }
       }
 
       protected void writeSource(StringBuilder builder) {
@@ -94,8 +111,8 @@ public class SmaliTestBase {
 
     public class ClassBuilder extends Builder {
 
-      ClassBuilder(String name, String superName) {
-        super(name, superName);
+      ClassBuilder(String name, String superName, List<String> implementedInterfaces) {
+        super(name, superName, implementedInterfaces);
       }
 
       public String toString() {
@@ -103,9 +120,9 @@ public class SmaliTestBase {
         builder.append(".class public ");
         builder.append(DescriptorUtils.javaTypeToDescriptor(name));
         builder.append("\n");
-        builder.append(".super ");
-        builder.append(DescriptorUtils.javaTypeToDescriptor(superName));
-        builder.append("\n\n");
+        appendSuper(builder);
+        appendImplementedInterfaces(builder);
+        builder.append("\n");
         writeSource(builder);
         return builder.toString();
       }
@@ -114,7 +131,7 @@ public class SmaliTestBase {
     public class InterfaceBuilder extends Builder {
 
       InterfaceBuilder(String name, String superName) {
-        super(name, superName);
+        super(name, superName, ImmutableList.of());
       }
 
       public String toString() {
@@ -122,9 +139,9 @@ public class SmaliTestBase {
         builder.append(".class public interface abstract ");
         builder.append(DescriptorUtils.javaTypeToDescriptor(name));
         builder.append("\n");
-        builder.append(".super ");
-        builder.append(DescriptorUtils.javaTypeToDescriptor(superName));
-        builder.append("\n\n");
+        appendSuper(builder);
+        appendImplementedInterfaces(builder);
+        builder.append("\n");
         writeSource(builder);
         return builder.toString();
       }
@@ -162,9 +179,13 @@ public class SmaliTestBase {
     }
 
     public void addClass(String name, String superName) {
+      addClass(name, superName, ImmutableList.of());
+    }
+
+    public void addClass(String name, String superName, List<String> implementedInterfaces) {
       assert !classes.containsKey(name);
       currentClassName = name;
-      classes.put(name, new ClassBuilder(name, superName));
+      classes.put(name, new ClassBuilder(name, superName, implementedInterfaces));
     }
 
     public void addInterface(String name) {

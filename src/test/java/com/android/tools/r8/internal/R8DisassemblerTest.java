@@ -6,8 +6,8 @@ package com.android.tools.r8.internal;
 import static com.android.tools.r8.utils.AndroidApp.DEFAULT_PROGUARD_MAP_FILE;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.Disassemble;
 import com.android.tools.r8.R8;
-import com.android.tools.r8.R8Command;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.FileUtils;
 import java.io.IOException;
@@ -27,11 +27,8 @@ public class R8DisassemblerTest {
 
   static final String APP_DIR = "third_party/gmscore/v5/";
 
-  public boolean deobfuscate;
-
-  @Test
-  public void disassemble() throws IOException, ExecutionException, ProguardRuleParserException,
-      CompilationException {
+  public void testDisassemble(boolean deobfuscate, boolean smali)
+      throws IOException, ExecutionException, ProguardRuleParserException, CompilationException {
     // This test only ensures that we do not break disassembling of dex code. It does not
     // check the generated code. To make it fast, we get rid of the output.
     PrintStream originalOut = System.out;
@@ -40,7 +37,8 @@ public class R8DisassemblerTest {
     }));
 
     try {
-      R8Command.Builder builder = R8Command.builder();
+      Disassemble.DisassembleCommand.Builder builder = Disassemble.DisassembleCommand.builder();
+      builder.setUseSmali(smali);
       if (deobfuscate) {
         builder.setProguardMapFile(Paths.get(APP_DIR, DEFAULT_PROGUARD_MAP_FILE));
       }
@@ -53,5 +51,25 @@ public class R8DisassemblerTest {
       // Restore System.out for good measure.
       System.setOut(originalOut);
     }
+  }
+
+  @Test
+  public void test1() throws  Exception {
+    testDisassemble(false, false);
+  }
+
+  @Test
+  public void test2() throws  Exception {
+    testDisassemble(false, true);
+  }
+
+  @Test
+  public void test3() throws  Exception {
+    testDisassemble(true, false);
+  }
+
+  @Test
+  public void test4() throws  Exception {
+    testDisassemble(true, true);
   }
 }

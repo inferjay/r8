@@ -347,7 +347,6 @@ public class SmaliDisassembleTest extends SmaliTestBase {
     roundTripRawSmali(expected);
   }
 
-
   @Test
   public void interfaceClass() {
     SmaliBuilder builder = new SmaliBuilder();
@@ -360,6 +359,28 @@ public class SmaliDisassembleTest extends SmaliTestBase {
         ".class public interface abstract LTest;\n" +
             "\n" +
             ".super Ljava/lang/Object;\n" +
+            "\n" +
+            ".method public abstract test()I\n" +
+            ".end method\n";
+
+    assertEquals(expected, application.smali(new InternalOptions()));
+
+    roundTripRawSmali(expected);
+  }
+
+  @Test
+  public void implementsInterface() {
+    SmaliBuilder builder = new SmaliBuilder();
+    builder.addClass("Test", "java.lang.Object", ImmutableList.of("java.util.List"));
+    builder.addAbstractMethod("int", "test", ImmutableList.of());
+    DexApplication application = buildApplication(builder);
+    assertEquals(1, Iterables.size(application.classes()));
+
+    String expected =
+        ".class public LTest;\n" +
+            "\n" +
+            ".super Ljava/lang/Object;\n" +
+            ".implements Ljava/util/List;\n" +
             "\n" +
             ".method public abstract test()I\n" +
             ".end method\n";
