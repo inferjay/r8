@@ -27,9 +27,7 @@ import com.android.tools.r8.utils.MethodSignatureEquivalence;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Equivalence.Wrapper;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
@@ -44,6 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 /**
  * Merges Supertypes with a single implementation into their single subtype.
@@ -61,7 +60,7 @@ public class SimpleClassMerger {
   private final GraphLense.Builder renamedMembersLense = GraphLense.builder();
   private final Map<DexType, DexType> mergedClasses = new IdentityHashMap<>();
   private final Timing timing;
-  private Set<DexMethod> invokes;
+  private Collection<DexMethod> invokes;
   private int numberOfMerges = 0;
 
   public SimpleClassMerger(DexApplication application, AppInfoWithLiveness appInfo,
@@ -81,23 +80,49 @@ public class SimpleClassMerger {
         && clazz.type.getSingleSubtype() != null;
   }
 
-  private Set<DexMethod> getInvokes() {
-    if (invokes == null) {
+  private void addProgramMethods(Set<Wrapper<DexMethod>> set, DexMethod method,
+      Equivalence<DexMethod> equivalence) {
+    DexClass definition = appInfo.definitionFor(method.holder);
+    if (definition != null && definition.isProgramClass()) {
+      set.add(equivalence.wrap(method));
+    }
+  }
 
-      // TODO(herhut): Ignore invokes into the library, as those can only reference library types.
-      invokes = Sets.newIdentityHashSet();
-      invokes.addAll(appInfo.directInvokes);
-      invokes.addAll(appInfo.staticInvokes);
-      invokes.addAll(appInfo.superInvokes);
-      invokes.addAll(appInfo.virtualInvokes);
-      invokes.addAll(appInfo.targetedMethods);
-      invokes.addAll(appInfo.liveMethods);
-      for (DexEncodedMethod method : Iterables
-          .filter(appInfo.pinnedItems, DexEncodedMethod.class)) {
-        invokes.add(method.method);
-      }
+  private Collection<DexMethod> getInvokes() {
+    if (invokes == null) {
+      // Collect all reachable methods that are not within a library class. Those defined on
+      // library classes are known not to have program classes in their signature.
+      // Also filter methods that only use types from library classes in their signatures. We
+      // know that those won't conflict.
+      Set<Wrapper<DexMethod>> filteredInvokes = new HashSet<>();
+      Equivalence<DexMethod> equivalence = MethodSignatureEquivalence.get();
+      appInfo.targetedMethods.forEach(m -> addProgramMethods(filteredInvokes, m, equivalence));
+      invokes = filteredInvokes.stream().map(Wrapper::get).filter(this::removeNonProgram)
+          .collect(Collectors.toList());
     }
     return invokes;
+  }
+
+  private boolean isProgramClass(DexType type) {
+    if (type.isArrayType()) {
+      type = type.toBaseType(appInfo.dexItemFactory);
+    }
+    if (type.isClassType()) {
+      DexClass clazz = appInfo.definitionFor(type);
+      if (clazz != null && clazz.isProgramClass()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean removeNonProgram(DexMethod dexMethod) {
+    for (DexType type : dexMethod.proto.parameters.values) {
+      if (isProgramClass(type)) {
+        return true;
+      }
+    }
+    return isProgramClass(dexMethod.proto.returnType);
   }
 
   public GraphLense run() {
@@ -426,7 +451,8 @@ public class SimpleClassMerger {
         if (previous != null) {
           if (!previous.accessFlags.isBridge()) {
             if (!method.accessFlags.isBridge()) {
-              throw new CompilationError("Class merging produced invalid result.");
+              throw new CompilationError(
+                  "Class merging produced invalid result on: " + previous.toSourceString());
             } else {
               filtered.put(previous.method, previous);
             }
