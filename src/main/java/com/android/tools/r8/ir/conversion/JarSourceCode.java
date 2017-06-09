@@ -66,7 +66,6 @@ import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
-
 public class JarSourceCode implements SourceCode {
 
   // Try-catch block wrapper containing resolved offsets.
@@ -144,7 +143,7 @@ public class JarSourceCode implements SourceCode {
   // thus that the monitor-entry prelude (part of the argument block which must not have a try-catch
   // successor) is not joined with the first instruction block (which likely will have a try-catch
   // successor).
-  private static final int EXCEPTIONAL_SYNC_EXIT_OFFSET = -1;
+  private static final int EXCEPTIONAL_SYNC_EXIT_OFFSET = -2;
   private static final TryCatchBlock EXCEPTIONAL_SYNC_EXIT =
       new TryCatchBlock(EXCEPTIONAL_SYNC_EXIT_OFFSET, 0, Integer.MAX_VALUE, null);
 
@@ -534,7 +533,7 @@ public class JarSourceCode implements SourceCode {
     if (targets != NO_TARGETS) {
       assert !canThrow(insn);
       for (int target : targets) {
-        builder.ensureSuccessorBlock(target);
+        builder.ensureNormalSuccessorBlock(index, target);
       }
       return true;
     }
@@ -549,12 +548,12 @@ public class JarSourceCode implements SourceCode {
           int handler = tryCatchBlock.getHandler();
           if (!seenHandlerOffsets.contains(handler)) {
             seenHandlerOffsets.add(handler);
-            builder.ensureSuccessorBlock(handler);
+            builder.ensureExceptionalSuccessorBlock(index, handler);
           }
         }
         // Edge to normal successor if any (fallthrough).
         if (!isThrow(insn)) {
-          builder.ensureSuccessorBlock(getOffset(insn.getNext()));
+          builder.ensureNormalSuccessorBlock(index, getOffset(insn.getNext()));
         }
         return true;
       }

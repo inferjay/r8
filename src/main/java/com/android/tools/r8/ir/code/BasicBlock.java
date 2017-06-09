@@ -694,7 +694,7 @@ public class BasicBlock {
       StringBuilder builder, List<BasicBlock> list, Function<BasicBlock, String> postfix) {
     if (list.size() > 0) {
       for (BasicBlock block : list) {
-        builder.append(block.getNumber());
+        builder.append(block.number >= 0 ? block.number : "<unknown>");
         builder.append(postfix.apply(block));
         builder.append(" ");
       }
