@@ -145,7 +145,8 @@ public class R8 {
     return result;
   }
 
-  public static void disassemble(R8Command command) throws IOException, ExecutionException {
+  public static void disassemble(Disassemble.DisassembleCommand command)
+      throws IOException, ExecutionException {
     Path output = command.getOutputPath();
     AndroidApp app = command.getInputApp();
     InternalOptions options = command.getInternalOptions();
