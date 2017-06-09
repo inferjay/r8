@@ -83,7 +83,14 @@ import com.android.tools.r8.ir.code.Xor;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.StringUtils.BraceType;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceSortedMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -100,6 +107,8 @@ import java.util.Set;
  * http://compilers.cs.uni-saarland.de/papers/bbhlmz13cc.pdf
  */
 public class IRBuilder {
+
+  private static final int INITIAL_BLOCK_OFFSET = -1;
 
   // SSA construction uses a worklist of basic blocks reachable from the entry and their
   // instruction offsets.
@@ -158,8 +167,64 @@ public class IRBuilder {
     }
   }
 
+  private static class BlockInfo {
+    BasicBlock block = new BasicBlock();
+    IntSet normalPredecessors = new IntArraySet();
+    IntSet normalSuccessors = new IntArraySet();
+    IntSet exceptionalPredecessors = new IntArraySet();
+    IntSet exceptionalSuccessors = new IntArraySet();
+
+    void addNormalPredecessor(int offset) {
+      normalPredecessors.add(offset);
+    }
+
+    void addNormalSuccessor(int offset) {
+      normalSuccessors.add(offset);
+    }
+
+    void replaceNormalPredecessor(int existing, int replacement) {
+      normalPredecessors.remove(existing);
+      normalPredecessors.add(replacement);
+    }
+
+    void addExceptionalPredecessor(int offset) {
+      exceptionalPredecessors.add(offset);
+    }
+
+    void addExceptionalSuccessor(int offset) {
+      exceptionalSuccessors.add(offset);
+    }
+
+    int predecessorCount() {
+      return normalPredecessors.size() + exceptionalPredecessors.size();
+    }
+
+    BlockInfo split(
+        int blockStartOffset, int fallthroughOffset, Int2ReferenceMap<BlockInfo> targets) {
+      BlockInfo fallthroughInfo = new BlockInfo();
+      fallthroughInfo.normalPredecessors = new IntArraySet(Collections.singleton(blockStartOffset));
+      fallthroughInfo.block.incrementUnfilledPredecessorCount();
+      // Move all normal successors to the fallthrough block.
+      IntIterator normalSuccessorIterator = normalSuccessors.iterator();
+      while (normalSuccessorIterator.hasNext()) {
+        BlockInfo normalSuccessor = targets.get(normalSuccessorIterator.nextInt());
+        normalSuccessor.replaceNormalPredecessor(blockStartOffset, fallthroughOffset);
+      }
+      fallthroughInfo.normalSuccessors = normalSuccessors;
+      normalSuccessors = new IntArraySet(Collections.singleton(fallthroughOffset));
+      // Copy all exceptional successors to the fallthrough block.
+      IntIterator exceptionalSuccessorIterator = fallthroughInfo.exceptionalSuccessors.iterator();
+      while (exceptionalSuccessorIterator.hasNext()) {
+        BlockInfo exceptionalSuccessor = targets.get(exceptionalSuccessorIterator.nextInt());
+        exceptionalSuccessor.addExceptionalPredecessor(fallthroughOffset);
+      }
+      fallthroughInfo.exceptionalSuccessors = new IntArraySet(this.exceptionalSuccessors);
+      return fallthroughInfo;
+    }
+  }
+
   // Mapping from instruction offsets to basic-block targets.
-  private final Map<Integer, BasicBlock> targets = new HashMap<>();
+  private final Int2ReferenceSortedMap<BlockInfo> targets = new Int2ReferenceAVLTreeMap<>();
 
   // Worklist of reachable blocks.
   private final Queue<Integer> traceBlocksWorklist = new LinkedList<>();
@@ -239,13 +304,8 @@ public class IRBuilder {
     assert source != null;
     source.setUp();
 
-    // Create entry block.
-    setCurrentBlock(new BasicBlock());
-
-    // If the method needs a prelude, the entry block must never be the target of other blocks.
-    if (!source.needsPrelude()) {
-      targets.put(0, currentBlock);
-    }
+    // Create entry block (at a non-targetable address).
+    targets.put(INITIAL_BLOCK_OFFSET, new BlockInfo());
 
     // Process reachable code paths starting from instruction 0.
     processedInstructions = new boolean[source.instructionCount()];
@@ -267,8 +327,8 @@ public class IRBuilder {
         // If the next instruction starts a block, fall through to it.
         if (index + 1 < source.instructionCount()) {
           int nextOffset = source.instructionOffset(index + 1);
-          if (getTarget(nextOffset) != null) {
-            ensureSuccessorBlock(nextOffset);
+          if (targets.get(nextOffset) != null) {
+            ensureNormalSuccessorBlock(startOfBlockOffset, nextOffset);
             break;
           }
         }
@@ -276,6 +336,7 @@ public class IRBuilder {
     }
     processedInstructions = null;
 
+    setCurrentBlock(targets.get(INITIAL_BLOCK_OFFSET).block);
     source.buildPrelude(this);
 
     // Process normal blocks reachable from the entry block using a worklist of reachable
@@ -340,8 +401,33 @@ public class IRBuilder {
 
   private boolean verifyFilledPredecessors() {
     for (BasicBlock block : blocks) {
-      assert block.verifyFilledPredecessors();
+      assert verifyFilledPredecessors(block);
     }
+    return true;
+  }
+
+  private boolean verifyFilledPredecessors(BasicBlock block) {
+    assert block.verifyFilledPredecessors();
+    // TODO(zerny): Consider moving the validation of the initial control-flow graph to after its
+    // construction and prior to building the IR.
+    for (BlockInfo info : targets.values()) {
+      if (info != null && info.block == block) {
+        assert info.predecessorCount() == block.getPredecessors().size();
+        assert info.normalSuccessors.size() == block.getNormalSucessors().size();
+        if (block.hasCatchHandlers()) {
+          assert info.exceptionalSuccessors.size()
+              == block.getCatchHandlers().getUniqueTargets().size();
+        } else {
+          assert !block.canThrow()
+              || info.exceptionalSuccessors.isEmpty()
+              || (info.exceptionalSuccessors.size() == 1
+                  && info.exceptionalSuccessors.iterator().nextInt() < 0);
+        }
+        return true;
+      }
+    }
+    // There are places where we add in new blocks that we do not represent in the initial CFG.
+    // TODO(zerny): Should we maintain the initial CFG after instruction building?
     return true;
   }
 
@@ -359,11 +445,11 @@ public class IRBuilder {
           source.closedCurrentBlock();
           break;
         }
-        BasicBlock block = getTarget(source.instructionOffset(i));
-        if (block != null && block != currentBlock) {
-          closeCurrentBlockWithFallThrough(block);
+        BlockInfo info = targets.get(source.instructionOffset(i));
+        if (info != null && info.block != currentBlock) {
+          closeCurrentBlockWithFallThrough(info.block);
           source.closedCurrentBlockWithFallthrough(i);
-          addToWorklist(block, i);
+          addToWorklist(info.block, i);
           break;
         }
         source.buildInstruction(this, i);
@@ -1151,7 +1237,8 @@ public class IRBuilder {
       // If this was a packed switch with only fallthrough cases we can make it a goto.
       // Oddly, this does happen.
       if (numberOfFallthroughs == numberOfTargets) {
-        targets.get(fallthroughOffset).decrementUnfilledPredecessorCount(numberOfFallthroughs);
+        BlockInfo info = targets.get(fallthroughOffset);
+        info.block.decrementUnfilledPredecessorCount(numberOfFallthroughs);
         addGoto(fallthroughOffset);
         return;
       }
@@ -1161,7 +1248,8 @@ public class IRBuilder {
       int bytesSaved = packedSwitchPayloadSize - sparseSwitchPayloadSize;
       // Perform the rewrite if we can reduce the payload size by more than 20%.
       if (bytesSaved > (packedSwitchPayloadSize / 5)) {
-        targets.get(fallthroughOffset).decrementUnfilledPredecessorCount(numberOfFallthroughs);
+        BlockInfo info = targets.get(fallthroughOffset);
+        info.block.decrementUnfilledPredecessorCount(numberOfFallthroughs);
         int nextCaseIndex = 0;
         int currentKey = keys[0];
         keys = new int[numberOfSparseTargets];
@@ -1458,10 +1546,16 @@ public class IRBuilder {
     BasicBlock block = new BasicBlock();
     blocks.add(block);
     block.incrementUnfilledPredecessorCount();
-    for (Integer offset : source.getCurrentCatchHandlers().getUniqueTargets()) {
-      BasicBlock target = getTarget(offset);
-      assert !target.isSealed();
-      target.incrementUnfilledPredecessorCount();
+    int freshOffset = INITIAL_BLOCK_OFFSET - 1;
+    while (targets.containsKey(freshOffset)) {
+      freshOffset--;
+    }
+    targets.put(freshOffset, null);
+    for (int offset : source.getCurrentCatchHandlers().getUniqueTargets()) {
+      BlockInfo target = targets.get(offset);
+      assert !target.block.isSealed();
+      target.block.incrementUnfilledPredecessorCount();
+      target.addExceptionalPredecessor(freshOffset);
     }
     addInstruction(new Goto());
     currentBlock.link(block);
@@ -1499,21 +1593,32 @@ public class IRBuilder {
   // Package (ie, SourceCode accessed) helpers.
 
   // Ensure there is a block starting at offset.
-  BasicBlock ensureBlockWithoutEnqueuing(int offset) {
-    BasicBlock block = targets.get(offset);
-    if (block == null) {
-      block = new BasicBlock();
-      targets.put(offset, block);
+  BlockInfo ensureBlockWithoutEnqueuing(int offset) {
+    assert offset != INITIAL_BLOCK_OFFSET;
+    BlockInfo info = targets.get(offset);
+    if (info == null) {
       // If this is a processed instruction, the block split and it has a fall-through predecessor.
       if (offset >= 0 && isOffsetProcessed(offset)) {
-        block.incrementUnfilledPredecessorCount();
+        int blockStartOffset = getBlockStartOffset(offset);
+        BlockInfo existing = targets.get(blockStartOffset);
+        info = existing.split(blockStartOffset, offset, targets);
+      } else {
+        info = new BlockInfo();
       }
+      targets.put(offset, info);
     }
-    return block;
+    return info;
+  }
+
+  private int getBlockStartOffset(int offset) {
+    if (targets.containsKey(offset)) {
+      return offset;
+    }
+    return targets.headMap(offset).lastIntKey();
   }
 
   // Ensure there is a block starting at offset and add it to the work-list if it needs processing.
-  private BasicBlock ensureBlock(int offset) {
+  private BlockInfo ensureBlock(int offset) {
     // We don't enqueue negative targets (these are special blocks, eg, an argument prelude).
     if (offset >= 0 && !isOffsetProcessed(offset)) {
       traceBlocksWorklist.add(offset);
@@ -1550,16 +1655,32 @@ public class IRBuilder {
   }
 
   // Ensure there is a block at offset and add a predecessor to it.
-  BasicBlock ensureSuccessorBlock(int offset) {
-    BasicBlock block = ensureBlock(offset);
-    block.incrementUnfilledPredecessorCount();
-    return block;
+  private void ensureSuccessorBlock(int sourceOffset, int targetOffset, boolean normal) {
+    BlockInfo targetInfo = ensureBlock(targetOffset);
+    int sourceStartOffset = getBlockStartOffset(sourceOffset);
+    BlockInfo sourceInfo = targets.get(sourceStartOffset);
+    if (normal) {
+      sourceInfo.addNormalSuccessor(targetOffset);
+      targetInfo.addNormalPredecessor(sourceStartOffset);
+    } else {
+      sourceInfo.addExceptionalSuccessor(targetOffset);
+      targetInfo.addExceptionalPredecessor(sourceStartOffset);
+    }
+    targetInfo.block.incrementUnfilledPredecessorCount();
+  }
+
+  void ensureNormalSuccessorBlock(int sourceOffset, int targetOffset) {
+    ensureSuccessorBlock(sourceOffset, targetOffset, true);
+  }
+
+  void ensureExceptionalSuccessorBlock(int sourceOffset, int targetOffset) {
+    ensureSuccessorBlock(sourceOffset, targetOffset, false);
   }
 
   // Private block helpers.
 
   private BasicBlock getTarget(int offset) {
-    return targets.get(offset);
+    return targets.get(offset).block;
   }
 
   private void closeCurrentBlock() {

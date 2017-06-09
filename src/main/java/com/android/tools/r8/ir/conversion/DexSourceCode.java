@@ -277,7 +277,7 @@ public class DexSourceCode implements SourceCode {
       // Check that we don't ever have instructions that can throw and have targets.
       assert !dex.canThrow();
       for (int relativeOffset : targets) {
-        builder.ensureSuccessorBlock(offset + relativeOffset);
+        builder.ensureNormalSuccessorBlock(offset, offset + relativeOffset);
       }
       return true;
     }
@@ -297,7 +297,7 @@ public class DexSourceCode implements SourceCode {
         builder.ensureBlockWithoutEnqueuing(tryRangeStartAddress);
         // Edge to exceptional successors.
         for (Integer handlerOffset : getUniqueTryHandlerOffsets(tryRange)) {
-          builder.ensureSuccessorBlock(handlerOffset);
+          builder.ensureExceptionalSuccessorBlock(offset, handlerOffset);
         }
         // If the following instruction is a move-result include it in this (the invokes) block.
         if (index + 1 < code.instructions.length && isMoveResult(code.instructions[index + 1])) {
@@ -307,7 +307,7 @@ public class DexSourceCode implements SourceCode {
         }
         // Edge to normal successor if any (fallthrough).
         if (!(dex instanceof Throw)) {
-          builder.ensureSuccessorBlock(dex.getOffset() + dex.getSize());
+          builder.ensureNormalSuccessorBlock(offset, dex.getOffset() + dex.getSize());
         }
         return true;
       }
@@ -319,9 +319,9 @@ public class DexSourceCode implements SourceCode {
       switchPayloadResolver.addPayloadUser(dex);
 
       for (int target : switchPayloadResolver.absoluteTargets(dex)) {
-        builder.ensureSuccessorBlock(target);
+        builder.ensureNormalSuccessorBlock(offset, target);
       }
-      builder.ensureSuccessorBlock(offset + dex.getSize());
+      builder.ensureNormalSuccessorBlock(offset, offset + dex.getSize());
       return true;
     }
     // TODO(zerny): Remove this from block computation.
