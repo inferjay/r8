@@ -48,6 +48,7 @@ public class ProguardConfigurationParser {
           "filterlibraryjarswithorginalprogramjars",
           "dontskipnonpubliclibraryclasses",
           "dontskipnonpubliclibraryclassmembers",
+          "overloadaggressively",
           "invokebasemethod");
   private static final List<String> ignoredClassDescriptorOptions = ImmutableList
       .of("isclassnamestring",
