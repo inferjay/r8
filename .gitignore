@@ -46,12 +46,12 @@ third_party/proguard/proguard5.2.1.tar.gz
 third_party/proguard/proguard5.2.1
 third_party/proguardsettings.tar.gz
 third_party/proguardsettings/
-third_party/youtube/youtube.android_11.47
-third_party/youtube/youtube.android_11.47.tar.gz
 third_party/youtube/youtube.android_12.10
 third_party/youtube/youtube.android_12.10.tar.gz
 third_party/youtube/youtube.android_12.17/
 third_party/youtube/youtube.android_12.17.tar.gz
+third_party/youtube/youtube.android_12.22/
+third_party/youtube/youtube.android_12.22.tar.gz
 third_party/jctf
 third_party/jctf.tar.gz
 third_party/android_cts_baseline
