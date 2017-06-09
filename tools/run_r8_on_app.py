@@ -67,7 +67,7 @@ def main():
     options.version = options.version or 'v9'
     data = gmscore_data
   elif options.app == 'youtube':
-    options.version = options.version or '12.10'
+    options.version = options.version or '12.22'
     data = youtube_data
   else:
     raise 'Unexpected'
