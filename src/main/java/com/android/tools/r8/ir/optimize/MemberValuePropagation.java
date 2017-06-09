@@ -236,8 +236,7 @@ public class MemberValuePropagation {
   private boolean isFieldRead(DexEncodedField field, boolean isStatic) {
     // Without live set information we cannot tell and assume true.
     if (liveSet == null
-        || isStatic && liveSet.staticFieldsRead.contains(field.field)
-        || !isStatic && liveSet.instanceFieldsRead.contains(field.field)
+        || liveSet.fieldsRead.contains(field.field)
         || liveSet.pinnedItems.contains(field)) {
       return true;
     }

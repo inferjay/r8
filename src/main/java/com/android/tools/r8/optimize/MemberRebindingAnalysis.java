@@ -4,7 +4,6 @@
 package com.android.tools.r8.optimize;
 
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.graph.Descriptor;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -98,11 +97,6 @@ public class MemberRebindingAnalysis {
     return searchClass.type;
   }
 
-  private boolean isNotFromLibrary(Descriptor item) {
-    DexClass clazz = appInfo.definitionFor(item.getHolder());
-    return clazz != null && !clazz.isLibraryClass();
-  }
-
   private DexEncodedMethod virtualLookup(DexMethod method) {
     return appInfo.lookupVirtualDefinition(method.getHolder(), method);
   }
@@ -190,11 +184,21 @@ public class MemberRebindingAnalysis {
     for (DexField field : fields) {
       field = lense.lookupField(field, null);
       DexEncodedField target = lookup.apply(field.getHolder(), field);
-      // Rebind to the lowest library class or program class.
-      if (target != null && target.field != field) {
+      // Rebind to the lowest library class or program class. Do not rebind accesses to fields that
+      // are not public, as this might lead to access violation errors.
+      if (target != null && target.field != field && isVisibleFromOtherClasses(target)) {
         builder.map(field, validTargetFor(target.field, field, lookupTargetOnClass));
       }
     }
+  }
+
+  private boolean isVisibleFromOtherClasses(DexEncodedField field) {
+    // If the field is not public, the visibility on the class can not be a further constraint.
+    if (!field.accessFlags.isPublic()) {
+      return true;
+    }
+    // If the field is public, then a non-public holder class will further constrain visibility.
+    return appInfo.definitionFor(field.field.getHolder()).accessFlags.isPublic();
   }
 
   private static void privateMethodsCheck(DexProgramClass clazz, DexEncodedMethod method) {
@@ -211,9 +215,9 @@ public class MemberRebindingAnalysis {
     computeMethodRebinding(appInfo.staticInvokes, appInfo::lookupStaticTarget,
         DexClass::findDirectTarget, DexProgramClass::addStaticMethod);
 
-    computeFieldRebinding(Sets.union(appInfo.staticFieldsRead, appInfo.staticFieldsWritten),
+    computeFieldRebinding(Sets.union(appInfo.staticFieldReads, appInfo.staticFieldWrites),
         appInfo::lookupStaticTarget, DexClass::findStaticTarget);
-    computeFieldRebinding(Sets.union(appInfo.instanceFieldsRead, appInfo.instanceFieldsWritten),
+    computeFieldRebinding(Sets.union(appInfo.instanceFieldReads, appInfo.instanceFieldWrites),
         appInfo::lookupInstanceTarget, DexClass::findInstanceTarget);
     return builder.build(lense, appInfo.dexItemFactory);
   }

@@ -103,8 +103,8 @@ public class R8RunExamplesTest {
         "regress_37875803.Regress",
         "regress_37955340.Regress",
         "regress_62300145.Regress",
-        "memberrebinding2.Test",
-        "memberrebinding3.Test",
+        "memberrebinding2.Memberrebinding",
+        "memberrebinding3.Memberrebinding",
         "minification.Minification",
         "enclosingmethod.Main",
         "interfaceinlining.Main",
@@ -123,7 +123,7 @@ public class R8RunExamplesTest {
   private static String[] makeTest(
       DexTool tool, CompilerUnderTest compiler, CompilationMode mode, String clazz) {
     String pkg = clazz.substring(0, clazz.lastIndexOf('.'));
-    return new String[] {pkg, tool.name(), compiler.name(), mode.name(), clazz};
+    return new String[]{pkg, tool.name(), compiler.name(), mode.name(), clazz};
   }
 
   @Rule

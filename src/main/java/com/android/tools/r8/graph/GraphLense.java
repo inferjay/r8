@@ -6,6 +6,19 @@ package com.android.tools.r8.graph;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+/**
+ * A GraphLense implements a virtual view on top of the graph, used to delay global rewrites until
+ * later IR processing stages.
+ * <p>
+ * Valid remappings are limited to the following operations:
+ * <ul>
+ * <li>Mapping a classes type to one of the super/subtypes.</li>
+ * <li>Renaming private methods/fields.</li>
+ * <li>Moving methods/fields to a super/subclass.</li>
+ * <li>Replacing method/field references by the same method/field on a super/subtype</li>
+ * </ul>
+ * Note that the latter two have to take visibility into account.
+ */
 public abstract class GraphLense {
 
   public static class Builder {

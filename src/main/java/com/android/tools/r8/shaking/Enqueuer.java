@@ -37,6 +37,7 @@ import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -47,6 +48,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -856,9 +858,8 @@ public class Enqueuer {
   }
 
   private Set<DexField> collectFields(Map<DexType, Set<DexField>> map) {
-    Set<DexField> set = Sets.newIdentityHashSet();
-    map.values().forEach(set::addAll);
-    return set;
+    return map.values().stream().flatMap(Collection::stream)
+        .collect(Collectors.toCollection(Sets::newIdentityHashSet));
   }
 
   Set<DexField> collectInstanceFieldsRead() {
@@ -875,6 +876,32 @@ public class Enqueuer {
 
   Set<DexField> collectStaticFieldsWritten() {
     return Collections.unmodifiableSet(collectFields(staticFieldsWritten));
+  }
+
+  private Set<DexField> collectReachedFields(Map<DexType, Set<DexField>> map,
+      Function<DexField, DexField> lookup) {
+    return map.values().stream().flatMap(set -> set.stream().map(lookup))
+        .collect(Collectors.toCollection(Sets::newIdentityHashSet));
+  }
+
+  private DexField tryLookupInstanceField(DexField field) {
+    DexEncodedField target = appInfo.lookupInstanceTarget(field.clazz, field);
+    return target == null ? field : target.field;
+  }
+
+  private DexField tryLookupStaticField(DexField field) {
+    DexEncodedField target = appInfo.lookupStaticTarget(field.clazz, field);
+    return target == null ? field : target.field;
+  }
+
+  Set<DexField> collectFieldsRead() {
+    return Sets.union(collectReachedFields(instanceFieldsRead, this::tryLookupInstanceField),
+        collectReachedFields(staticFieldsRead, this::tryLookupStaticField));
+  }
+
+  Set<DexField> collectFieldsWritten() {
+    return Sets.union(collectReachedFields(instanceFieldsWritten, this::tryLookupInstanceField),
+        collectReachedFields(staticFieldsWritten, this::tryLookupStaticField));
   }
 
   private static class Action {
@@ -981,31 +1008,29 @@ public class Enqueuer {
      */
     final Set<DexField> liveFields;
     /**
-     * Set of all fields which are read. Combines {@link #instanceFieldsRead} and
-     * {@link #staticFieldsRead}.
+     * Set of all fields which may be touched by a get operation. This is actual field definitions.
      */
     public final Set<DexField> fieldsRead;
     /**
-     * Set of all fields which are written. Combines {@link #instanceFieldsWritten} and
-     * {@link #staticFieldsWritten}.
+     * Set of all fields which may be touched by a put operation. This is actual field definitions.
      */
     public final Set<DexField> fieldsWritten;
     /**
-     * Set of all instance fields which are read.
+     * Set of all field ids used in instance field reads.
      */
-    public final Set<DexField> instanceFieldsRead;
+    public final Set<DexField> instanceFieldReads;
     /**
-     * Set of all instance fields which are written.
+     * Set of all field ids used in instance field writes.
      */
-    public final Set<DexField> instanceFieldsWritten;
+    public final Set<DexField> instanceFieldWrites;
     /**
-     * Set of all static fields which are read.
+     * Set of all field ids used in static static field reads.
      */
-    public final Set<DexField> staticFieldsRead;
+    public final Set<DexField> staticFieldReads;
     /**
-     * Set of all static fields which are written.
+     * Set of all field ids used in static field writes.
      */
-    public final Set<DexField> staticFieldsWritten;
+    public final Set<DexField> staticFieldWrites;
     /**
      * Set of all methods referenced in virtual invokes;
      */
@@ -1042,12 +1067,12 @@ public class Enqueuer {
       this.targetedMethods = toDescriptorSet(enqueuer.targetedMethods.getItems());
       this.liveMethods = toDescriptorSet(enqueuer.liveMethods.getItems());
       this.liveFields = toDescriptorSet(enqueuer.liveFields.getItems());
-      this.instanceFieldsRead = enqueuer.collectInstanceFieldsRead();
-      this.instanceFieldsWritten = enqueuer.collectInstanceFieldsWritten();
-      this.staticFieldsRead = enqueuer.collectStaticFieldsRead();
-      this.staticFieldsWritten = enqueuer.collectStaticFieldsWritten();
-      this.fieldsRead = Sets.union(staticFieldsRead, instanceFieldsRead);
-      this.fieldsWritten = Sets.union(staticFieldsWritten, instanceFieldsWritten);
+      this.instanceFieldReads = enqueuer.collectInstanceFieldsRead();
+      this.instanceFieldWrites = enqueuer.collectInstanceFieldsWritten();
+      this.staticFieldReads = enqueuer.collectStaticFieldsRead();
+      this.staticFieldWrites = enqueuer.collectStaticFieldsWritten();
+      this.fieldsRead = enqueuer.collectFieldsRead();
+      this.fieldsWritten = enqueuer.collectFieldsWritten();
       this.pinnedItems = Collections.unmodifiableSet(enqueuer.pinnedItems);
       this.virtualInvokes = joinInvokedMethods(enqueuer.virtualInvokes);
       this.superInvokes = joinInvokedMethods(enqueuer.superInvokes);
@@ -1055,8 +1080,8 @@ public class Enqueuer {
       this.staticInvokes = joinInvokedMethods(enqueuer.staticInvokes);
       this.noSideEffects = enqueuer.rootSet.noSideEffects;
       this.assumedValues = enqueuer.rootSet.assumedValues;
-      assert Sets.intersection(instanceFieldsRead, staticFieldsRead).size() == 0;
-      assert Sets.intersection(instanceFieldsWritten, staticFieldsWritten).size() == 0;
+      assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
+      assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
 
     private AppInfoWithLiveness(AppInfoWithLiveness previous, DexApplication application) {
@@ -1066,11 +1091,12 @@ public class Enqueuer {
       this.targetedMethods = previous.targetedMethods;
       this.liveMethods = previous.liveMethods;
       this.liveFields = previous.liveFields;
-      this.instanceFieldsRead = previous.instanceFieldsRead;
-      this.instanceFieldsWritten = previous.instanceFieldsWritten;
-      this.staticFieldsRead = previous.staticFieldsRead;
-      this.staticFieldsWritten = previous.staticFieldsWritten;
+      this.instanceFieldReads = previous.instanceFieldReads;
+      this.instanceFieldWrites = previous.instanceFieldWrites;
+      this.staticFieldReads = previous.staticFieldReads;
+      this.staticFieldWrites = previous.staticFieldWrites;
       this.fieldsRead = previous.fieldsRead;
+      // TODO(herhut): We remove fields that are only written, so maybe update this.
       this.fieldsWritten = previous.fieldsWritten;
       this.pinnedItems = previous.pinnedItems;
       this.noSideEffects = previous.noSideEffects;
@@ -1079,8 +1105,8 @@ public class Enqueuer {
       this.superInvokes = previous.superInvokes;
       this.directInvokes = previous.directInvokes;
       this.staticInvokes = previous.staticInvokes;
-      assert Sets.intersection(instanceFieldsRead, staticFieldsRead).size() == 0;
-      assert Sets.intersection(instanceFieldsWritten, staticFieldsWritten).size() == 0;
+      assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
+      assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
 
     private AppInfoWithLiveness(AppInfoWithLiveness previous, GraphLense lense) {
@@ -1090,12 +1116,12 @@ public class Enqueuer {
       this.targetedMethods = rewriteItems(previous.targetedMethods, lense::lookupMethod);
       this.liveMethods = rewriteItems(previous.liveMethods, lense::lookupMethod);
       this.liveFields = rewriteItems(previous.liveFields, lense::lookupField);
-      this.instanceFieldsRead = rewriteItems(previous.instanceFieldsRead, lense::lookupField);
-      this.instanceFieldsWritten = rewriteItems(previous.instanceFieldsWritten, lense::lookupField);
-      this.staticFieldsRead = rewriteItems(previous.staticFieldsRead, lense::lookupField);
-      this.staticFieldsWritten = rewriteItems(previous.staticFieldsWritten, lense::lookupField);
-      this.fieldsRead = Sets.union(staticFieldsRead, instanceFieldsRead);
-      this.fieldsWritten = Sets.union(staticFieldsWritten, instanceFieldsWritten);
+      this.instanceFieldReads = rewriteItems(previous.instanceFieldReads, lense::lookupField);
+      this.instanceFieldWrites = rewriteItems(previous.instanceFieldWrites, lense::lookupField);
+      this.staticFieldReads = rewriteItems(previous.staticFieldReads, lense::lookupField);
+      this.staticFieldWrites = rewriteItems(previous.staticFieldWrites, lense::lookupField);
+      this.fieldsRead = rewriteItems(previous.fieldsRead, lense::lookupField);
+      this.fieldsWritten = rewriteItems(previous.fieldsWritten, lense::lookupField);
       // TODO(herhut): Migrate these to Descriptors, as well.
       this.pinnedItems = previous.pinnedItems;
       this.noSideEffects = previous.noSideEffects;
@@ -1104,8 +1130,8 @@ public class Enqueuer {
       this.superInvokes = rewriteItems(previous.superInvokes, lense::lookupMethod);
       this.directInvokes = rewriteItems(previous.directInvokes, lense::lookupMethod);
       this.staticInvokes = rewriteItems(previous.staticInvokes, lense::lookupMethod);
-      assert Sets.intersection(instanceFieldsRead, staticFieldsRead).size() == 0;
-      assert Sets.intersection(instanceFieldsWritten, staticFieldsWritten).size() == 0;
+      assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
+      assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
 
     private Set<DexMethod> joinInvokedMethods(Map<DexType, Set<DexMethod>> invokes) {

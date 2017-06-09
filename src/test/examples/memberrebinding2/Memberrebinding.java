@@ -5,7 +5,7 @@ package memberrebinding2;
 
 import memberrebinding2.subpackage.PublicClass;
 
-public class Test {
+public class Memberrebinding {
 
   public static void main(String[] args) {
     ClassAtBottomOfChain bottomInstance = new ClassAtBottomOfChain();

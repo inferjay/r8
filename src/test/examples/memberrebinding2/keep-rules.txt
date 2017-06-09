@@ -1,0 +1,12 @@
+# Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# Keep the application entry point. Get rid of everything that is not
+# reachable from there.
+-keep public class memberrebinding2.Memberrebinding {
+  public static void main(...);
+}
+
+# Remove once b/62048823 is fixed.
+-allowaccessmodification

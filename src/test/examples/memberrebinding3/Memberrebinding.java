@@ -3,16 +3,19 @@
 // BSD-style license that can be found in the LICENSE file.
 package memberrebinding3;
 
-public class Test extends ClassAtBottomOfChain {
+public class Memberrebinding extends ClassAtBottomOfChain {
 
+  @Override
   void bottomMethod() {
 
   }
 
+  @Override
   void middleMethod() {
 
   }
 
+  @Override
   void topMethod() {
 
   }
@@ -24,6 +27,6 @@ public class Test extends ClassAtBottomOfChain {
   }
 
   public static void main(String[] args) {
-    new Test().test();
+    new Memberrebinding().test();
   }
 }

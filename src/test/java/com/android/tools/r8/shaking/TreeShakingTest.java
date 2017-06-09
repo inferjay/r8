@@ -542,7 +542,9 @@ public class TreeShakingTest {
             "assumevalues3",
             "assumevalues4",
             "assumevalues5",
-            "annotationremoval");
+            "annotationremoval",
+            "memberrebinding2",
+            "memberrebinding3");
 
     // Keys can be the name of the test or the name of the test followed by a colon and the name
     // of the keep file.

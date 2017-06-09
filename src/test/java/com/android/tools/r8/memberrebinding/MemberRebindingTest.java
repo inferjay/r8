@@ -105,7 +105,8 @@ public class MemberRebindingTest {
   }
 
   private static void inspectOriginalMain(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding.Test").method(DexInspector.MAIN);
+    MethodSubject main = inspector.clazz("memberrebinding.Memberrebinding")
+        .method(DexInspector.MAIN);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(MemberRebindingTest::coolInvokes);
     assertTrue(iterator.next().holder().is("memberrebinding.ClassAtBottomOfChain"));
@@ -132,7 +133,8 @@ public class MemberRebindingTest {
   }
 
   private static void inspectMain(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding.Test").method(DexInspector.MAIN);
+    MethodSubject main = inspector.clazz("memberrebinding.Memberrebinding")
+        .method(DexInspector.MAIN);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(MemberRebindingTest::coolInvokes);
     assertTrue(iterator.next().holder().is("memberrebinding.ClassAtBottomOfChain"));
@@ -162,7 +164,8 @@ public class MemberRebindingTest {
   }
 
   private static void inspectOriginalMain2(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding2.Test").method(DexInspector.MAIN);
+    MethodSubject main = inspector.clazz("memberrebinding2.Memberrebinding")
+        .method(DexInspector.MAIN);
     Iterator<FieldAccessInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isFieldAccess);
     // Run through instance put, static put, instance get and instance get.
@@ -177,7 +180,8 @@ public class MemberRebindingTest {
   }
 
   private static void inspectMain2(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding2.Test").method(DexInspector.MAIN);
+    MethodSubject main = inspector.clazz("memberrebinding2.Memberrebinding")
+        .method(DexInspector.MAIN);
     Iterator<FieldAccessInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isFieldAccess);
     // Run through instance put, static put, instance get and instance get.
@@ -185,7 +189,7 @@ public class MemberRebindingTest {
       assertTrue(iterator.next().holder().is("memberrebinding2.ClassAtBottomOfChain"));
       assertTrue(iterator.next().holder().is("memberrebinding2.ClassInMiddleOfChain"));
       assertTrue(iterator.next().holder().is("memberrebinding2.SuperClassOfAll"));
-      assertTrue(iterator.next().holder().is("memberrebinding2.subpackage.PackagePrivateClass"));
+      assertTrue(iterator.next().holder().is("memberrebinding2.subpackage.PublicClass"));
     }
     assertTrue(iterator.next().holder().is("java.lang.System"));
     assertFalse(iterator.hasNext());
@@ -195,7 +199,7 @@ public class MemberRebindingTest {
       new MethodSignature("test", "void", new String[]{});
 
   private static void inspectOriginal3(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding3.Test").method(TEST);
+    MethodSubject main = inspector.clazz("memberrebinding3.Memberrebinding").method(TEST);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isInvoke);
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
@@ -205,7 +209,7 @@ public class MemberRebindingTest {
   }
 
   private static void inspect3(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding3.Test").method(TEST);
+    MethodSubject main = inspector.clazz("memberrebinding3.Memberrebinding").method(TEST);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isInvoke);
     assertTrue(iterator.next().holder().is("memberrebinding3.ClassAtBottomOfChain"));
@@ -215,19 +219,19 @@ public class MemberRebindingTest {
   }
 
   private static void inspectOriginal4(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding4.Test").method(TEST);
+    MethodSubject main = inspector.clazz("memberrebinding4.Memberrebinding").method(TEST);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isInvoke);
-    assertTrue(iterator.next().holder().is("memberrebinding4.Test$Inner"));
+    assertTrue(iterator.next().holder().is("memberrebinding4.Memberrebinding$Inner"));
     assertTrue(iterator.next().holder().is("memberrebinding4.subpackage.PublicInterface"));
     assertFalse(iterator.hasNext());
   }
 
   private static void inspect4(DexInspector inspector) {
-    MethodSubject main = inspector.clazz("memberrebinding4.Test").method(TEST);
+    MethodSubject main = inspector.clazz("memberrebinding4.Memberrebinding").method(TEST);
     Iterator<InvokeInstructionSubject> iterator =
         main.iterateInstructions(InstructionSubject::isInvoke);
-    assertTrue(iterator.next().holder().is("memberrebinding4.Test$Inner"));
+    assertTrue(iterator.next().holder().is("memberrebinding4.Memberrebinding$Inner"));
     assertTrue(iterator.next().holder().is("memberrebinding4.subpackage.PublicInterface"));
     assertFalse(iterator.hasNext());
   }

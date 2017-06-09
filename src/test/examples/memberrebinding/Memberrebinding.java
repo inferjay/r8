@@ -6,7 +6,7 @@ package memberrebinding;
 import memberrebinding.subpackage.PublicClass;
 import memberrebindinglib.AnIndependentInterface;
 
-public class Test {
+public class Memberrebinding {
 
   public static void main(String[] args) {
     ClassAtBottomOfChain bottomInstance = new ClassAtBottomOfChain();

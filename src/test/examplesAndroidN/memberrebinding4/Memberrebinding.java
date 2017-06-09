@@ -5,7 +5,7 @@ package memberrebinding4;
 
 import memberrebinding4.subpackage.PublicInterface;
 
-public class Test {
+public class Memberrebinding {
 
   static class Inner implements PublicInterface {
 

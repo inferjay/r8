@@ -25,7 +25,7 @@ public class ExtraFileTest {
   private static final String EXAMPLE_DIR = ToolHelper.EXAMPLES_BUILD_DIR;
   private static final String EXAMPLE_DEX = "memberrebinding/classes.dex";
   private static final String EXAMPLE_LIB = "memberrebindinglib/classes.dex";
-  private static final String EXAMPLE_CLASS = "memberrebinding.Test";
+  private static final String EXAMPLE_CLASS = "memberrebinding.Memberrebinding";
   private static final String EXAMPLE_PACKAGE_MAP = "memberrebinding/package.map";
   private static final String EXAMPLE_PROGUARD_MAP = "memberrebinding/proguard.map";
 
