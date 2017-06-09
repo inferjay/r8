@@ -142,7 +142,7 @@ public class MainDexTracingTest {
           .collect(Collectors.toList());
       Collections.sort(resultMainDexList);
       String[] refList = new String(Files.readAllBytes(
-          expectedMainDexList), StandardCharsets.UTF_8).split("\n");
+          expectedMainDexList), StandardCharsets.UTF_8).split(ToolHelper.LINE_SEPARATOR);
       for (int i = 0; i < refList.length; i++) {
         String reference = refList[i];
         String computed = resultMainDexList.get(i);

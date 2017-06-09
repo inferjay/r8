@@ -1,0 +1,23 @@
+Dx version: 1.12
+dx.bat and dx.jar are fetched from SDK build tools 24.0.0.
+dx.bat has been modified so that the code that checks if 'java' if on current path
+is removed and replaced by a direct reference to it.
+This is done because this relies on a tool found in the SDK and not present in the
+current package.
+Diff:
+
+26,29c26,29
+< set java_exe=
+< if exist    "%~dp0..\tools\lib\find_java.bat" call    "%~dp0..\tools\lib\find_java.bat"
+< if exist "%~dp0..\..\tools\lib\find_java.bat" call "%~dp0..\..\tools\lib\find_java.bat"
+< if not defined java_exe goto :EOF
+---
+> REM set java_exe=
+> REM if exist    "%~dp0..\tools\lib\find_java.bat" call    "%~dp0..\tools\lib\find_java.bat"
+> REM if exist "%~dp0..\..\tools\lib\find_java.bat" call "%~dp0..\..\tools\lib\find_java.bat"
+> REM if not defined java_exe goto :EOF
+87c87
+< call "%java_exe%" %javaOpts% -Djava.ext.dirs="%frameworkdir%" -jar "%jarpath%" %params%
+---
+> call java %javaOpts% -Djava.ext.dirs="%frameworkdir%" -jar "%jarpath%" %params%
+

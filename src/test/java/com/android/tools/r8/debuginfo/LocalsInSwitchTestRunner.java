@@ -5,6 +5,7 @@ package com.android.tools.r8.debuginfo;
 
 import static org.junit.Assert.assertEquals;
 
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.utils.AndroidApp;
 import org.junit.Test;
 
@@ -17,7 +18,8 @@ public class LocalsInSwitchTestRunner extends DebugInfoTestBase {
     AndroidApp d8App = compileWithD8(clazz);
     AndroidApp dxApp = getDxCompiledSources();
 
-    String expected = "55\n1862\n15130\n";
+    String expected = "55" + ToolHelper.LINE_SEPARATOR + "1862" + ToolHelper.LINE_SEPARATOR
+            + "15130" + ToolHelper.LINE_SEPARATOR;
     assertEquals(expected, runOnJava(clazz));
     assertEquals(expected, runOnArt(d8App, clazz.getCanonicalName()));
     assertEquals(expected, runOnArt(dxApp, clazz.getCanonicalName()));

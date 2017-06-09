@@ -64,7 +64,8 @@ public class Dx extends DefaultTask {
       public void execute(ExecSpec execSpec) {
         try {
           if (dxExecutable == null) {
-            dxExecutable = new File("tools/" + Utils.toolsDir() + "/dx/bin/dx");
+            String dxExecutableName = Utils.toolsDir().equals("windows") ? "dx.bat" : "dx";
+            dxExecutable = new File("tools/" + Utils.toolsDir() + "/dx/bin/" + dxExecutableName);
           }
           execSpec.setExecutable(dxExecutable);
           execSpec.args("--dex");

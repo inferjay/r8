@@ -5,6 +5,7 @@ package com.android.tools.r8.jasmin;
 
 import static org.junit.Assert.assertEquals;
 
+import com.android.tools.r8.ToolHelper;
 import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 
@@ -66,7 +67,7 @@ public class InvalidDebugInfoTests extends JasminTestBase {
         "  invokestatic Test/foo(I)V",
         "  return");
 
-    String expected = "42\n0\n";
+    String expected = "42" + ToolHelper.LINE_SEPARATOR + "0" + ToolHelper.LINE_SEPARATOR;
     String javaResult = runOnJava(builder, clazz.name);
     assertEquals(expected, javaResult);
     String artResult = runOnArtD8(builder, clazz.name);
@@ -115,7 +116,7 @@ public class InvalidDebugInfoTests extends JasminTestBase {
         "  invokestatic Test/foo(II)V",
         "  return");
 
-    String expected = "42\n";
+    String expected = "42" + ToolHelper.LINE_SEPARATOR;
     String javaResult = runOnJava(builder, clazz.name);
     assertEquals(expected, javaResult);
     String artResult = runOnArtD8(builder, clazz.name);

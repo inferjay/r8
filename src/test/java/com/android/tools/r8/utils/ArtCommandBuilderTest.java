@@ -9,9 +9,16 @@ import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ArtCommandBuilder;
 import com.android.tools.r8.ToolHelper.DexVm;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 public class ArtCommandBuilderTest {
+
+  @Before
+  public void setUp() {
+    Assume.assumeTrue(ToolHelper.artSupported());
+  }
 
   @Test
   public void noArguments() {

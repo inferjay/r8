@@ -11,6 +11,8 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
 import com.google.common.io.ByteStreams;
+
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -73,9 +75,12 @@ public final class PreloadedResourceProvider implements ResourceProvider {
     assert name != null;
     assert name.endsWith(CLASS_EXTENSION) :
         "Name " + name + " must have " + CLASS_EXTENSION + " suffix";
-    String descriptor = name.substring(0, name.length() - CLASS_EXTENSION.length());
+    String fileName =
+            File.separatorChar == '/' ? name.toString() :
+                    name.toString().replace(File.separatorChar, '/');
+    String descriptor = fileName.substring(0, fileName.length() - CLASS_EXTENSION.length());
     if (descriptor.contains(".")) {
-      throw new CompilationError("Unexpected file name in the archive: " + name);
+      throw new CompilationError("Unexpected file name in the archive: " + fileName);
     }
     return 'L' + descriptor + ';';
   }
