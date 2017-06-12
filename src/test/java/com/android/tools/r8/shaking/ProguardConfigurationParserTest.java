@@ -379,4 +379,15 @@ public class ProguardConfigurationParserTest extends TestBase {
     );
     parser.parse(proguardConfig);
   }
+
+  @Test
+  public void parseCustomFlags() throws Exception {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    // Custom Proguard flags -runtype and -laststageoutput are ignored.
+    Path proguardConfig = writeTextToTempFile(
+        "-runtype FINAL                    ",
+        "-laststageoutput /some/file/name  "
+    );
+    parser.parse(proguardConfig);
+  }
 }
