@@ -30,6 +30,7 @@ import argparse
 import os
 import re
 import sys
+import time
 
 import gradle
 import utils
@@ -103,34 +104,19 @@ def remove_aosp_out():
 #     tree[module_name][testcase_name][test_name] = True|False
 #
 def read_test_result_into_tree(filename):
-  re_module = re.compile('<Module name="([^"]*)"')
-  re_testcase = re.compile('<TestCase name="([^"]*)"')
-  re_test = re.compile('<Test result="(pass|fail)" name="([^"]*)"')
   tree = {}
   module = None
   testcase = None
-  with open(filename) as f:
-    for line in f:
-      m = re_module.search(line)
-      if m:
-        module_name = m.groups()[0]
-        tree[module_name] = {}
-        module = tree[module_name]
-        continue
+  for x in utils.read_cts_test_result(filename):
+    if type(x) is utils.CtsModule:
+      tree[x.name] = {}
+      module = tree[x.name]
+    elif type(x) is utils.CtsTestCase:
+      module[x.name] = {}
+      testcase = module[x.name]
+    else:
+      testcase[x.name] = x.outcome
 
-      m = re_testcase.search(line)
-      if m:
-        testcase_name = m.groups()[0]
-        module[testcase_name] = {}
-        testcase = module[testcase_name]
-        continue
-
-      m = re_test.search(line)
-      if m:
-        outcome = m.groups()[0]
-        test_name = m.groups()[1]
-        assert outcome in ["fail", "pass"]
-        testcase[test_name] = outcome == "pass"
   return tree
 
 # Report the items with the title

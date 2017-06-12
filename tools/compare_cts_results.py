@@ -9,8 +9,9 @@ from __future__ import print_function
 from os.path import basename
 import argparse
 import os
-import re
 import sys
+
+import utils
 
 class Module:
   def __init__(self):
@@ -90,35 +91,19 @@ def parse_arguments():
 
 # Read CTS test_result.xml from file and merge into result_tree
 def add_to_result_tree(result_tree, file_xml, file_idx):
-  re_module = re.compile('<Module name="([^"]*)"')
-  re_test_case = re.compile('<TestCase name="([^"]*)"')
-  re_test = re.compile('<Test result="(pass|fail)" name="([^"]*)"')
   module = None
   test_case = None
-  with open(file_xml) as f:
-    for line in f:
-      m = re_module.search(line)
-      if m:
-        module_name = m.groups()[0]
-        module = result_tree.setdefault(module_name, Module())
-        module.set_file_index_present(file_idx)
-        continue
-
-      m = re_test_case.search(line)
-      if m:
-        test_case_name = m.groups()[0]
-        test_case = module.get_test_case_maybe_create(test_case_name)
-        test_case.set_file_index_present(file_idx)
-        continue
-
-      m = re_test.search(line)
-      if m:
-        outcome = m.groups()[0]
-        test_name = m.groups()[1]
-        assert outcome in ["fail", "pass"]
-
-        v = test_case.get_test_maybe_create(test_name)
-        v.set_file_index_outcome(outcome == 'pass', file_idx)
+  for x in utils.read_cts_test_result(file_xml):
+    if type(x) is utils.CtsModule:
+      module = result_tree.setdefault(x.name, Module())
+      module.set_file_index_present(file_idx)
+    elif type(x) is utils.CtsTestCase:
+      test_case = module.get_test_case_maybe_create(x.name)
+      test_case.set_file_index_present(file_idx)
+    else:
+      assert(type(x) is utils.CtsTest)
+      v = test_case.get_test_maybe_create(x.name)
+      v.set_file_index_outcome(x.outcome, file_idx)
 
 # main tree_report function
 def tree_report(result_tree, files, diff_only):
