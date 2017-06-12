@@ -162,7 +162,7 @@ public final class D8 {
       app = optimize(app, appInfo, options);
 
       // If a method filter is present don't produce output since the application is likely partial.
-      if (!options.methodsFilter.isEmpty()) {
+      if (options.hasMethodsFilter()) {
         System.out.println("Finished compilation with method filter: ");
         options.methodsFilter.forEach((m) -> System.out.println("  - " + m));
         return null;

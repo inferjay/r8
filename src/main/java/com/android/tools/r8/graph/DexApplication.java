@@ -212,15 +212,38 @@ public class DexApplication {
     ps.append(builder.toString());
   }
 
-  /** Write smali source for the application code on the provided PrintStream. */
+  private void writeClassFooter(DexClass clazz, PrintStream ps) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("# End of class ");
+    builder.append(clazz.type.toSmaliString());
+    builder.append("\n");
+    ps.append(builder.toString());
+  }
+
+  /**
+   * Write smali source for the application code on the provided PrintStream.
+   */
   public void smali(InternalOptions options, PrintStream ps) {
     List<DexProgramClass> classes = (List<DexProgramClass>) classes();
     classes.sort(Comparator.comparing(DexProgramClass::toSourceString));
+    boolean firstClass = true;
     for (DexClass clazz : classes) {
       boolean classHeaderWritten = false;
+      if (!options.hasMethodsFilter()) {
+        if (!firstClass) {
+          ps.append("\n");
+          firstClass = false;
+        }
+        writeClassHeader(clazz, ps);
+        classHeaderWritten = true;
+      }
       for (DexEncodedMethod method : clazz.virtualMethods()) {
         if (options.methodMatchesFilter(method)) {
           if (!classHeaderWritten) {
+            if (!firstClass) {
+              ps.append("\n");
+              firstClass = false;
+            }
             writeClassHeader(clazz, ps);
             classHeaderWritten = true;
           }
@@ -231,12 +254,20 @@ public class DexApplication {
       for (DexEncodedMethod method : clazz.directMethods()) {
         if (options.methodMatchesFilter(method)) {
           if (!classHeaderWritten) {
+            if (!firstClass) {
+              ps.append("\n");
+              firstClass = false;
+            }
             writeClassHeader(clazz, ps);
             classHeaderWritten = true;
           }
           ps.append("\n");
           ps.append(method.toSmaliString(getProguardMap()));
         }
+      }
+      if (classHeaderWritten) {
+        ps.append("\n");
+        writeClassFooter(clazz, ps);
       }
     }
   }
