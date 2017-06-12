@@ -7,6 +7,7 @@ import static com.android.tools.r8.D8Command.USAGE_MESSAGE;
 
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.ir.conversion.IRConverter;
@@ -178,13 +179,17 @@ public final class D8 {
       options.printWarnings();
       return output;
     } catch (ExecutionException e) {
-      throw new RuntimeException(e.getMessage(), e.getCause());
+      if (e.getCause() instanceof CompilationError) {
+        throw (CompilationError) e.getCause();
+      } else {
+        throw new RuntimeException(e.getMessage(), e.getCause());
+      }
     }
   }
 
   private static DexApplication optimize(
       DexApplication application, AppInfo appInfo, InternalOptions options)
-      throws IOException, ExecutionException {
+      throws IOException {
     final CfgPrinter printer = options.printCfg ? new CfgPrinter() : null;
 
     IRConverter converter = new IRConverter(application, appInfo, options, printer);
