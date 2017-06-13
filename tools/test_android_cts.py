@@ -14,11 +14,9 @@
 #   cd build/aosp
 #   repo manifest -o ../../third_party/aosp_manifest.xml -r
 #
-# The baseline is the `test_result.xml` file which is created with an AOSP
-# build which uses the default (JACK) toolset.
-#
-# Use this script, with '--tool=jack' to reproduce the baseline results
-#
+# The baseline is a set of `test_result.xml` files in
+# third_party/android_cts_baseline/jack. The current test considered a success
+# if all tests pass that consistently pass in the baseline.
 
 from __future__ import print_function
 from glob import glob
@@ -35,8 +33,8 @@ import time
 import gradle
 import utils
 
-CTS_BASELINE = join(utils.REPO_ROOT,
-  'third_party/android_cts_baseline/test_result.xml')
+CTS_BASELINE_FILES_DIR = join(utils.REPO_ROOT,
+  'third_party/android_cts_baseline/jack')
 AOSP_MANIFEST_XML = join(utils.REPO_ROOT, 'third_party',
   'aosp_manifest.xml')
 AOSP_HELPER_SH = join(utils.REPO_ROOT, 'scripts', 'aosp_helper.sh')
@@ -97,82 +95,33 @@ def remove_aosp_out():
       return False
   return True
 
-# Read the xml test result file into an in-memory tree:
-# Extract only the Module/TestCase/Test names and outcome (True|False for
-# PASS|FAIL):
-#
-#     tree[module_name][testcase_name][test_name] = True|False
-#
-def read_test_result_into_tree(filename):
+# Return list of fully qualified names of tests passing in
+# all the files.
+def consistently_passing_tests_from_test_results(filenames):
   tree = {}
   module = None
   testcase = None
-  for x in utils.read_cts_test_result(filename):
-    if type(x) is utils.CtsModule:
-      tree[x.name] = {}
-      module = tree[x.name]
-    elif type(x) is utils.CtsTestCase:
-      module[x.name] = {}
-      testcase = module[x.name]
-    else:
-      testcase[x.name] = x.outcome
+  # Build a tree with leaves True|False|None for passing, failing and flaky
+  # tests.
+  for f in filenames:
+    for x in utils.read_cts_test_result(f):
+      if type(x) is utils.CtsModule:
+        module = tree.setdefault(x.name, {})
+      elif type(x) is utils.CtsTestCase:
+        testcase = module.setdefault(x.name, {})
+      else:
+        outcome = testcase.setdefault(x.name, x.outcome)
+        if outcome is not None and outcome != x.outcome:
+          testcase[x.name] = None
 
-  return tree
+  result = []
+  for module_name, module in tree.iteritems():
+    for test_case_name, test_case in module.iteritems():
+      result.extend(['{}/{}/{}'.format(module_name, test_case_name, test_name)
+          for test_name, test in test_case.iteritems()
+              if test])
 
-# Report the items with the title
-def report_key_diff(title, items, prefix = ''):
-  if len(items) > 0:
-    print(title, ":")
-    for x in items:
-      print("- {}{}".format(prefix, x))
-    print()
-
-
-def diff_sets(base_minus_result_title, result_minus_base_title,
-    base_set, result_set, prefix = ''):
-  base_minus_result = base_set - result_set
-  result_minus_base = result_set - base_set
-  report_key_diff(base_minus_result_title, base_minus_result, prefix)
-  report_key_diff(result_minus_base_title, result_minus_base, prefix)
-  return len(base_minus_result) > 0 or len(result_minus_base) > 0
-
-def diff_tree_report(baseline_tree, result_tree):
-  baseline_modules = set(baseline_tree.keys())
-  result_modules = set(result_tree.keys())
-  differ = diff_sets('Modules missing from current result',
-      'New modules appeared in current result',
-      baseline_modules, result_modules)
-  for module in (result_modules & baseline_modules):
-    baseline_module = baseline_tree[module]
-    result_module = result_tree[module]
-    baseline_testcases = set(baseline_module.keys())
-    result_testcases = set(result_module.keys())
-    differ = diff_sets('Test cases missing from current result',
-        'New test cases appeared in current result',
-        baseline_testcases, result_testcases, module + '/') \
-        or differ
-    for testcase in (result_testcases & baseline_testcases):
-      baseline_testcase = baseline_module[testcase]
-      result_testcase = result_module[testcase]
-      baseline_tests = set(baseline_testcase.keys())
-      result_tests = set(result_testcase.keys())
-      differ = diff_sets('Tests missing from current result',
-          'New tests appeared in current result',
-          baseline_tests, result_tests, module + '/' + testcase + '/') \
-          or differ
-      need_newline_at_end = False
-      for test in (result_tests & baseline_tests):
-        baseline_outcome = baseline_testcase[test]
-        result_outcome = result_testcase[test]
-        if baseline_outcome != result_outcome:
-          differ = True
-          print('Test: {}/{}/{}, change: {}'.format(
-            module, testcase, test,
-            'PASS -> FAIL' if baseline_outcome else 'FAIL -> PASS'))
-          need_newline_at_end = True
-      if need_newline_at_end:
-        print()
-  return differ
+  return result
 
 def setup_and_clean(tool_is_d8, clean_dex):
   # Two output dirs, one for the android image and one for cts tests.
@@ -282,8 +231,6 @@ def Main():
   re_summary = re.compile('<Summary ')
 
   summaries = [('Summary from current test results: ', results_xml)]
-  if not args.no_baseline:
-    summaries.append(('Summary from baseline: ', CTS_BASELINE))
 
   for (title, result_file) in summaries:
     print(title, result_file)
@@ -298,10 +245,31 @@ def Main():
   else:
     print('Comparing test results to baseline:\n')
 
-    result_tree = read_test_result_into_tree(results_xml)
-    baseline_tree = read_test_result_into_tree(CTS_BASELINE)
+    passing_tests = consistently_passing_tests_from_test_results([results_xml])
+    baseline_results = \
+        [f for f in glob(join(CTS_BASELINE_FILES_DIR, '*.xml'))]
+    assert len(baseline_results) != 0
 
-    r = EXIT_FAILURE if diff_tree_report(baseline_tree, result_tree) else 0
+    passing_tests_in_baseline = \
+        consistently_passing_tests_from_test_results(baseline_results)
+
+    missing_or_failing_tests = \
+        set(passing_tests_in_baseline) - set(passing_tests)
+
+    num_tests = len(missing_or_failing_tests)
+    if num_tests != 0:
+      if num_tests > 1:
+        text = '{} tests that consistently pass in the baseline' \
+          ' are missing or failing in the current test:'.format(num_tests)
+      else:
+        text = '1 test that consistently passes in the baseline' \
+          ' is missing or failing in the current test:'
+      print(text)
+      for t in missing_or_failing_tests:
+        print(t)
+      r = EXIT_FAILURE
+    else:
+      r = 0
 
   if args.save_result:
     copy2(results_xml, args.save_result)
