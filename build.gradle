@@ -137,8 +137,14 @@ cloudDependencies.each { entry ->
             def sha1File = "${gzFile}.sha1"
             inputs.file sha1File
             outputs.file gzFile
-            executable "bash"
-            args "-c", "download_from_google_storage -n -b r8-deps -u -s ${sha1File}"
+            List<String> dlFromStorageArgs = ["-n", "-b", "r8-deps", "-u", "-s", "${sha1File}"]
+            if (OperatingSystem.current().isWindows()) {
+                executable "download_from_google_storage.bat"
+                args dlFromStorageArgs
+            } else {
+                executable "bash"
+                args "-c", "download_from_google_storage " + String.join(" ", dlFromStorageArgs)
+            }
         }
     }
 }
@@ -428,7 +434,12 @@ task buildDebugTestResourcesJars {
 task buildExampleJars {
     dependsOn downloadProguard
     def examplesDir = file("src/test/examples")
-    def proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.sh"
+    def proguardScript
+    if (OperatingSystem.current().isWindows()) {
+        proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.bat"
+    } else {
+        proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.sh"
+    }
     task "compile_examples"(type: JavaCompile) {
         source = fileTree(dir: examplesDir, include: '**/*.java')
         destinationDir = file("build/test/examples/classes")
@@ -460,11 +471,17 @@ task buildExampleJars {
                 // Enable these to get stdout and stderr redirected to files...
                 // standardOutput = new FileOutputStream('proguard.stdout')
                 // errorOutput = new FileOutputStream('proguard.stderr')
-                executable "bash"
-                args "-c", "${proguardScript} '-verbose -dontwarn java.** -injars ${jarPath}" +
+                def proguardArguments = "-verbose -dontwarn java.** -injars ${jarPath}" +
                         " -outjars ${proguardJarPath}" +
                         " -include ${proguardConfigPath}" +
-                        " -printmapping ${proguardMapPath}'"
+                        " -printmapping ${proguardMapPath}"
+                if (OperatingSystem.current().isWindows()) {
+                    executable "${proguardScript}"
+                    args "${proguardArguments}"
+                } else {
+                    executable "bash"
+                    args "-c", "${proguardScript} '${proguardArguments}'"
+                }
                 outputs.file proguardJarPath
             }
         } else {
