@@ -4686,8 +4686,7 @@ public class JctfTestSpecifications {
           // 1) t02
           // java.lang.AssertionError: java.lang.AssertionError: expected:<5> but was:<4>
 
-          .put("lang.Thread.interrupt.Thread_interrupt_A04",
-              match(D8_COMPILER, runtimes(DexVm.ART_6_0_1)))
+          .put("lang.Thread.interrupt.Thread_interrupt_A04", any())
           // Been running fine for a while then this happened on a bot:
           // 1) t01
           // java.lang.AssertionError: expected:<BLOCKED> but was:<RUNNABLE>
