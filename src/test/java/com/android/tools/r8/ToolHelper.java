@@ -14,7 +14,6 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
-import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -465,9 +464,7 @@ public class ToolHelper {
       optionsConsumer.accept(options);
     }
     CompilationResult result = R8.runForTesting(app, options);
-    if (command.getOutputPath() != null) {
-      result.androidApp.write(command.getOutputPath(), OutputMode.Indexed);
-    }
+    R8.writeOutputs(command, options, result.androidApp);
     return result;
   }
 

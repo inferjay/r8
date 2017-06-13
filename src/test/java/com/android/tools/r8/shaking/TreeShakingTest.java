@@ -13,6 +13,7 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.naming.MemberNaming.FieldSignature;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
+import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.DexInspector;
 import com.android.tools.r8.utils.DexInspector.ClassSubject;
@@ -126,7 +127,11 @@ public class TreeShakingTest {
             .addLibraryFiles(ListUtils.map(libs, Paths::get))
             .setMinification(minify)
             .build();
-    ToolHelper.runR8(command, options -> options.inlineAccessors = inline);
+    ToolHelper.runR8(command, options -> {
+      options.inlineAccessors = inline;
+      options.printMapping = true;
+      options.printMappingFile = out.resolve(AndroidApp.DEFAULT_PROGUARD_MAP_FILE);
+    });
   }
 
   public static void shaking1HasNoClassUnused(DexInspector inspector) {

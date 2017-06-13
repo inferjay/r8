@@ -46,7 +46,6 @@ import com.android.tools.r8.utils.Timing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -55,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -348,19 +348,6 @@ public class R8 {
               packageDistribution,
               options);
 
-      if (options.printMapping && androidApp.hasProguardMap() && !options.skipMinification) {
-        Path mapOutput = options.printMappingFile;
-        try (Closer closer = Closer.create()) {
-          OutputStream mapOut;
-          if (mapOutput == null) {
-            mapOut = System.out;
-          } else {
-            mapOut = new FileOutputStream(mapOutput.toFile());
-            closer.register(mapOut);
-          }
-          androidApp.writeProguardMap(closer, mapOut);
-        }
-      }
       options.printWarnings();
       return new CompilationResult(androidApp, application, appInfo);
     } catch (ExecutionException e) {
@@ -388,12 +375,55 @@ public class R8 {
    */
   public static AndroidApp run(R8Command command)
       throws IOException, CompilationException, ProguardRuleParserException {
+    InternalOptions options = command.getInternalOptions();
     AndroidApp outputApp =
-        runForTesting(command.getInputApp(), command.getInternalOptions()).androidApp;
-    if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath(), OutputMode.Indexed);
-    }
+        runForTesting(command.getInputApp(), options).androidApp;
+    writeOutputs(command, options, outputApp);
+
     return outputApp;
+  }
+
+  static void writeOutputs(R8Command command, InternalOptions options, AndroidApp outputApp)
+      throws IOException {
+    if (command.getOutputPath() != null) {
+      outputApp.write(command.getOutputPath(), options.outputMode);
+    }
+
+    if (options.printMapping && !options.skipMinification) {
+      assert outputApp.hasProguardMap();
+      try (Closer closer = Closer.create()) {
+        OutputStream mapOut =
+            openPathWithDefault(closer, options.printMappingFile, true, System.out);
+        outputApp.writeProguardMap(closer, mapOut);
+      }
+    }
+    if (options.printSeeds) {
+      assert outputApp.hasProguardSeeds();
+      try (Closer closer = Closer.create()) {
+        OutputStream seedsOut =
+            openPathWithDefault(closer, options.seedsFile, true, System.out);
+        outputApp.writeProguardSeeds(closer, seedsOut);
+      }
+    }
+  }
+
+  private static OutputStream openPathWithDefault(Closer closer,
+      Path file,
+      boolean allowOverwrite,
+      PrintStream defaultOutput) throws IOException {
+    OutputStream mapOut;
+    if (file == null) {
+      mapOut = defaultOutput;
+    } else {
+      if (!allowOverwrite) {
+        mapOut = Files.newOutputStream(file, StandardOpenOption.CREATE_NEW);
+      } else {
+        mapOut = Files.newOutputStream(file,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+      }
+      closer.register(mapOut);
+    }
+    return mapOut;
   }
 
   /**

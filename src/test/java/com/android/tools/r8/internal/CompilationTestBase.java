@@ -67,7 +67,10 @@ public abstract class CompilationTestBase {
         builder.addProguardConfigurationFiles(Paths.get(pgConf));
       }
       builder.setMode(mode);
-      outputApp = ToolHelper.runR8(builder.build());
+      outputApp = ToolHelper.runR8(builder.build(),
+                  options -> {
+                    options.printSeeds = false;
+                  });
     } else {
       assert compiler == CompilerUnderTest.D8;
       outputApp =

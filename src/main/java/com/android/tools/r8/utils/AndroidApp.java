@@ -49,8 +49,6 @@ import java.util.zip.ZipOutputStream;
 public class AndroidApp {
 
   public static final String DEFAULT_PROGUARD_MAP_FILE = "proguard.map";
-  public static final String DEFAULT_PROGUARD_SEEDS_FILE = "proguard.seeds";
-  public static final String DEFAULT_PACKAGE_DISTRIBUTION_FILE = "package.map";
 
   private final ImmutableList<Resource> programResources;
   private final ImmutableList<Resource> classpathResources;
@@ -290,8 +288,6 @@ public class AndroidApp {
         Path fileName = directory.resolve(outputMode.getFileName(dexProgramSources.get(i), i));
         Files.copy(dexProgramSources.get(i).getStream(closer), fileName, options);
       }
-      writeProguardMap(closer, directory, overwrite);
-      writeProguardSeeds(closer, directory, overwrite);
     }
   }
 
@@ -334,17 +330,6 @@ public class AndroidApp {
           out.closeEntry();
         }
       }
-      // Write the proguard map to the archives containing directory.
-      // TODO(zerny): How do we want to determine the output location for the extra resources?
-      writeProguardMap(closer, archive.getParent(), overwrite);
-      writeProguardSeeds(closer, archive.getParent(), overwrite);
-    }
-  }
-
-  private void writeProguardMap(Closer closer, Path parent, boolean overwrite) throws IOException {
-    InputStream input = getProguardMap(closer);
-    if (input != null) {
-      Files.copy(input, parent.resolve(DEFAULT_PROGUARD_MAP_FILE), copyOptions(overwrite));
     }
   }
 
@@ -354,12 +339,10 @@ public class AndroidApp {
     out.write(ByteStreams.toByteArray(input));
   }
 
-  private void writeProguardSeeds(Closer closer, Path parent, boolean overwrite)
-      throws IOException {
+  public void writeProguardSeeds(Closer closer, OutputStream out) throws IOException {
     InputStream input = getProguardSeeds(closer);
-    if (input != null) {
-      Files.copy(input, parent.resolve(DEFAULT_PROGUARD_SEEDS_FILE), copyOptions(overwrite));
-    }
+    assert input != null;
+    out.write(ByteStreams.toByteArray(input));
   }
 
   private OpenOption[] openOptions(boolean overwrite) {
