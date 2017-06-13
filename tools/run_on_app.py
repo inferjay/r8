@@ -6,6 +6,7 @@
 import optparse
 import os
 import r8
+import d8
 import sys
 
 import gmscore_data
@@ -17,6 +18,10 @@ APPS = ['gmscore', 'youtube', 'gmail']
 
 def ParseOptions():
   result = optparse.OptionParser()
+  result.add_option('--compiler',
+                    help='',
+                    default='r8',
+                    choices=['d8', 'r8'])
   result.add_option('--app',
                     help='',
                     default='gmscore',
@@ -89,18 +94,21 @@ def main():
     return 1
   values = version[options.type]
   inputs = None
-  # For 'deploy' the JAR is located using the Proguard configuration -injars option.
-  if 'inputs' in values and options.type != 'deploy':
+  # For R8 'deploy' the JAR is located using the Proguard configuration -injars option.
+  if 'inputs' in values and (options.compiler != 'r8' or options.type != 'deploy'):
     inputs = values['inputs']
 
   args.extend(['--output', outdir])
-  if 'pgmap' in values:
-    args.extend(['--pg-map', values['pgmap']])
-  if 'pgconf' in values and not options.k:
-    for pgconf in values['pgconf']:
-      args.extend(['--pg-conf', pgconf])
-  if options.k:
-    args.extend(['--pg-conf', options.k])
+
+  if options.compiler == 'r8':
+    if 'pgmap' in values:
+      args.extend(['--pg-map', values['pgmap']])
+    if 'pgconf' in values and not options.k:
+      for pgconf in values['pgconf']:
+        args.extend(['--pg-conf', pgconf])
+    if options.k:
+      args.extend(['--pg-conf', options.k])
+
   if not options.no_libraries and 'libraries' in values:
     for lib in values['libraries']:
       args.extend(['--lib', lib])
@@ -108,10 +116,11 @@ def main():
   if not outdir.endswith('.zip') and not outdir.endswith('.jar') and not os.path.exists(outdir):
     os.makedirs(outdir)
 
-  if 'r8-flags' in values:
-    args.extend(values['r8-flags'].split(' '))
-  if options.r8_flags:
-    args.extend(options.r8_flags.split(' '))
+  if options.compiler == 'r8':
+    if 'r8-flags' in values:
+      args.extend(values['r8-flags'].split(' '))
+    if options.r8_flags:
+      args.extend(options.r8_flags.split(' '))
 
   if inputs:
     args.extend(inputs)
@@ -120,8 +129,12 @@ def main():
     with open(options.dump_args_file, 'w') as args_file:
       args_file.writelines([arg + os.linesep for arg in args])
   else:
-    r8.run(args, not options.no_build, not options.no_debug, options.profile,
-           options.track_memory_to_file)
+    if options.compiler == 'd8':
+      d8.run(args, not options.no_build, not options.no_debug, options.profile,
+             options.track_memory_to_file)
+    else:
+      r8.run(args, not options.no_build, not options.no_debug, options.profile,
+             options.track_memory_to_file)
 
 if __name__ == '__main__':
   sys.exit(main())

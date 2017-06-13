@@ -5,7 +5,8 @@
 
 import sys
 
-import run_r8_on_app
+import run_on_app
 
 if __name__ == '__main__':
-  sys.exit(run_r8_on_app.main())
+  # Default compiler is R8.
+  sys.exit(run_on_app.main())
