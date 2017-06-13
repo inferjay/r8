@@ -421,12 +421,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   @Override
-  public int getRegisterForRangedArgument(Value value, int instructionNumber) {
-    // If argument values flow into ranged invokes, all the ranged invoke arguments
-    // are arguments to this method in order. Therefore, we use the incoming registers
-    // for the ranged invoke arguments. We know that arguments are always available there.
-    // If argument reuse is allowed there is no splitting and if argument reuse is disallowed
-    // the argument registers are never overwritten.
+  public int getArgumentOrAllocateRegisterForValue(Value value, int instructionNumber) {
     if (value.isArgument()) {
       return getRegisterForIntervals(value.getLiveIntervals());
     }

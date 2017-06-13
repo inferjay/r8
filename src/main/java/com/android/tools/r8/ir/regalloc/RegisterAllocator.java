@@ -10,5 +10,5 @@ public interface RegisterAllocator {
   int registersUsed();
   int getRegisterForValue(Value value, int instructionNumber);
   boolean argumentValueUsesHighRegister(Value value, int instructionNumber);
-  int getRegisterForRangedArgument(Value value, int instructionNumber);
+  int getArgumentOrAllocateRegisterForValue(Value value, int instructionNumber);
 }

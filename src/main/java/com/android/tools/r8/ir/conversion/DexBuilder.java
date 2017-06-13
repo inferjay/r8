@@ -318,8 +318,10 @@ public class DexBuilder {
     return registerAllocator.getRegisterForValue(value, instructionNumber);
   }
 
-  public int allocatedRegisterForRangedArgument(Value value, int instructionNumber) {
-    return registerAllocator.getRegisterForRangedArgument(value, instructionNumber);
+  // Get the argument register for a value if it is an argument, otherwise returns the
+  // allocated register at the instruction number.
+  public int argumentOrAllocateRegister(Value value, int instructionNumber) {
+    return registerAllocator.getArgumentOrAllocateRegisterForValue(value, instructionNumber);
   }
 
   public boolean argumentValueUsesHighRegister(Value value, int instructionNumber) {
