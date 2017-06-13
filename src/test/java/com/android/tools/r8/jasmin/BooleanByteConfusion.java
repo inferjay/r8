@@ -6,7 +6,6 @@ package com.android.tools.r8.jasmin;
 import static junit.framework.TestCase.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class BooleanByteConfusion extends JasminTestBase {
@@ -21,7 +20,6 @@ public class BooleanByteConfusion extends JasminTestBase {
   }
 
   @Test
-  @Ignore("b/62438166")
   public void booleanByteConfusion() throws Exception {
     JasminBuilder builder = new JasminBuilder();
     JasminBuilder.ClassBuilder clazz = builder.addClass("Test");

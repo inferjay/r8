@@ -342,8 +342,8 @@ public class MainDexListTests {
     }
 
     @Override
-    public boolean traceInstruction(int instructionIndex, IRBuilder builder) {
-      return true;
+    public int traceInstruction(int instructionIndex, IRBuilder builder) {
+      return instructionIndex;
     }
 
     @Override

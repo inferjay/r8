@@ -812,9 +812,9 @@ public class Outliner {
     }
 
     @Override
-    public boolean traceInstruction(int instructionIndex, IRBuilder builder) {
+    public int traceInstruction(int instructionIndex, IRBuilder builder) {
       // There is just one block, and after the last instruction it is closed.
-      return instructionIndex == outline.templateInstructions.size();
+      return instructionIndex == outline.templateInstructions.size() ? instructionIndex : -1;
     }
 
     @Override

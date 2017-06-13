@@ -33,9 +33,10 @@ public interface SourceCode {
    * <p>The instruction at {@code index} is traced and its target blocks are marked by using
    * {@code IRBuilder.ensureSuccessorBlock} (and {@code ensureBlockWithoutEnqueuing}).
    *
-   * @return True if the instruction closes the current block, false otherwise.
+   * @return If the instruction closes the block, the last index of the block,
+   * otherwise -1.
    */
-  boolean traceInstruction(int instructionIndex, IRBuilder builder);
+  int traceInstruction(int instructionIndex, IRBuilder builder);
 
   void closedCurrentBlockWithFallthrough(int fallthroughInstructionIndex);
   void closedCurrentBlock();

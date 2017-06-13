@@ -40,13 +40,6 @@ public class JarState {
   // Type representative for an address type (used by JSR/RET).
   public static final Type ADDR_TYPE = Type.getObjectType("<address>");
 
-  private static final Slot INVALID_SLOT = new Slot(-1, null);
-  private static final Local INVALID_LOCAL = new Local(INVALID_SLOT, null);
-
-  public boolean isInvalid() {
-    return stack.peek() == INVALID_SLOT;
-  }
-
   // Typed mapping from a local slot or stack slot to a virtual register.
   public static class Slot {
     public final int register;
@@ -54,7 +47,7 @@ public class JarState {
 
     @Override
     public String toString() {
-      return this == INVALID_SLOT ? "<invalid slot>" : "r" + register + ":" + type;
+      return "r" + register + ":" + type;
     }
 
     public Slot(int register, Type type) {
@@ -356,15 +349,6 @@ public class JarState {
 
   // State procedures.
 
-  public void invalidateState() {
-    for (int i = 0; i < locals.length; i++) {
-      locals[i] = INVALID_LOCAL;
-    }
-    stack.clear();
-    stack.push(INVALID_SLOT);
-    topOfStack = -1;
-  }
-
   public boolean hasState(int offset) {
     return targetStates.get(offset) != null;
   }
@@ -374,49 +358,100 @@ public class JarState {
     assert snapshot != null;
     assert locals.length == snapshot.locals.length;
     for (int i = 0; i < locals.length; i++) {
-      assert locals[i] == INVALID_LOCAL;
       locals[i] = snapshot.locals[i];
     }
-    assert stack.peek() == INVALID_SLOT;
-    assert topOfStack == -1;
     stack.clear();
     stack.addAll(snapshot.stack);
     topOfStack = startOfStack + 2 * stack.size();
   }
 
-  public void recordStateForTarget(int target, JarSourceCode source) {
-    recordStateForTarget(target, locals.clone(), ImmutableList.copyOf(stack), source);
+  public boolean recordStateForTarget(int target, JarSourceCode source) {
+    return recordStateForTarget(target, locals.clone(), ImmutableList.copyOf(stack), source);
   }
 
-  public void recordStateForExceptionalTarget(int target, JarSourceCode source) {
-    recordStateForTarget(target, locals.clone(), ImmutableList.of(), source);
+  public boolean recordStateForExceptionalTarget(int target, JarSourceCode source) {
+    return recordStateForTarget(target, locals.clone(), ImmutableList.of(), source);
   }
 
-  private void recordStateForTarget(int target, Local[] locals, ImmutableList<Slot> stack,
+  private boolean recordStateForTarget(int target, Local[] locals, ImmutableList<Slot> stack,
       JarSourceCode source) {
-    Snapshot snapshot = targetStates.get(target);
-    if (snapshot == null) {
-      if (!localVariables.isEmpty()) {
-        for (int i = 0; i < locals.length; i++) {
-          if (locals[i] != null) {
-            locals[i] = new Local(locals[i].slot, null);
-          }
-        }
-        // TODO(zerny): Precompute and sort the local ranges.
-        for (LocalVariableNode node : localVariables.keySet()) {
-          int startOffset = source.getOffset(node.start);
-          int endOffset = source.getOffset(node.end);
-          if (startOffset <= target && target < endOffset) {
-            int register = getLocalRegister(node.index, Type.getType(node.desc));
-            Local local = locals[register];
-            locals[register] = new Local(local.slot, localVariables.get(node));
-          }
+    if (!localVariables.isEmpty()) {
+      for (int i = 0; i < locals.length; i++) {
+        if (locals[i] != null) {
+          locals[i] = new Local(locals[i].slot, null);
         }
       }
-      targetStates.put(target, new Snapshot(locals, stack));
-      return;
+      // TODO(zerny): Precompute and sort the local ranges.
+      for (LocalVariableNode node : localVariables.keySet()) {
+        int startOffset = source.getOffset(node.start);
+        int endOffset = source.getOffset(node.end);
+        if (startOffset <= target && target < endOffset) {
+          int register = getLocalRegister(node.index, Type.getType(node.desc));
+          Local local = locals[register];
+          locals[register] = new Local(local.slot, localVariables.get(node));
+        }
+      }
     }
-    assert verifyStack(stack, snapshot.stack);
+    Snapshot snapshot = targetStates.get(target);
+    if (snapshot != null) {
+      Local[] newLocals = mergeLocals(snapshot.locals, locals);
+      ImmutableList<Slot> newStack = mergeStacks(snapshot.stack, stack);
+      if (newLocals != snapshot.locals || newStack != snapshot.stack) {
+        targetStates.put(target, new Snapshot(newLocals, newStack));
+        return true;
+      }
+      // The snapshot is up to date - no new type information recoded.
+      return false;
+    }
+    targetStates.put(target, new Snapshot(locals, stack));
+    return true;
+  }
+
+  private ImmutableList<Slot> mergeStacks(
+      ImmutableList<Slot> currentStack, ImmutableList<Slot> newStack) {
+    assert currentStack.size() == newStack.size();
+    List<Slot> mergedStack = null;
+    for (int i = 0; i < currentStack.size(); i++) {
+      assert currentStack.get(i).isCompatibleWith(newStack.get(i).type);
+      if (currentStack.get(i).type == JarState.NULL_TYPE &&
+          newStack.get(i).type != JarState.NULL_TYPE) {
+        if (mergedStack == null) {
+          mergedStack = new ArrayList<>();
+          mergedStack.addAll(currentStack.subList(0, i));
+        }
+        mergedStack.add(newStack.get(i));
+      } else if (mergedStack != null) {
+        mergedStack.add(currentStack.get(i));
+      }
+    }
+    return mergedStack != null ? ImmutableList.copyOf(mergedStack) : currentStack;
+  }
+
+  private Local[] mergeLocals(Local[] currentLocals, Local[] newLocals) {
+    assert currentLocals.length == newLocals.length;
+    Local[] mergedLocals = null;
+    for (int i = 0; i < currentLocals.length; i++) {
+      Local currentLocal = currentLocals[i];
+      Local newLocal = newLocals[i];
+      if (currentLocal == null || newLocal == null) {
+        continue;
+      }
+      // If this assert triggers we can get different debug information for the same local
+      // on different control-flow paths and we will have to merge them.
+      assert currentLocal.info == newLocal.info;
+      if (currentLocal.slot.type == JarState.NULL_TYPE &&
+          newLocal.slot.type != JarState.NULL_TYPE) {
+        if (mergedLocals == null) {
+          mergedLocals = new Local[currentLocals.length];
+          System.arraycopy(currentLocals, 0, mergedLocals, 0, i);
+        }
+        Slot newSlot = new Slot(newLocal.slot.register, newLocal.slot.type);
+        mergedLocals[i] = new Local(newSlot, newLocal.info);
+      } else if (mergedLocals != null) {
+        mergedLocals[i] = currentLocals[i];
+      }
+    }
+    return mergedLocals != null ? mergedLocals : currentLocals;
   }
 
   private static boolean verifyStack(List<Slot> stack, List<Slot> other) {
@@ -446,9 +481,6 @@ public class JarState {
   public static String stackToString(Collection<Slot> stack) {
     List<String> strings = new ArrayList<>(stack.size());
     for (Slot slot : stack) {
-      if (slot == INVALID_SLOT) {
-        return "<stack invalidated>";
-      }
       strings.add(slot.type.toString());
     }
     StringBuilder builder = new StringBuilder("{ ");
@@ -466,9 +498,6 @@ public class JarState {
     StringBuilder builder = new StringBuilder("{ ");
     boolean first = true;
     for (Local local : locals) {
-      if (local == INVALID_LOCAL) {
-        return "<locals invalidated>";
-      }
       if (!first) {
         builder.append(", ");
       } else {
