@@ -10,9 +10,10 @@ import sys
 
 import gmscore_data
 import youtube_data
+import gmail_data
 
 TYPES = ['dex', 'deploy', 'proguarded']
-APPS = ['gmscore', 'youtube']
+APPS = ['gmscore', 'youtube', 'gmail']
 
 def ParseOptions():
   result = optparse.OptionParser()
@@ -69,6 +70,9 @@ def main():
   elif options.app == 'youtube':
     options.version = options.version or '12.22'
     data = youtube_data
+  elif options.app == 'gmail':
+    options.version = options.version or '170604.16'
+    data = gmail_data
   else:
     raise 'Unexpected'
 
