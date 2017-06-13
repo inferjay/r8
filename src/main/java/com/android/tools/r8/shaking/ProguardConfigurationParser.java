@@ -41,7 +41,7 @@ public class ProguardConfigurationParser {
           "optimizationpasses",
           "target");
   private static final List<String> ignoredOptionalSingleArgOptions = ImmutableList
-      .of("keepdirectories");
+      .of("keepdirectories", "runtype", "laststageoutput");
   private static final List<String> ignoredFlagOptions = ImmutableList
       .of("forceprocessing", "dontusemixedcaseclassnames",
           "dontpreverify", "experimentalshrinkunusedprotofields",
