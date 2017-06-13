@@ -145,6 +145,7 @@ cloudDependencies.each { entry ->
 
 def x20Dependencies = [
     "third_party": [
+        "gmail/gmail_android_170604.16.tar.gz",
         "gmscore/v4.tar.gz",
         "gmscore/v5.tar.gz",
         "gmscore/v6.tar.gz",
