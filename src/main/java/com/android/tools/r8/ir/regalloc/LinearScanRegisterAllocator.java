@@ -1414,7 +1414,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     assert spilled.isSpilled();
     assert spilled.getValue().isConstant();
     assert !spilled.isLinked() || spilled.isArgumentInterval();
-    int maxGapSize = 50 * INSTRUCTION_NUMBER_DELTA;
+    // Do not split range if constant is reused by one of the eleven following instruction.
+    int maxGapSize = 11 * INSTRUCTION_NUMBER_DELTA;
     if (!spilled.getUses().isEmpty()) {
       // Split at first use after the spill position and add to unhandled to get a register
       // assigned for rematerialization.
