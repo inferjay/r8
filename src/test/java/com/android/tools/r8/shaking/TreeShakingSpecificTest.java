@@ -11,13 +11,16 @@ import com.android.tools.r8.R8;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.errors.CompilationError;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,7 +98,11 @@ public class TreeShakingSpecificTest {
     actualMapping = new String(Files.readAllBytes(outputmapping), StandardCharsets.UTF_8);
     String refMapping = new String(Files.readAllBytes(
         Paths.get(EXAMPLES_DIR, "shaking1", "print-mapping.ref")), StandardCharsets.UTF_8);
-    Assert.assertEquals(refMapping, actualMapping);
+    Assert.assertEquals(sorted(refMapping), sorted(actualMapping));
   }
 
+  private static String sorted(String str) {
+    return new BufferedReader(new StringReader(str))
+        .lines().sorted().collect(Collectors.joining("\n"));
+  }
 }
