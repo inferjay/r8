@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.ir.conversion.IRBuilder;
@@ -119,7 +120,7 @@ public class BasicBlock {
   public List<BasicBlock> getNormalPredecessors() {
     ImmutableList.Builder<BasicBlock> normals = ImmutableList.builder();
     for (BasicBlock predecessor : predecessors) {
-      if (!predecessor.isCatchSuccessor(this)) {
+      if (!predecessor.hasCatchSuccessor(this)) {
         normals.add(predecessor);
       }
     }
@@ -647,10 +648,10 @@ public class BasicBlock {
 
   public EdgeType getEdgeType(BasicBlock successor) {
     assert successors.indexOf(successor) >= 0;
-    return isCatchSuccessor(successor) ? EdgeType.EXCEPTIONAL : EdgeType.NORMAL;
+    return hasCatchSuccessor(successor) ? EdgeType.EXCEPTIONAL : EdgeType.NORMAL;
   }
 
-  public boolean isCatchSuccessor(BasicBlock block) {
+  public boolean hasCatchSuccessor(BasicBlock block) {
     if (!hasCatchHandlers()) {
       return false;
     }
@@ -658,7 +659,7 @@ public class BasicBlock {
   }
 
   public int guardsForCatchSuccessor(BasicBlock block) {
-    assert isCatchSuccessor(block);
+    assert hasCatchSuccessor(block);
     int index = successors.indexOf(block);
     int count = 0;
     for (int handler : catchHandlers.getAllTargets()) {
@@ -713,7 +714,7 @@ public class BasicBlock {
   }
 
   private String predecessorPostfix(BasicBlock block) {
-    if (isCatchSuccessor(block)) {
+    if (hasCatchSuccessor(block)) {
       return new String(new char[guardsForCatchSuccessor(block)]).replace("\0", "*");
     }
     return "";
@@ -1053,22 +1054,13 @@ public class BasicBlock {
     // one new phi to merge the two exception values, and all other phis don't need
     // to be changed.
     for (BasicBlock catchSuccessor : catchSuccessors) {
-      catchSuccessor.splitCriticalExceptioEdges(
+      catchSuccessor.splitCriticalExceptionEdges(
           code.valueNumberGenerator,
           newBlock -> {
             newBlock.setNumber(code.blocks.size());
             blockIterator.add(newBlock);
           });
     }
-  }
-
-  private boolean allPredecessorsHaveCatchEdges() {
-    for (BasicBlock predecessor : getPredecessors()) {
-      if (!predecessor.isCatchSuccessor(this)) {
-        assert false;
-      }
-    }
-    return true;
   }
 
   /**
@@ -1086,10 +1078,8 @@ public class BasicBlock {
    *
    * NOTE: onNewBlock must assign block number to the newly created block.
    */
-  public void splitCriticalExceptioEdges(
+  public void splitCriticalExceptionEdges(
       ValueNumberGenerator valueNumberGenerator, Consumer<BasicBlock> onNewBlock) {
-    assert allPredecessorsHaveCatchEdges();
-
     List<BasicBlock> predecessors = this.getPredecessors();
     boolean hasMoveException = entry().isMoveException();
     MoveException move = null;
@@ -1103,6 +1093,10 @@ public class BasicBlock {
     List<BasicBlock> newPredecessors = new ArrayList<>();
     List<Value> values = new ArrayList<>(predecessors.size());
     for (BasicBlock predecessor : predecessors) {
+      if (!predecessor.hasCatchSuccessor(this)) {
+        throw new CompilationError(
+            "Invalid block structure: catch block reachable via non-exceptional flow.");
+      }
       BasicBlock newBlock = new BasicBlock();
       newPredecessors.add(newBlock);
       if (hasMoveException) {
