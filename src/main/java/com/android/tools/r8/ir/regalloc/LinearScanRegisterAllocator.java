@@ -1520,7 +1520,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         // If we are processing an exception edge, we need to use the throwing instruction
         // as the instruction we are coming from.
         int fromInstruction = block.exit().getNumber();
-        boolean isCatch = block.isCatchSuccessor(successor);
+        boolean isCatch = block.hasCatchSuccessor(successor);
         if (isCatch) {
           for (Instruction instruction : block.getInstructions()) {
             if (instruction.instructionTypeCanThrow()) {

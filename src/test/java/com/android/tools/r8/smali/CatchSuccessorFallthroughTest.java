@@ -93,7 +93,7 @@ public class CatchSuccessorFallthroughTest extends SmaliTestBase {
             assertTrue(
                 defBlock.getInstructions().get(defBlock.getInstructions().size() - 2).isInvoke());
             for (BasicBlock returnPredecessor : block.getPredecessors()) {
-              if (defBlock.isCatchSuccessor(returnPredecessor)) {
+              if (defBlock.hasCatchSuccessor(returnPredecessor)) {
                 hasExceptionalPredecessor = true;
               } else if (defBlock == returnPredecessor) {
                 // Normal flow goes to return.

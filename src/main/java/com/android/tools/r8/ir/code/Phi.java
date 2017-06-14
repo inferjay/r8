@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.code.BasicBlock.EdgeType;
 import com.android.tools.r8.ir.conversion.IRBuilder;
@@ -60,6 +61,9 @@ public class Phi extends Value {
     // exactly once by adding the operands.
     assert operands.isEmpty();
     boolean canBeNull = false;
+    if (block.getPredecessors().size() == 0) {
+      throwUndefinedValueError();
+    }
     for (BasicBlock pred : block.getPredecessors()) {
       EdgeType edgeType = pred.getEdgeType(block);
       // Since this read has been delayed we must provide the local info for the value.
@@ -79,6 +83,9 @@ public class Phi extends Value {
     // exactly once by adding the operands.
     assert this.operands.isEmpty();
     boolean canBeNull = false;
+    if (operands.size() == 0) {
+      throwUndefinedValueError();
+    }
     for (Value operand : operands) {
       canBeNull |= operand.canBeNull();
       appendOperand(operand);
@@ -87,6 +94,13 @@ public class Phi extends Value {
       markNeverNull();
     }
     removeTrivialPhi();
+  }
+
+  private void throwUndefinedValueError() {
+    throw new CompilationError(
+        "Undefined value encountered during compilation. "
+            + "This is typically caused by invalid dex input that uses a register "
+            + "that is not define on all control-flow paths leading to the use.");
   }
 
   private void appendOperand(Value operand) {
@@ -174,9 +188,6 @@ public class Phi extends Value {
       same = op;
     }
     assert isTrivialPhi();
-    if (same == null) {
-      same = Value.UNDEFINED;
-    }
     // Removing this phi, so get rid of it as a phi user from all of the operands to avoid
     // recursively getting back here with the same phi. If the phi has itself as an operand
     // that also removes the self-reference.

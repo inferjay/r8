@@ -81,8 +81,6 @@ import com.android.tools.r8.ir.code.Value.DebugInfo;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.code.Xor;
 import com.android.tools.r8.utils.InternalOptions;
-import com.android.tools.r8.utils.StringUtils;
-import com.android.tools.r8.utils.StringUtils.BraceType;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceSortedMap;
@@ -371,9 +369,6 @@ public class IRBuilder {
     // Split critical edges to make sure that we have a place to insert phi moves if
     // necessary.
     splitCriticalEdges();
-
-    // Consistency check.
-    assert phiOperandsAreConsistent();
 
     // Package up the IR code.
     IRCode ir = new IRCode(method, blocks, normalExitBlock, valueNumberGenerator);
@@ -808,7 +803,7 @@ public class IRBuilder {
   public void addGoto(int targetOffset) {
     addInstruction(new Goto());
     BasicBlock targetBlock = getTarget(targetOffset);
-    if (currentBlock.isCatchSuccessor(targetBlock)) {
+    if (currentBlock.hasCatchSuccessor(targetBlock)) {
       needGotoToCatchBlocks.add(new BasicBlock.Pair(currentBlock, targetBlock));
     } else {
       currentBlock.link(targetBlock);
@@ -1086,7 +1081,12 @@ public class IRBuilder {
     Value out = writeRegister(dest, MoveType.OBJECT, ThrowingInfo.NO_THROW);
     MoveException instruction = new MoveException(out);
     assert !instruction.instructionTypeCanThrow();
-    assert currentBlock.getInstructions().isEmpty();
+    if (!currentBlock.getInstructions().isEmpty()) {
+      throw new CompilationError("Invalid MoveException instruction encountered. "
+          + "The MoveException instruction is not the first instruction in the block in "
+          + method.qualifiedName()
+          + ".");
+    }
     addInstruction(instruction);
   }
 
@@ -1698,7 +1698,7 @@ public class IRBuilder {
     assert currentBlock != null;
     flushCurrentDebugPosition();
     currentBlock.add(new Goto());
-    if (currentBlock.isCatchSuccessor(nextBlock)) {
+    if (currentBlock.hasCatchSuccessor(nextBlock)) {
       needGotoToCatchBlocks.add(new BasicBlock.Pair(currentBlock, nextBlock));
     } else {
       currentBlock.link(nextBlock);
@@ -1778,8 +1778,8 @@ public class IRBuilder {
       target.getPredecessors().add(newBlock);
 
       // Check that the successor indexes are correct.
-      assert source.isCatchSuccessor(newBlock);
-      assert !source.isCatchSuccessor(target);
+      assert source.hasCatchSuccessor(newBlock);
+      assert !source.hasCatchSuccessor(target);
 
       // Mark the filled predecessors to the blocks.
       if (source.isFilled()) {
@@ -1788,22 +1788,6 @@ public class IRBuilder {
       target.filledPredecessor(this);
     }
     return blockNumber;
-  }
-
-  private boolean phiOperandsAreConsistent() {
-    for (BasicBlock block : blocks) {
-      if (block.hasIncompletePhis()) {
-        StringBuilder builder = new StringBuilder("Incomplete phis in ");
-        builder.append(method);
-        builder.append(". The following registers appear to be uninitialized: ");
-        StringUtils.append(builder, block.getIncompletePhiRegisters(), ", ", BraceType.NONE);
-        throw new CompilationError(builder.toString());
-      }
-      for (Phi phi : block.getPhis()) {
-        assert phi.getOperands().size() == block.getPredecessors().size();
-      }
-    }
-    return true;
   }
 
   /**
@@ -1837,6 +1821,15 @@ public class IRBuilder {
   public void joinPredecessorsWithIdenticalPhis() {
     List<BasicBlock> blocksToAdd = new ArrayList<>();
     for (BasicBlock block : blocks) {
+      // Consistency check. At this point there should be no incomplete phis.
+      // If there are, the input is typically dex code that uses a register
+      // that is not defined on all control-flow paths.
+      if (block.hasIncompletePhis()) {
+        throw new CompilationError(
+            "Undefined value encountered during compilation. "
+                + "This is typically caused by invalid dex input that uses a register "
+                + "that is not define on all control-flow paths leading to the use.");
+      }
       if (block.entry() instanceof MoveException) {
         // TODO: Should we support joining in the presence of move-exception instructions?
         continue;
@@ -1889,7 +1882,7 @@ public class IRBuilder {
       // If any of the edges to the block are critical, we need to insert new blocks on each
       // containing the move-exception instruction which must remain the first instruction.
       if (block.entry() instanceof MoveException) {
-        block.splitCriticalExceptioEdges(valueNumberGenerator,
+        block.splitCriticalExceptionEdges(valueNumberGenerator,
             newBlock -> {
               newBlock.setNumber(blocks.size() + newBlocks.size());
               newBlocks.add(newBlock);
