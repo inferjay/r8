@@ -21,3 +21,5 @@ Diff:
 ---
 > call java %javaOpts% -Djava.ext.dirs="%frameworkdir%" -jar "%jarpath%" %params%
 
+dexmerger.bat has been copied from dx.bat, and the command line has been updated
+according to the SDK dexmerger bash script to call the right class.
