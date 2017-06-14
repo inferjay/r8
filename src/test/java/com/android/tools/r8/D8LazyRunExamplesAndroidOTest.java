@@ -4,8 +4,8 @@
 
 package com.android.tools.r8;
 
-import com.android.tools.r8.utils.DirectoryResourceProvider;
-import com.android.tools.r8.utils.PreloadedResourceProvider;
+import com.android.tools.r8.utils.DirectoryClassFileProvider;
+import com.android.tools.r8.utils.PreloadedClassFileProvider;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -25,13 +25,13 @@ public class D8LazyRunExamplesAndroidOTest
 
     private void addClasspathPath(Path location, D8Command.Builder builder) {
       builder.addClasspathResourceProvider(
-          DirectoryResourceProvider.fromDirectory(location.resolve("..")));
+          DirectoryClassFileProvider.fromDirectory(location.resolve("..")));
     }
 
     @Override
     void addLibraryReference(D8Command.Builder builder, Path location) throws IOException {
       builder.addLibraryResourceProvider(
-          PreloadedResourceProvider.fromArchive(location));
+          PreloadedClassFileProvider.fromArchive(location));
     }
   }
 

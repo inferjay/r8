@@ -7,8 +7,8 @@ import static com.android.tools.r8.utils.FileUtils.isArchive;
 import static com.android.tools.r8.utils.FileUtils.isClassFile;
 import static com.android.tools.r8.utils.FileUtils.isDexFile;
 
+import com.android.tools.r8.ClassFileResourceProvider;
 import com.android.tools.r8.Resource;
-import com.android.tools.r8.ResourceProvider;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.ClassKind;
@@ -53,8 +53,8 @@ public class AndroidApp {
   private final ImmutableList<Resource> programResources;
   private final ImmutableList<Resource> classpathResources;
   private final ImmutableList<Resource> libraryResources;
-  private final ImmutableList<ResourceProvider> classpathResourceProviders;
-  private final ImmutableList<ResourceProvider> libraryResourceProviders;
+  private final ImmutableList<ClassFileResourceProvider> classpathResourceProviders;
+  private final ImmutableList<ClassFileResourceProvider> libraryResourceProviders;
   private final Resource proguardMap;
   private final Resource proguardSeeds;
   private final Resource packageDistribution;
@@ -65,8 +65,8 @@ public class AndroidApp {
       ImmutableList<Resource> programResources,
       ImmutableList<Resource> classpathResources,
       ImmutableList<Resource> libraryResources,
-      ImmutableList<ResourceProvider> classpathResourceProviders,
-      ImmutableList<ResourceProvider> libraryResourceProviders,
+      ImmutableList<ClassFileResourceProvider> classpathResourceProviders,
+      ImmutableList<ClassFileResourceProvider> libraryResourceProviders,
       Resource proguardMap,
       Resource proguardSeeds,
       Resource packageDistribution,
@@ -176,12 +176,12 @@ public class AndroidApp {
   }
 
   /** Get classpath resource providers. */
-  public List<ResourceProvider> getClasspathResourceProviders() {
+  public List<ClassFileResourceProvider> getClasspathResourceProviders() {
     return classpathResourceProviders;
   }
 
   /** Get library resource providers. */
-  public List<ResourceProvider> getLibraryResourceProviders() {
+  public List<ClassFileResourceProvider> getLibraryResourceProviders() {
     return libraryResourceProviders;
   }
 
@@ -366,8 +366,8 @@ public class AndroidApp {
     private final List<Resource> programResources = new ArrayList<>();
     private final List<Resource> classpathResources = new ArrayList<>();
     private final List<Resource> libraryResources = new ArrayList<>();
-    private final List<ResourceProvider> classpathResourceProviders = new ArrayList<>();
-    private final List<ResourceProvider> libraryResourceProviders = new ArrayList<>();
+    private final List<ClassFileResourceProvider> classpathResourceProviders = new ArrayList<>();
+    private final List<ClassFileResourceProvider> libraryResourceProviders = new ArrayList<>();
     private Resource proguardMap;
     private Resource proguardSeeds;
     private Resource packageDistribution;
@@ -450,7 +450,7 @@ public class AndroidApp {
     /**
      * Add classpath resource provider.
      */
-    public Builder addClasspathResourceProvider(ResourceProvider provider) {
+    public Builder addClasspathResourceProvider(ClassFileResourceProvider provider) {
       classpathResourceProviders.add(provider);
       return this;
     }
@@ -475,7 +475,7 @@ public class AndroidApp {
     /**
      * Add library resource provider.
      */
-    public Builder addLibraryResourceProvider(ResourceProvider provider) {
+    public Builder addLibraryResourceProvider(ClassFileResourceProvider provider) {
       libraryResourceProviders.add(provider);
       return this;
     }
@@ -627,7 +627,7 @@ public class AndroidApp {
                 Resource.Kind.DEX, ByteStreams.toByteArray(stream)));
           } else if (isClassFile(name)) {
             containsClassData = true;
-            String descriptor = PreloadedResourceProvider.guessTypeDescriptor(name);
+            String descriptor = PreloadedClassFileProvider.guessTypeDescriptor(name);
             resources(classKind).add(Resource.fromBytes(Resource.Kind.CLASSFILE,
                 ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
           }

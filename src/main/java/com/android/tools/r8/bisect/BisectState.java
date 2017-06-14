@@ -8,8 +8,6 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexApplication.Builder;
-import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexLibraryClass;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.naming.NamingLens;
@@ -24,7 +22,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -261,23 +258,20 @@ public class BisectState {
     System.out.println("Next bisection range: " + nextRange);
     int goodClasses = 0;
     int badClasses = 0;
-    Map<DexType, DexClass> classes = new HashMap<>();
-    for (DexLibraryClass clazz : badApp.libraryClasses()) {
-      classes.put(clazz.type, clazz);
-    }
+    List<DexProgramClass> programClasses = new ArrayList<>();
     for (DexProgramClass clazz : badApp.classes()) {
       DexProgramClass goodClass = getGoodClass(clazz);
       if (goodClass != null) {
-        classes.put(goodClass.type, goodClass);
+        programClasses.add(goodClass);
         ++goodClasses;
       } else {
-        classes.put(clazz.type, clazz);
+        programClasses.add(clazz);
         assert !nextRange.isEmpty();
         ++badClasses;
       }
     }
     System.out.println("Class split is good: " + goodClasses + ", bad: " + badClasses);
-    return new Builder(badApp, classes).build();
+    return new Builder(badApp).replaceProgramClasses(programClasses).build();
   }
 
   private DexProgramClass getGoodClass(DexProgramClass clazz) {

@@ -3,17 +3,18 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
+import java.util.Set;
+
 /**
- * Represents a provider for application resources. All resources returned
- * via this provider should be class file resources, other resource kinds
- * are not yet supported.
+ * Represents a provider for application resources of class file kind.
  *
  * Note that the classes will only be created for resources provided by
  * resource providers on-demand when they are needed by the tool. If
  * never needed, the resource will never be loaded.
  */
-public interface ResourceProvider {
-  // TODO: Consider adding support for DEX resources.
+public interface ClassFileResourceProvider {
+  /** Returns all class descriptors. */
+  Set<String> getClassDescriptors();
 
   /**
    * Get the class resource associated with the descriptor, or null if

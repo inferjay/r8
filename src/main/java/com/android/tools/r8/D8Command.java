@@ -10,7 +10,7 @@ import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.android.tools.r8.utils.OutputMode;
-import com.android.tools.r8.utils.PreloadedResourceProvider;
+import com.android.tools.r8.utils.PreloadedClassFileProvider;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -53,7 +53,7 @@ public class D8Command extends BaseCommand {
     public Builder addClasspathFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
         if (isArchive(file)) {
-          addClasspathResourceProvider(PreloadedResourceProvider.fromArchive(file));
+          addClasspathResourceProvider(PreloadedClassFileProvider.fromArchive(file));
         } else {
           super.addClasspathFiles(file);
         }
@@ -70,7 +70,7 @@ public class D8Command extends BaseCommand {
     public Builder addLibraryFiles(Collection<Path> files) throws IOException {
       for (Path file : files) {
         if (isArchive(file)) {
-          addLibraryResourceProvider(PreloadedResourceProvider.fromArchive(file));
+          addLibraryResourceProvider(PreloadedClassFileProvider.fromArchive(file));
         } else {
           super.addLibraryFiles(file);
         }
@@ -78,12 +78,12 @@ public class D8Command extends BaseCommand {
       return this;
     }
 
-    public Builder addClasspathResourceProvider(ResourceProvider provider) {
+    public Builder addClasspathResourceProvider(ClassFileResourceProvider provider) {
       getAppBuilder().addClasspathResourceProvider(provider);
       return this;
     }
 
-    public Builder addLibraryResourceProvider(ResourceProvider provider) {
+    public Builder addLibraryResourceProvider(ClassFileResourceProvider provider) {
       getAppBuilder().addLibraryResourceProvider(provider);
       return this;
     }

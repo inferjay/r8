@@ -21,7 +21,7 @@ public class AppInfoWithSubtyping extends AppInfo {
 
   public AppInfoWithSubtyping(DexApplication application) {
     super(application);
-    populateSubtypeMap(application.getClassMap(), application.dexItemFactory);
+    populateSubtypeMap(application.getFullClassMap(), application.dexItemFactory);
   }
 
   protected AppInfoWithSubtyping(AppInfoWithSubtyping previous) {
@@ -33,7 +33,7 @@ public class AppInfoWithSubtyping extends AppInfo {
   protected AppInfoWithSubtyping(AppInfoWithSubtyping previous, GraphLense lense) {
     super(previous, lense);
     // Recompute subtype map if we have modified the graph.
-    populateSubtypeMap(previous.app.getClassMap(), dexItemFactory);
+    populateSubtypeMap(previous.app.getFullClassMap(), dexItemFactory);
   }
 
   public Set<DexType> getMissingClasses() {

@@ -7,17 +7,14 @@ import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
-import com.android.tools.r8.graph.DexLibraryClass;
 import com.android.tools.r8.graph.DexProgramClass;
-import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.KeyedDexItem;
 import com.android.tools.r8.graph.PresortedComparable;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 public class TreePruner {
@@ -51,22 +48,20 @@ public class TreePruner {
   }
 
   private DexApplication.Builder removeUnused(DexApplication application) {
-    return new DexApplication.Builder(application, removeUnusedClassStructure(application));
+    return new DexApplication.Builder(application)
+        .replaceProgramClasses(getNewProgramClasses(application.classes()));
   }
 
-  private Map<DexType, DexClass> removeUnusedClassStructure(DexApplication application) {
-    Map<DexType, DexClass> classMap = new IdentityHashMap<>();
-    for (DexLibraryClass clazz : application.libraryClasses()) {
-      classMap.put(clazz.type, clazz);
-    }
-    for (DexProgramClass clazz : application.classes()) {
+  private List<DexProgramClass> getNewProgramClasses(List<DexProgramClass> classes) {
+    List<DexProgramClass> newClasses = new ArrayList<>();
+    for (DexProgramClass clazz : classes) {
       if (!appInfo.liveTypes.contains(clazz.type) && !options.debugKeepRules) {
         // The class is completely unused and we can remove it.
         if (Log.ENABLED) {
           Log.debug(getClass(), "Removing class: " + clazz);
         }
       } else {
-        classMap.put(clazz.type, clazz);
+        newClasses.add(clazz);
         if (!appInfo.instantiatedTypes.contains(clazz.type) && !options.debugKeepRules) {
           // The class is only needed as a type but never instantiated. Make it abstract to reflect
           // this.
@@ -88,7 +83,7 @@ public class TreePruner {
         clazz.staticFields = reachableFields(clazz.staticFields());
       }
     }
-    return classMap;
+    return newClasses;
   }
 
   private <S extends PresortedComparable<S>, T extends KeyedDexItem<S>> int firstUnreachableIndex(

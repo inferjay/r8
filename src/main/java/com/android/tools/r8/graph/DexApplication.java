@@ -6,16 +6,13 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
-import com.android.tools.r8.Resource;
-import com.android.tools.r8.errors.CompilationError;
-import com.android.tools.r8.ir.desugar.LambdaRewriter;
-import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
+import com.android.tools.r8.utils.ClasspathClassCollection;
 import com.android.tools.r8.utils.InternalOptions;
-import com.android.tools.r8.utils.LazyClassCollection;
+import com.android.tools.r8.utils.LibraryClassCollection;
+import com.android.tools.r8.utils.ProgramClassCollection;
 import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.Timing;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import java.io.ByteArrayOutputStream;
@@ -29,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,16 +34,9 @@ import java.util.Set;
 public class DexApplication {
 
   // Maps type into class, may be used concurrently.
-  private final ImmutableMap<DexType, DexClass> classMap;
-
-  // Lazily loaded classes.
-  //
-  // Note that this collection is autonomous and may be used in several
-  // different applications. Particularly, it is the case when one
-  // application is being build based on another one. Among others,
-  // it will have an important side-effect: class conflict resolution,
-  // generated errors in particular, may be different in lazy scenario.
-  private final LazyClassCollection lazyClassCollection;
+  private ProgramClassCollection programClasses;
+  private ClasspathClassCollection classpathClasses;
+  private LibraryClassCollection libraryClasses;
 
   public final ImmutableSet<DexType> mainDexList;
 
@@ -61,24 +52,27 @@ public class DexApplication {
   /** Constructor should only be invoked by the DexApplication.Builder. */
   private DexApplication(
       ClassNameMapper proguardMap,
-      ImmutableMap<DexType, DexClass> classMap,
-      LazyClassCollection lazyClassCollection,
+      ProgramClassCollection programClasses,
+      ClasspathClassCollection classpathClasses,
+      LibraryClassCollection libraryClasses,
       ImmutableSet<DexType> mainDexList,
       DexItemFactory dexItemFactory,
       DexString highestSortingString,
       Timing timing) {
+    assert programClasses != null;
     this.proguardMap = proguardMap;
-    this.lazyClassCollection = lazyClassCollection;
+    this.programClasses = programClasses;
+    this.classpathClasses = classpathClasses;
+    this.libraryClasses = libraryClasses;
     this.mainDexList = mainDexList;
-    this.classMap = classMap;
     this.dexItemFactory = dexItemFactory;
     this.highestSortingString = highestSortingString;
     this.timing = timing;
   }
 
-  ImmutableMap<DexType, DexClass> getClassMap() {
-    assert lazyClassCollection == null : "Only allowed in non-lazy scenarios.";
-    return classMap;
+  /** Force load all classes and return type -> class map containing all the classes */
+  public Map<DexType, DexClass> getFullClassMap() {
+    return forceLoadAllClasses();
   }
 
   // Reorder classes randomly. Note that the order of classes in program or library
@@ -92,49 +86,63 @@ public class DexApplication {
     return true;
   }
 
-  public Iterable<DexProgramClass> classes() {
-    List<DexProgramClass> result = new ArrayList<>();
-    // Note: we ignore lazy class collection because it
-    // is never supposed to be used for program classes.
-    for (DexClass clazz : classMap.values()) {
-      if (clazz.isProgramClass()) {
-        result.add(clazz.asProgramClass());
-      }
-    }
-    assert reorderClasses(result);
-    return result;
+  public List<DexProgramClass> classes() {
+    List<DexProgramClass> classes = programClasses.collectLoadedClasses();
+    assert reorderClasses(classes);
+    return classes;
   }
 
-  public Iterable<DexLibraryClass> libraryClasses() {
-    assert lazyClassCollection == null : "Only allowed in non-lazy scenarios.";
-    List<DexLibraryClass> result = new ArrayList<>();
+  public List<DexLibraryClass> libraryClasses() {
+    assert classpathClasses == null : "Operation is not supported.";
+    Map<DexType, DexClass> classMap = forceLoadAllClasses();
+    List<DexLibraryClass> classes = new ArrayList<>();
     for (DexClass clazz : classMap.values()) {
       if (clazz.isLibraryClass()) {
-        result.add(clazz.asLibraryClass());
+        classes.add(clazz.asLibraryClass());
       }
     }
-    assert reorderClasses(result);
-    return result;
+    assert reorderClasses(classes);
+    return classes;
+  }
+
+  private Map<DexType, DexClass> forceLoadAllClasses() {
+    Map<DexType, DexClass> loaded = new IdentityHashMap<>();
+
+    // program classes are supposed to be loaded, but force-loading them is no-op.
+    programClasses.forceLoad(type -> true);
+    programClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+
+    if (classpathClasses != null) {
+      classpathClasses.forceLoad(type -> !loaded.containsKey(type));
+      classpathClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+    }
+
+    if (libraryClasses != null) {
+      libraryClasses.forceLoad(type -> !loaded.containsKey(type));
+      libraryClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+    }
+
+    return loaded;
   }
 
   public DexClass definitionFor(DexType type) {
-    DexClass clazz = classMap.get(type);
-    // In presence of lazy class collection we also reach out to it
-    // as well unless the class found is already a program class.
-    if (lazyClassCollection != null && (clazz == null || !clazz.isProgramClass())) {
-      clazz = lazyClassCollection.get(type, clazz);
+    DexClass clazz = programClasses.get(type);
+    if (clazz == null && classpathClasses != null) {
+      clazz = classpathClasses.get(type);
+    }
+    if (clazz == null && libraryClasses != null) {
+      clazz = libraryClasses.get(type);
     }
     return clazz;
   }
 
   public DexProgramClass programDefinitionFor(DexType type) {
-    DexClass clazz = classMap.get(type);
-    // Don't bother about lazy class collection, it should never load program classes.
-    return (clazz == null || !clazz.isProgramClass()) ? null : clazz.asProgramClass();
+    DexClass clazz = programClasses.get(type);
+    return clazz == null ? null : clazz.asProgramClass();
   }
 
   public String toString() {
-    return "Application (classes #" + classMap.size() + ")";
+    return "Application (" + programClasses + "; " + classpathClasses + "; " + libraryClasses + ")";
   }
 
   public ClassNameMapper getProguardMap() {
@@ -184,7 +192,7 @@ public class DexApplication {
    * <p>If no directory is provided everything is written to System.out.
    */
   public void disassemble(Path outputDir, InternalOptions options) {
-    for (DexClass clazz : classes()) {
+    for (DexProgramClass clazz : programClasses.collectLoadedClasses()) {
       for (DexEncodedMethod method : clazz.virtualMethods()) {
         if (options.methodMatchesFilter(method)) {
           disassemble(method, getProguardMap(), outputDir);
@@ -238,7 +246,7 @@ public class DexApplication {
    * Write smali source for the application code on the provided PrintStream.
    */
   public void smali(InternalOptions options, PrintStream ps) {
-    List<DexProgramClass> classes = (List<DexProgramClass>) classes();
+    List<DexProgramClass> classes = programClasses.collectLoadedClasses();
     classes.sort(Comparator.comparing(DexProgramClass::toSourceString));
     boolean firstClass = true;
     for (DexClass clazz : classes) {
@@ -287,9 +295,16 @@ public class DexApplication {
   }
 
   public static class Builder {
+    // We handle program class collection separately from classpath
+    // and library class collections. Since while we assume program
+    // class collection should always be fully loaded and thus fully
+    // represented by the map (making it easy, for example, adding
+    // new or removing existing classes), classpath and library
+    // collections will be considered monolithic collections.
 
-    private final Hashtable<DexType, DexClass> classMap = new Hashtable<>();
-    private LazyClassCollection lazyClassCollection;
+    private final List<DexProgramClass> programClasses;
+    private ClasspathClassCollection classpathClasses;
+    private LibraryClassCollection libraryClasses;
 
     public final Hashtable<DexCode, DexCode> codeItems = new Hashtable<>();
 
@@ -301,18 +316,17 @@ public class DexApplication {
     private final Set<DexType> mainDexList = Sets.newIdentityHashSet();
 
     public Builder(DexItemFactory dexItemFactory, Timing timing) {
+      this.programClasses = new ArrayList<>();
       this.dexItemFactory = dexItemFactory;
       this.timing = timing;
-      this.lazyClassCollection = null;
+      this.classpathClasses = null;
+      this.libraryClasses = null;
     }
 
     public Builder(DexApplication application) {
-      this(application, application.classMap);
-    }
-
-    public Builder(DexApplication application, Map<DexType, DexClass> classMap) {
-      this.classMap.putAll(classMap);
-      this.lazyClassCollection = application.lazyClassCollection;
+      programClasses = application.programClasses.collectLoadedClasses();
+      classpathClasses = application.classpathClasses;
+      libraryClasses = application.libraryClasses;
       proguardMap = application.proguardMap;
       timing = application.timing;
       highestSortingString = application.highestSortingString;
@@ -326,58 +340,45 @@ public class DexApplication {
       return this;
     }
 
+    public synchronized Builder replaceProgramClasses(List<DexProgramClass> newProgramClasses) {
+      assert newProgramClasses != null;
+      this.programClasses.clear();
+      this.programClasses.addAll(newProgramClasses);
+      return this;
+    }
+
     public synchronized Builder setHighestSortingString(DexString value) {
       highestSortingString = value;
       return this;
     }
 
-    public Builder addClass(DexClass clazz) {
-      addClass(clazz, false);
+    public synchronized Builder addProgramClass(DexProgramClass clazz) {
+      programClasses.add(clazz);
       return this;
     }
 
-    public Builder setLazyClassCollection(LazyClassCollection lazyClassMap) {
-      this.lazyClassCollection = lazyClassMap;
+    public Builder setClasspathClassCollection(ClasspathClassCollection classes) {
+      this.classpathClasses = classes;
       return this;
     }
 
-    public Builder addClassIgnoringLibraryDuplicates(DexClass clazz) {
-      addClass(clazz, true);
+    public Builder setLibraryClassCollection(LibraryClassCollection classes) {
+      this.libraryClasses = classes;
       return this;
     }
 
-    public Builder addSynthesizedClass(DexProgramClass synthesizedClass, boolean addToMainDexList) {
+    public synchronized Builder addSynthesizedClass(
+        DexProgramClass synthesizedClass, boolean addToMainDexList) {
       assert synthesizedClass.isProgramClass() : "All synthesized classes must be program classes";
-      addClass(synthesizedClass);
+      addProgramClass(synthesizedClass);
       if (addToMainDexList && !mainDexList.isEmpty()) {
         mainDexList.add(synthesizedClass.type);
       }
       return this;
     }
 
-    public List<DexProgramClass> getProgramClasses() {
-      List<DexProgramClass> result = new ArrayList<>();
-      // Note: we ignore lazy class collection because it
-      // is never supposed to be used for program classes.
-      for (DexClass clazz : classMap.values()) {
-        if (clazz.isProgramClass()) {
-          result.add(clazz.asProgramClass());
-        }
-      }
-      return result;
-    }
-
-    // Callback from FileReader when parsing a DexProgramClass (multi-threaded).
-    public synchronized void addClass(DexClass newClass, boolean skipLibDups) {
-      assert newClass != null;
-      DexType type = newClass.type;
-      DexClass oldClass = classMap.get(type);
-      if (oldClass != null) {
-        newClass = chooseClass(newClass, oldClass, skipLibDups);
-      }
-      if (oldClass != newClass) {
-        classMap.put(type, newClass);
-      }
+    public Collection<DexProgramClass> getProgramClasses() {
+      return programClasses;
     }
 
     public Builder addToMainDexList(Collection<DexType> mainDexList) {
@@ -388,83 +389,13 @@ public class DexApplication {
     public DexApplication build() {
       return new DexApplication(
           proguardMap,
-          ImmutableMap.copyOf(classMap),
-          lazyClassCollection,
+          ProgramClassCollection.create(programClasses),
+          classpathClasses,
+          libraryClasses,
           ImmutableSet.copyOf(mainDexList),
           dexItemFactory,
           highestSortingString,
           timing);
-    }
-  }
-
-  public static DexClass chooseClass(DexClass a, DexClass b, boolean skipLibDups) {
-    // NOTE: We assume that there should not be any conflicting names in user defined
-    // classes and/or linked jars. If we ever want to allow 'keep first'-like policy
-    // to resolve this kind of conflict between program and/or classpath classes, we'll
-    // need to make sure we choose the class we keep deterministically.
-    if (a.isProgramClass() && b.isProgramClass()) {
-      if (allowProgramClassConflict(a.asProgramClass(), b.asProgramClass())) {
-        return a;
-      }
-      throw new CompilationError("Program type already present: " + a.type.toSourceString());
-    }
-    if (a.isProgramClass()) {
-      return chooseClass(a.asProgramClass(), b);
-    }
-    if (b.isProgramClass()) {
-      return chooseClass(b.asProgramClass(), a);
-    }
-
-    if (a.isClasspathClass() && b.isClasspathClass()) {
-      throw new CompilationError("Classpath type already present: " + a.type.toSourceString());
-    }
-    if (a.isClasspathClass()) {
-      return chooseClass(a.asClasspathClass(), b.asLibraryClass());
-    }
-    if (b.isClasspathClass()) {
-      return chooseClass(b.asClasspathClass(), a.asLibraryClass());
-    }
-
-    return chooseClasses(b.asLibraryClass(), a.asLibraryClass(), skipLibDups);
-  }
-
-  private static boolean allowProgramClassConflict(DexProgramClass a, DexProgramClass b) {
-    // Currently only allow collapsing synthetic lambda classes.
-    return a.getOrigin() == Resource.Kind.DEX
-        && b.getOrigin() == Resource.Kind.DEX
-        && a.accessFlags.isSynthetic()
-        && b.accessFlags.isSynthetic()
-        && LambdaRewriter.hasLambdaClassPrefix(a.type)
-        && LambdaRewriter.hasLambdaClassPrefix(b.type);
-  }
-
-  private static DexClass chooseClass(DexProgramClass selected, DexClass ignored) {
-    assert !ignored.isProgramClass();
-    if (ignored.isLibraryClass()) {
-      logIgnoredClass(ignored, "Class `%s` was specified as library and program type.");
-    }
-    // We don't log program/classpath class conflict since it is expected case.
-    return selected;
-  }
-
-  private static DexClass chooseClass(DexClasspathClass selected, DexLibraryClass ignored) {
-    logIgnoredClass(ignored, "Class `%s` was specified as library and classpath type.");
-    return selected;
-  }
-
-  private static DexClass chooseClasses(
-      DexLibraryClass selected, DexLibraryClass ignored, boolean skipDups) {
-    if (!skipDups) {
-      throw new CompilationError(
-          "Library type already present: " + selected.type.toSourceString());
-    }
-    logIgnoredClass(ignored, "Class `%s` was specified twice as a library type.");
-    return selected;
-  }
-
-  private static void logIgnoredClass(DexClass ignored, String message) {
-    if (Log.ENABLED) {
-      Log.warn(DexApplication.class, message, ignored.type.toSourceString());
     }
   }
 }
