@@ -8,6 +8,7 @@ import os
 import r8
 import d8
 import sys
+import utils
 
 import gmscore_data
 import youtube_data
@@ -64,6 +65,17 @@ def ParseOptions():
                     'configuration. For use as a @<file> argument to perform ' +
                     'the run.')
   return result.parse_args()
+
+# Most apps have the -printmapping and -printseeds in the Proguard
+# configuration. However we don't want to write these files in these
+# locations. Instead generate an auxiliary Proguard configuration
+# placing these two output files together with the dex output.
+def GenerateAdditionalProguardConfiguration(temp, outdir):
+  name = "output.config"
+  with open(os.path.join(temp, name), 'w') as file:
+    file.write('-printmapping ' + os.path.join(outdir, 'proguard.map') + "\n")
+    file.write('-printseeds ' + os.path.join(outdir, 'proguard.seeds') + "\n")
+    return os.path.abspath(file.name)
 
 def main():
   (options, args) = ParseOptions()
@@ -133,8 +145,16 @@ def main():
       d8.run(args, not options.no_build, not options.no_debug, options.profile,
              options.track_memory_to_file)
     else:
-      r8.run(args, not options.no_build, not options.no_debug, options.profile,
-             options.track_memory_to_file)
+      with utils.TempDir() as temp:
+        if outdir.endswith('.zip') or outdir.endswith('.jar'):
+          pg_outdir = os.path.dirname(outdir)
+        else:
+          pg_outdir = outdir
+        additional_pg_conf = GenerateAdditionalProguardConfiguration(
+            temp, os.path.abspath(pg_outdir))
+        args.extend(['--pg-conf', additional_pg_conf])
+        r8.run(args, not options.no_build, not options.no_debug, options.profile,
+               options.track_memory_to_file)
 
 if __name__ == '__main__':
   sys.exit(main())
