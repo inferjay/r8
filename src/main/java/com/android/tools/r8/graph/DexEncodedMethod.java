@@ -22,7 +22,7 @@ import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.android.tools.r8.ir.synthetic.ForwardMethodSourceCode;
 import com.android.tools.r8.ir.synthetic.SynthesizedCode;
@@ -102,7 +102,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     return compilationState == PROCESSED_INLINING_CANDIDATE_PUBLIC;
   }
 
-  public void markProcessed(InliningConstraint state) {
+  public void markProcessed(Constraint state) {
     switch (state) {
       case ALWAYS:
         compilationState = PROCESSED_INLINING_CANDIDATE_PUBLIC;

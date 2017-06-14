@@ -17,6 +17,7 @@ import com.android.tools.r8.ir.code.InvokeVirtual;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.conversion.CallGraph;
 import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
+import com.android.tools.r8.ir.optimize.Inliner.Reason;
 import com.android.tools.r8.logging.Log;
 
 /**
@@ -103,6 +104,19 @@ public class InliningOracle {
     return candidate;
   }
 
+  private Reason computeInliningReason(DexEncodedMethod target) {
+    if (target.getOptimizationInfo().forceInline()) {
+      return Reason.FORCE;
+    }
+    if (callGraph.hasSingleCallSite(target)) {
+      return Reason.SINGLE_CALLER;
+    }
+    if (isDoubleInliningTarget(target)) {
+      return Reason.DUAL_CALLER;
+    }
+    return Reason.SIMPLE;
+  }
+
   public InlineAction computeForInvokeWithReceiver(InvokeMethodWithReceiver invoke) {
     boolean receiverIsNeverNull = invoke.receiverIsNeverNull();
     if (!receiverIsNeverNull) {
@@ -120,11 +134,9 @@ public class InliningOracle {
       return null;
     }
 
-    boolean fromBridgeMethod = target.getOptimizationInfo().forceInline();
-
     if (target == method) {
       // Bridge methods should never have recursive calls.
-      assert !fromBridgeMethod;
+      assert !target.getOptimizationInfo().forceInline();
       return null;
     }
 
@@ -154,11 +166,9 @@ public class InliningOracle {
       return null;
     }
 
-    boolean doubleInlineTarget = isDoubleInliningTarget(target);
+    Reason reason = computeInliningReason(target);
     // Determine if this should be inlined no matter how big it is.
-    boolean forceInline =
-        fromBridgeMethod | callGraph.hasSingleCallSite(target) | doubleInlineTarget;
-    if (!target.isInliningCandidate(method, forceInline)) {
+    if (!target.isInliningCandidate(method, reason != Reason.SIMPLE)) {
       // Abort inlining attempt if the single target is not an inlining candidate.
       if (info != null) {
         info.exclude(invoke, "target is not identified for inlining");
@@ -175,7 +185,7 @@ public class InliningOracle {
     }
 
     // Attempt to inline a candidate that is only called twice.
-    if (doubleInlineTarget && (doubleInlining(target) == null)) {
+    if ((reason == Reason.DUAL_CALLER) && (doubleInlining(target) == null)) {
       if (info != null) {
         info.exclude(invoke, "target is not ready for double inlining");
       }
@@ -185,7 +195,7 @@ public class InliningOracle {
     if (info != null) {
       info.include(invoke.getType(), target);
     }
-    return new InlineAction(target, invoke, forceInline);
+    return new InlineAction(target, invoke, reason);
   }
 
   public InlineAction computeForInvokeVirtual(InvokeVirtual invoke) {
@@ -224,12 +234,9 @@ public class InliningOracle {
     if (candidate == null) {
       return null;
     }
-    boolean fromBridgeMethod = candidate.getOptimizationInfo().forceInline();
-    boolean doubleInlineTarget = isDoubleInliningTarget(candidate);
+    Reason reason = computeInliningReason(candidate);
     // Determine if this should be inlined no matter how big it is.
-    boolean forceInline =
-        fromBridgeMethod | callGraph.hasSingleCallSite(candidate) | doubleInlineTarget;
-    if (!candidate.isInliningCandidate(method, forceInline)) {
+    if (!candidate.isInliningCandidate(method, reason != Reason.SIMPLE)) {
       // Abort inlining attempt if the single target is not an inlining candidate.
       if (info != null) {
         info.exclude(invoke, "target is not identified for inlining");
@@ -246,7 +253,7 @@ public class InliningOracle {
     }
 
     // Attempt to inline a candidate that is only called twice.
-    if (doubleInlineTarget && (doubleInlining(candidate) == null)) {
+    if ((reason == Reason.DUAL_CALLER) && (doubleInlining(candidate) == null)) {
       if (info != null) {
         info.exclude(invoke, "target is not ready for double inlining");
       }
@@ -256,7 +263,7 @@ public class InliningOracle {
     if (info != null) {
       info.include(invoke.getType(), candidate);
     }
-    return new InlineAction(candidate, invoke);
+    return new InlineAction(candidate, invoke, reason);
   }
 
   public InlineAction computeForInvokeSuper(InvokeSuper invoke) {
@@ -270,7 +277,7 @@ public class InliningOracle {
     if (info != null) {
       info.include(invoke.getType(), candidate);
     }
-    return new InlineAction(candidate, invoke);
+    return new InlineAction(candidate, invoke, Reason.SIMPLE);
   }
 
   public InlineAction computeForInvokePolymorpic(InvokePolymorphic invoke) {

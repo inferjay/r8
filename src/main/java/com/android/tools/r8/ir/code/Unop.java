@@ -6,7 +6,7 @@ package com.android.tools.r8.ir.code;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexType;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 
 abstract public class Unop extends Instruction {
 
@@ -43,7 +43,7 @@ abstract public class Unop extends Instruction {
   }
 
   @Override
-  public InliningConstraint inliningConstraint(AppInfo info, DexType holder) {
-    return InliningConstraint.ALWAYS;
+  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+    return Constraint.ALWAYS;
   }
 }
