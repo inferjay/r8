@@ -50,8 +50,12 @@ def ParseOptions():
                     help='')
   result.add_option('-k',
                     help='Override the default ProGuard keep rules')
+  result.add_option('--compiler-flags',
+                    help='Additional option(s) for the compiler. ' +
+                         'If passing several options use a quoted string.')
   result.add_option('--r8-flags',
-                    help='Additional option(s) for R8. ' +
+                    help='Additional option(s) for the compiler. ' +
+                         'Same as --compiler-flags, keeping it for backward compatibility. ' +
                          'If passing several options use a quoted string.')
   result.add_option('--track-memory-to-file',
                     help='Track how much memory the jvm is using while ' +
@@ -131,8 +135,11 @@ def main():
   if options.compiler == 'r8':
     if 'r8-flags' in values:
       args.extend(values['r8-flags'].split(' '))
-    if options.r8_flags:
-      args.extend(options.r8_flags.split(' '))
+
+  if options.compiler_flags:
+    args.extend(options.compiler_flags.split(' '))
+  if options.r8_flags:
+    args.extend(options.r8_flags.split(' '))
 
   if inputs:
     args.extend(inputs)
