@@ -18,6 +18,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -80,17 +82,20 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
         Assert.assertEquals(1, descriptors.size());
         String classDescriptor = descriptors.iterator().next();
         classDescriptor = classDescriptor.substring(1, classDescriptor.length() - 1);
-        fileToResource.put(classDescriptor + ".class", resource);
+        String classFilePath = classDescriptor + ".class";
+        if (File.separatorChar != '/') {
+          classFilePath = classFilePath.replace('/', File.separatorChar);
+        }
+        fileToResource.put(classFilePath, resource);
       }
       return fileToResource;
     }
 
     private Path makeRelative(Path testJarFile, Path classFile) {
-      classFile = classFile.toAbsolutePath();
       Path regularParent =
-          testJarFile.getParent().resolve(Paths.get("classes")).toAbsolutePath();
+          testJarFile.getParent().resolve(Paths.get("classes"));
       Path legacyParent = regularParent.resolve(Paths.get("..",
-          regularParent.getFileName().toString() + "Legacy", "classes")).toAbsolutePath();
+          regularParent.getFileName().toString() + "Legacy", "classes"));
 
       if (classFile.startsWith(regularParent)) {
         return regularParent.relativize(classFile);
@@ -102,9 +107,9 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
     private List<String> collectClassFiles(Path testJarFile) {
       List<String> result = new ArrayList<>();
       // Collect Java 8 classes.
-      collectClassFiles(getClassesRoot(testJarFile).toFile(), result);
+      collectClassFiles(getClassesRoot(testJarFile), result);
       // Collect legacy classes.
-      collectClassFiles(getLegacyClassesRoot(testJarFile).toFile(), result);
+      collectClassFiles(getLegacyClassesRoot(testJarFile), result);
       Collections.sort(result);
       return result;
     }
@@ -121,15 +126,18 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
       return parent.resolve(legacyPath);
     }
 
-    private void collectClassFiles(File dir, List<String> result) {
-      File[] files = dir.listFiles();
-      if (files != null) {
-        for (File file : files) {
-          if (file.isDirectory()) {
-            collectClassFiles(file, result);
-          } else {
-            result.add(file.getAbsolutePath());
+    private void collectClassFiles(Path dir, List<String> result) {
+      if (Files.exists(dir)) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+          for (Path entry: stream) {
+            if (Files.isDirectory(entry)) {
+              collectClassFiles(entry, result);
+            } else {
+              result.add(entry.toString());
+            }
           }
+        } catch (IOException x) {
+          throw new AssertionError(x);
         }
       }
     }
