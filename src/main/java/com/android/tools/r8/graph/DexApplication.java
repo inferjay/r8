@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
@@ -80,6 +81,17 @@ public class DexApplication {
     return classMap;
   }
 
+  // Reorder classes randomly. Note that the order of classes in program or library
+  // class collections should not matter for compilation of valid code and when running
+  // with assertions enabled we reorder the classes randomly to catch possible issues.
+  // Also note that the order may add to non-determinism in reporting errors for invalid
+  // code, but this non-determinism exists even with the same order of classes since we
+  // may process classes concurrently and fail-fast on the first error.
+  private <T> boolean reorderClasses(List<T> classes) {
+    Collections.shuffle(classes);
+    return true;
+  }
+
   public Iterable<DexProgramClass> classes() {
     List<DexProgramClass> result = new ArrayList<>();
     // Note: we ignore lazy class collection because it
@@ -89,6 +101,7 @@ public class DexApplication {
         result.add(clazz.asProgramClass());
       }
     }
+    assert reorderClasses(result);
     return result;
   }
 
@@ -100,6 +113,7 @@ public class DexApplication {
         result.add(clazz.asLibraryClass());
       }
     }
+    assert reorderClasses(result);
     return result;
   }
 
