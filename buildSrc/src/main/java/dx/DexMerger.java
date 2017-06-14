@@ -53,7 +53,7 @@ public class DexMerger extends DefaultTask {
       public void execute(ExecSpec execSpec) {
         try {
           if (dexMergerExecutable == null) {
-            dexMergerExecutable = new File("tools/" + Utils.toolsDir() + "/dx/bin/dexmerger");
+            dexMergerExecutable = Utils.dexMergerExecutable();
           }
           execSpec.setExecutable(dexMergerExecutable);
           execSpec.args(destination.getCanonicalPath());

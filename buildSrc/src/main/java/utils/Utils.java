@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package utils;
 
+import java.io.File;
+
 public class Utils {
   public static String toolsDir() {
     String osName = System.getProperty("os.name");
@@ -13,5 +15,10 @@ public class Utils {
     } else {
       return "linux";
     }
+  }
+
+  public static File dexMergerExecutable() {
+    String executableName = Utils.toolsDir().equals("windows") ? "dexmerger.bat" : "dexmerger";
+    return new File("tools/" + Utils.toolsDir() + "/dx/bin/" + executableName);
   }
 }

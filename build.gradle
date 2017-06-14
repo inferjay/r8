@@ -1,7 +1,8 @@
 // Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-import org.gradle.internal.os.OperatingSystem;
+import org.gradle.internal.os.OperatingSystem
+import utils.Utils;
 
 apply plugin: 'java'
 apply plugin: 'idea'
@@ -984,7 +985,7 @@ def buildArtTest(androidCheckoutDir, artTestBuildDir, dir, dexTool) {
     def artTestDir = file("${androidCheckoutDir}/art/test")
     def artRunTestScript = file("${artTestDir}/run-test")
     def dxExecutable = new File("tools/linux/dx/bin/dx");
-    def dexMergerExecutable = new File("tools/linux/dx/bin/dexmerger");
+    def dexMergerExecutable = Utils.dexMergerExecutable()
     def dexToolName = dexTool == DexTool.DX ? "dx" : "jack"
 
     def name = dir.getName();
