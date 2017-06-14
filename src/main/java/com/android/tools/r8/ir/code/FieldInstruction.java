@@ -9,8 +9,7 @@ import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexType;
-import com.android.tools.r8.ir.optimize.Inliner;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import java.util.List;
 
 abstract class FieldInstruction extends Instruction {
@@ -43,7 +42,7 @@ abstract class FieldInstruction extends Instruction {
   }
 
   @Override
-  public InliningConstraint inliningConstraint(AppInfo info, DexType holder) {
+  public Constraint inliningConstraint(AppInfo info, DexType holder) {
     // Resolve the field if possible and decide whether the instruction can inlined.
     DexType fieldHolder = field.getHolder();
     DexEncodedField target = info.lookupInstanceTarget(fieldHolder, field);
@@ -51,15 +50,15 @@ abstract class FieldInstruction extends Instruction {
     if ((target != null) && (fieldClass != null) && !fieldClass.isLibraryClass()) {
       DexAccessFlags flags = target.accessFlags;
       if (flags.isPublic()) {
-        return Inliner.InliningConstraint.ALWAYS;
+        return Constraint.ALWAYS;
       }
       if (flags.isPrivate() && (fieldHolder == holder)) {
-        return Inliner.InliningConstraint.PRIVATE;
+        return Constraint.PRIVATE;
       }
       if (flags.isProtected() && (fieldHolder.isSamePackage(holder))) {
-        return Inliner.InliningConstraint.PACKAGE;
+        return Constraint.PACKAGE;
       }
     }
-    return Inliner.InliningConstraint.NEVER;
+    return Constraint.NEVER;
   }
 }

@@ -9,7 +9,7 @@ import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.Value.DebugInfo;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.InternalOptions;
@@ -797,7 +797,7 @@ public abstract class Instruction {
   }
 
   // Returns the inlining constraint for this instruction.
-  public InliningConstraint inliningConstraint(AppInfo info, DexType holder) {
-    return InliningConstraint.NEVER;
+  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+    return Constraint.NEVER;
   }
 }

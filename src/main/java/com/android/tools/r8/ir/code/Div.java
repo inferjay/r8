@@ -14,9 +14,6 @@ import com.android.tools.r8.code.DivIntLit16;
 import com.android.tools.r8.code.DivIntLit8;
 import com.android.tools.r8.code.DivLong;
 import com.android.tools.r8.code.DivLong2Addr;
-import com.android.tools.r8.graph.AppInfo;
-import com.android.tools.r8.graph.DexType;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
 
 public class Div extends ArithmeticBinop {
 

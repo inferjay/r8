@@ -50,23 +50,23 @@ public class Inliner {
     this.options = options;
   }
 
-  private InliningConstraint instructionAllowedForInlining(
+  private Constraint instructionAllowedForInlining(
       DexEncodedMethod method, Instruction instruction) {
-    InliningConstraint result = instruction.inliningConstraint(appInfo, method.method.holder);
-    if ((result == InliningConstraint.NEVER) && instruction.isDebugInstruction()) {
-      return InliningConstraint.ALWAYS;
+    Constraint result = instruction.inliningConstraint(appInfo, method.method.holder);
+    if ((result == Constraint.NEVER) && instruction.isDebugInstruction()) {
+      return Constraint.ALWAYS;
     }
     return result;
   }
 
-  public InliningConstraint identifySimpleMethods(IRCode code, DexEncodedMethod method) {
+  public Constraint identifySimpleMethods(IRCode code, DexEncodedMethod method) {
     DexCode dex = method.getCode().asDexCode();
     // We have generated code for a method and we want to figure out whether the method is a
     // candidate for inlining. The code is the final IR after optimizations.
     if (dex.instructions.length > INLINING_INSTRUCTION_LIMIT) {
-      return InliningConstraint.NEVER;
+      return Constraint.NEVER;
     }
-    InliningConstraint result = InliningConstraint.ALWAYS;
+    Constraint result = Constraint.ALWAYS;
     ListIterator<BasicBlock> iterator = code.listIterator();
     assert iterator.hasNext();
     BasicBlock block = iterator.next();
@@ -76,9 +76,9 @@ public class Inliner {
       InstructionListIterator it = block.listIterator();
       while (it.hasNext()) {
         Instruction instruction = it.next();
-        InliningConstraint state = instructionAllowedForInlining(method, instruction);
-        if (state == InliningConstraint.NEVER) {
-          return InliningConstraint.NEVER;
+        Constraint state = instructionAllowedForInlining(method, instruction);
+        if (state == Constraint.NEVER) {
+          return Constraint.NEVER;
         }
         if (state.ordinal() < result.ordinal()) {
           result = state;
@@ -105,7 +105,7 @@ public class Inliner {
     return methodHolder.isSamePackage(targetHolder);
   }
 
-  public enum InliningConstraint {
+  public enum Constraint {
     // The ordinal values are important so please do not reorder.
     NEVER,    // Never inline this.
     PRIVATE,  // Only inline this into methods with same holder.
@@ -113,23 +113,27 @@ public class Inliner {
     ALWAYS,   // No restrictions for inlining this.
   }
 
+  public enum Reason {
+    FORCE,         // Inlinee is marked for forced inlining (bridge method or renamed constructor).
+    SINGLE_CALLER, // Inlinee has precisely one caller.
+    DUAL_CALLER,   // Inlinee has precisely two callers.
+    SIMPLE,        // Inlinee has simple code suitable for inlining.
+  }
+
   static public class InlineAction {
 
     public final DexEncodedMethod target;
     public final Invoke invoke;
-    public final boolean forceInline;
+    public final Reason reason;
 
-    public InlineAction(
-        DexEncodedMethod target, Invoke invoke, boolean forceInline) {
+    public InlineAction(DexEncodedMethod target, Invoke invoke, Reason reason) {
       this.target = target;
       this.invoke = invoke;
-      this.forceInline = forceInline;
+      this.reason = reason;
     }
 
-    public InlineAction(DexEncodedMethod target, Invoke invoke) {
-      this.target = target;
-      this.invoke = invoke;
-      this.forceInline = target.getOptimizationInfo().forceInline();
+    public boolean forceInline() {
+      return reason != Reason.SIMPLE;
     }
 
     public IRCode buildIR(ValueNumberGenerator generator, AppInfoWithSubtyping appInfo,
@@ -275,7 +279,7 @@ public class Inliner {
               // Back up before the invoke instruction.
               iterator.previous();
               instruction_allowance -= numberOfInstructions(inlinee);
-              if (instruction_allowance >= 0 || result.forceInline) {
+              if (instruction_allowance >= 0 || result.forceInline()) {
                 iterator.inlineInvoke(code, inlinee, blockIterator, blocksToRemove, downcast);
               }
               // If we inlined the invoke from a bridge method, it is no longer a bridge method.

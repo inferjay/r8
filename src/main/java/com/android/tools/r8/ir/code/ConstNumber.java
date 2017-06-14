@@ -15,7 +15,7 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.utils.NumberUtils;
 
 public class ConstNumber extends ConstInstruction {
@@ -188,7 +188,7 @@ public class ConstNumber extends ConstInstruction {
   }
 
   @Override
-  public InliningConstraint inliningConstraint(AppInfo info, DexType holder) {
-    return InliningConstraint.ALWAYS;
+  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+    return Constraint.ALWAYS;
   }
 }

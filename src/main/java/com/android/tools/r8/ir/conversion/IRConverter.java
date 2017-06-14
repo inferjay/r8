@@ -25,7 +25,7 @@ import com.android.tools.r8.ir.desugar.LambdaRewriter;
 import com.android.tools.r8.ir.optimize.CodeRewriter;
 import com.android.tools.r8.ir.optimize.DeadCodeRemover;
 import com.android.tools.r8.ir.optimize.Inliner;
-import com.android.tools.r8.ir.optimize.Inliner.InliningConstraint;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.optimize.MemberValuePropagation;
 import com.android.tools.r8.ir.optimize.Outliner;
 import com.android.tools.r8.ir.optimize.PeepholeOptimizer;
@@ -390,15 +390,15 @@ public class IRConverter {
     boolean matchesMethodFilter = options.methodMatchesFilter(method);
     if (code != null && matchesMethodFilter) {
       assert !method.isProcessed();
-      InliningConstraint state = rewriteCode(method, outlineHandler);
+      Constraint state = rewriteCode(method, outlineHandler);
       method.markProcessed(state);
     } else {
       // Mark abstract methods as processed as well.
-      method.markProcessed(InliningConstraint.NEVER);
+      method.markProcessed(Constraint.NEVER);
     }
   }
 
-  private InliningConstraint rewriteCode(DexEncodedMethod method,
+  private Constraint rewriteCode(DexEncodedMethod method,
       BiConsumer<IRCode, DexEncodedMethod> outlineHandler) {
     if (options.verbose) {
       System.out.println("Processing: " + method.toSourceString());
@@ -409,7 +409,7 @@ public class IRConverter {
     }
     IRCode code = method.buildIR(options);
     if (code == null) {
-      return InliningConstraint.NEVER;
+      return Constraint.NEVER;
     }
     if (Log.ENABLED) {
       Log.debug(getClass(), "Initial (SSA) flow graph for %s:\n%s", method.toSourceString(), code);
@@ -490,7 +490,7 @@ public class IRConverter {
 
     // After all the optimizations have take place, we compute whether method should be inlined.
     if (!options.inlineAccessors || inliner == null) {
-      return InliningConstraint.NEVER;
+      return Constraint.NEVER;
     }
     return inliner.identifySimpleMethods(code, method);
   }
