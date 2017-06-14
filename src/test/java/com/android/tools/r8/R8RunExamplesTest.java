@@ -14,6 +14,7 @@ import com.android.tools.r8.R8RunArtTestsTest.DexTool;
 import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
+import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.JarBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +41,6 @@ import org.junit.runners.Parameterized.Parameters;
 public class R8RunExamplesTest {
 
   private static final String EXAMPLE_DIR = ToolHelper.EXAMPLES_BUILD_DIR;
-  private static final String DEFAULT_DEX_FILENAME = "classes.dex";
 
   // For local testing on a specific Art version(s) change this set. e.g. to
   // ImmutableSet.of(DexVm.ART_DEFAULT) or pass the option -Ddex_vm=<version> to the Java VM.
@@ -161,7 +161,7 @@ public class R8RunExamplesTest {
   }
 
   private Path getOriginalDexFile() {
-    return Paths.get(EXAMPLE_DIR, pkg, DEFAULT_DEX_FILENAME);
+    return Paths.get(EXAMPLE_DIR, pkg, FileUtils.DEFAULT_DEX_FILENAME);
   }
 
   @Rule
