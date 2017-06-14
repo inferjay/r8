@@ -29,7 +29,15 @@ public class Monitor extends Instruction {
 
   @Override
   public void buildDex(DexBuilder builder) {
-    int object = builder.allocatedRegister(object(), getNumber());
+    // If the monitor object is an argument, we use the argument register for all the monitor
+    // enters and exits in order to not confuse the Art verifier lock verification code.
+    // This is best effort. If the argument happens to be in a very high register we cannot
+    // do it and the lock verification can hit a case where it gets confused. Not much we
+    // can do about that, but this should avoid it in the most common cases.
+    int object = builder.argumentOrAllocateRegister(object(), getNumber());
+    if (object > maxInValueRegister()) {
+      object = builder.allocatedRegister(object(), getNumber());
+    }
     if (type == Type.ENTER) {
       builder.add(this, new MonitorEnter(object));
     } else {

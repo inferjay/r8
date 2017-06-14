@@ -38,7 +38,7 @@ public class IdenticalAfterRegisterAllocationTest {
     }
 
     @Override
-    public int getRegisterForRangedArgument(Value value, int instructionNumber) {
+    public int getArgumentOrAllocateRegisterForValue(Value value, int instructionNumber) {
       return value.getNumber();
     }
   }

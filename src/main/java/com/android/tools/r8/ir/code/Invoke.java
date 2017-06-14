@@ -91,8 +91,14 @@ public abstract class Invoke extends Instruction {
   }
 
   protected int argumentRegisterValue(int i, DexBuilder builder) {
+    assert requiredArgumentRegisters() > 5;
     if (i < arguments().size()) {
-      return builder.allocatedRegisterForRangedArgument(arguments().get(i), getNumber());
+      // If argument values flow into ranged invokes, all the ranged invoke arguments
+      // are arguments to this method in order. Therefore, we use the incoming registers
+      // for the ranged invoke arguments. We know that arguments are always available there.
+      // If argument reuse is allowed there is no splitting and if argument reuse is disallowed
+      // the argument registers are never overwritten.
+      return builder.argumentOrAllocateRegister(arguments().get(i), getNumber());
     }
     return 0;
   }
@@ -120,10 +126,10 @@ public abstract class Invoke extends Instruction {
 
   protected boolean argumentsConsecutive(DexBuilder builder) {
     Value value = arguments().get(0);
-    int next = builder.allocatedRegisterForRangedArgument(value, getNumber()) + value.requiredRegisters();
+    int next = builder.argumentOrAllocateRegister(value, getNumber()) + value.requiredRegisters();
     for (int i = 1; i < arguments().size(); i++) {
       value = arguments().get(i);
-      assert next == builder.allocatedRegisterForRangedArgument(value, getNumber());
+      assert next == builder.argumentOrAllocateRegister(value, getNumber());
       next += value.requiredRegisters();
     }
     return true;
