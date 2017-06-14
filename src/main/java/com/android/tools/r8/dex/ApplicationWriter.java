@@ -12,11 +12,13 @@ import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexDebugInfo;
 import com.android.tools.r8.graph.DexEncodedArray;
 import com.android.tools.r8.graph.DexProgramClass;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexTypeList;
 import com.android.tools.r8.graph.DexValue;
 import com.android.tools.r8.naming.MinifiedNameMapPrinter;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.AndroidApp;
+import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.PackageDistribution;
 import java.io.ByteArrayOutputStream;
@@ -141,6 +143,10 @@ public class ApplicationWriter {
       if (proguardSeedsData != null) {
         builder.setProguardSeedsData(proguardSeedsData);
       }
+      byte[] mainDexList = writeMainDexList();
+      if (mainDexList != null) {
+        builder.setMainDexListData(mainDexList);
+      }
       return builder.build();
     } finally {
       application.timing.end();
@@ -176,5 +182,23 @@ public class ApplicationWriter {
       return bytes.toByteArray();
     }
     return null;
+  }
+
+  private String mapMainDexListName(DexType type) {
+    return DescriptorUtils.descriptorToJavaType(namingLens.lookupDescriptor(type).toString())
+        .replace('.', '/') + ".class";
+  }
+
+  private byte[] writeMainDexList() throws IOException {
+    if (application.mainDexList.isEmpty()) {
+      return null;
+    }
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    PrintWriter writer = new PrintWriter(bytes);
+    application.mainDexList.forEach(
+        type -> writer.println(mapMainDexListName(type))
+    );
+    writer.flush();
+    return bytes.toByteArray();
   }
 }

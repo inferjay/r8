@@ -59,10 +59,15 @@ public class ClassNameMapper {
     return canonicalizeSignature(new FieldSignature(field.name.toString(), type));
   }
 
+  /**
+   * Deobfuscate a class name.
+   *
+   * Returns the deobfuscated name if a mapping was found. Otherwise it returns the passed in name.
+   */
   public String deobfuscateClassName(String name) {
     ClassNaming classNaming = classNameMappings.get(name);
     if (classNaming == null) {
-      return null;
+      return name;
     }
     return classNaming.originalName;
   }

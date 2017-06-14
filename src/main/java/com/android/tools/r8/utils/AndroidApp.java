@@ -345,6 +345,12 @@ public class AndroidApp {
     out.write(ByteStreams.toByteArray(input));
   }
 
+  public void writeMainDexList(Closer closer, OutputStream out) throws IOException {
+    InputStream input = getMainDexList(closer);
+    assert input != null;
+    out.write(ByteStreams.toByteArray(input));
+  }
+
   private OpenOption[] openOptions(boolean overwrite) {
     return new OpenOption[]{
         overwrite ? StandardOpenOption.CREATE : StandardOpenOption.CREATE_NEW,
@@ -567,6 +573,14 @@ public class AndroidApp {
      */
     public Builder setMainDexListFile(Path file) {
       mainDexList = file == null ? null : Resource.fromFile(null, file);
+      return this;
+    }
+
+    /**
+     * Set the main-dex list data.
+     */
+    public Builder setMainDexListData(byte[] content) {
+      mainDexList = content == null ? null : Resource.fromBytes(null, content);
       return this;
     }
 
