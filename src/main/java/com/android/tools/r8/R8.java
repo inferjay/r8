@@ -39,7 +39,6 @@ import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.InternalOptions.AttributeRemovalOptions;
-import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.PackageDistribution;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
@@ -375,12 +374,12 @@ public class R8 {
    */
   public static AndroidApp run(R8Command command)
       throws IOException, CompilationException, ProguardRuleParserException {
-    InternalOptions options = command.getInternalOptions();
-    AndroidApp outputApp =
-        runForTesting(command.getInputApp(), options).androidApp;
-    writeOutputs(command, options, outputApp);
-
-    return outputApp;
+    ExecutorService executorService = ThreadUtils.getExecutorService(command.getInternalOptions());
+    try {
+      return run(command, executorService);
+    } finally {
+      executorService.shutdown();
+    }
   }
 
   static void writeOutputs(R8Command command, InternalOptions options, AndroidApp outputApp)
@@ -438,11 +437,10 @@ public class R8 {
    */
   public static AndroidApp run(R8Command command, ExecutorService executor)
       throws IOException, CompilationException, ProguardRuleParserException {
+    InternalOptions options = command.getInternalOptions();
     AndroidApp outputApp =
-        runForTesting(command.getInputApp(), command.getInternalOptions(), executor).androidApp;
-    if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath(), OutputMode.Indexed);
-    }
+        runForTesting(command.getInputApp(), options, executor).androidApp;
+    writeOutputs(command, options, outputApp);
     return outputApp;
   }
 
