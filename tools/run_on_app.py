@@ -28,8 +28,7 @@ def ParseOptions():
                     default='gmscore',
                     choices=APPS)
   result.add_option('--type',
-                    help='',
-                    default='deploy',
+                    help='Default for R8: deploy, for D8: proguarded',
                     choices=TYPES)
   result.add_option('--out',
                     help='',
@@ -103,6 +102,10 @@ def main():
     return 1
 
   version = data.VERSIONS[options.version]
+
+  if not options.type:
+    options.type = 'deploy' if options.compiler == 'r8' \
+        else 'proguarded'
 
   if options.type not in version:
     print 'No type %s for version %s' % (options.type, options.version)
