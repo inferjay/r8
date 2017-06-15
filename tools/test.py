@@ -48,6 +48,9 @@ def ParseOptions():
   result.add_option('--jctf_compile_only',
       help="Don't run, only compile JCTF tests.",
       default=False, action='store_true')
+  result.add_option('--disable_assertions',
+      help="Disable assertions when running tests.",
+      default=False, action='store_true')
 
   return result.parse_args()
 
@@ -75,6 +78,8 @@ def Main():
     gradle_args.append('-Ponly_jctf')
   if options.jctf_compile_only:
     gradle_args.append('-Pjctf_compile_only')
+  if options.disable_assertions:
+    gradle_args.append('-Pdisable_assertions')
   if len(args) > 0:
     gradle_args.append('--tests')
     gradle_args.append(args[0])
@@ -93,5 +98,3 @@ def Main():
 
 if __name__ == '__main__':
   sys.exit(Main())
-
-

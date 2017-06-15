@@ -685,6 +685,9 @@ tasks.withType(Test) {
     forkEvery = 0
     // Use the Concurrent Mark Sweep GC (CMS) to keep memory usage at a resonable level.
     jvmArgs = ["-XX:+UseConcMarkSweepGC"]
+    if (project.hasProperty('disable_assertions')) {
+        enableAssertions = false
+    }
 }
 
 task buildPreNJdwpTestsJar(type: Jar) {
