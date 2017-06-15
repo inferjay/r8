@@ -136,7 +136,7 @@ public class VirtualFile {
         } else {
           System.out.println(
               "WARNING: Application does not contain `"
-                  + type.toDescriptorString()
+                  + type.toSourceString()
                   + "` as referenced in main-dex-list.");
         }
         mainDexFile.commitTransaction();

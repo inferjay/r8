@@ -66,6 +66,8 @@ public class InternalOptions {
   public Path seedsFile;
   public boolean printMapping;
   public Path printMappingFile;
+  public boolean printMainDexList;
+  public Path printMainDexListFile;
   public boolean ignoreMissingClasses = false;
   public boolean skipMinification = false;
   public String packagePrefix = "";

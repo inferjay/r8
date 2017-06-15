@@ -404,6 +404,13 @@ public class R8 {
         outputApp.writeProguardSeeds(closer, seedsOut);
       }
     }
+    if (options.printMainDexList && outputApp.hasMainDexList()) {
+      try (Closer closer = Closer.create()) {
+        OutputStream mainDexOut =
+            openPathWithDefault(closer, options.printMainDexListFile, true, System.out);
+        outputApp.writeMainDexList(closer, mainDexOut);
+      }
+    }
   }
 
   private static OutputStream openPathWithDefault(Closer closer,

@@ -88,11 +88,7 @@ public class DescriptorUtils {
         String clazz = descriptor.substring(1, descriptor.length() - 1)
             .replace(DESCRIPTOR_PACKAGE_SEPARATOR, JAVA_PACKAGE_SEPARATOR);
         String originalName =
-            classNameMapper == null ? null : classNameMapper.deobfuscateClassName(clazz);
-        if (originalName == null) {
-          // Class was not renamed, reconstruct the java name.
-          return clazz;
-        }
+            classNameMapper == null ? clazz : classNameMapper.deobfuscateClassName(clazz);
         return originalName;
       case '[':
         return descriptorToJavaType(descriptor.substring(1, descriptor.length()), classNameMapper)

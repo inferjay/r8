@@ -96,6 +96,15 @@ public class TestBase {
   /**
    * Compile an application with R8.
    */
+  protected AndroidApp compileWithR8(List<Class> classes, Consumer<InternalOptions> optionsConsumer)
+      throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
+    R8Command command = ToolHelper.prepareR8CommandBuilder(readClasses(classes)).build();
+    return ToolHelper.runR8(command, optionsConsumer);
+  }
+
+  /**
+   * Compile an application with R8.
+   */
   protected AndroidApp compileWithR8(AndroidApp app, Consumer<InternalOptions> optionsConsumer)
       throws CompilationException, ProguardRuleParserException, ExecutionException, IOException {
     R8Command command = ToolHelper.prepareR8CommandBuilder(app).build();
