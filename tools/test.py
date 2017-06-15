@@ -7,6 +7,7 @@
 # if an argument is given, run only tests with that pattern. This script will
 # force the tests to run, even if no input changed.
 
+import os
 import gradle
 import optparse
 import sys
@@ -77,7 +78,15 @@ def Main():
   if len(args) > 0:
     gradle_args.append('--tests')
     gradle_args.append(args[0])
-
+  if os.name == 'nt':
+    # temporary hack
+    gradle_args.append('-Pno_internal')
+    gradle_args.append('-x')
+    gradle_args.append('createJctfTests')
+    gradle_args.append('-x')
+    gradle_args.append('jctfCommonJar')
+    gradle_args.append('-x')
+    gradle_args.append('jctfTestsClasses')
   vms_to_test = [options.dex_vm] if options.dex_vm != "all" else ALL_ART_VMS
   for art_vm in vms_to_test:
     gradle.RunGradle(gradle_args + ['-Pdex_vm=%s' % art_vm])
