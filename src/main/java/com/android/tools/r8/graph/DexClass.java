@@ -50,6 +50,12 @@ public abstract class DexClass extends DexItem {
         throw new CompilationError("Interface " + type.toString() + " cannot implement itself");
       }
     }
+    if (!type.descriptor.isValidClassDescriptor()) {
+      throw new CompilationError(
+          "Class descriptor '"
+              + type.descriptor.toString()
+              + "' cannot be represented in dex format.");
+    }
   }
 
   @Override

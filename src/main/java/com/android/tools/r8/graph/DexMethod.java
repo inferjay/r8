@@ -4,6 +4,7 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.dex.IndexedItemCollection;
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.naming.NamingLens;
 
 public class DexMethod extends Descriptor<DexEncodedMethod, DexMethod>
@@ -20,6 +21,10 @@ public class DexMethod extends Descriptor<DexEncodedMethod, DexMethod>
     this.holder = holder;
     this.proto = proto;
     this.name = name;
+    if (!name.isValidMethodName()) {
+      throw new CompilationError(
+          "Method name '" + name.toString() + "' cannot be represented in dex format.");
+    }
   }
 
   @Override
