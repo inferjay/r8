@@ -412,7 +412,6 @@ public class JarState {
     assert currentStack.size() == newStack.size();
     List<Slot> mergedStack = null;
     for (int i = 0; i < currentStack.size(); i++) {
-      assert currentStack.get(i).isCompatibleWith(newStack.get(i).type);
       if (currentStack.get(i).type == JarState.NULL_TYPE &&
           newStack.get(i).type != JarState.NULL_TYPE) {
         if (mergedStack == null) {
@@ -421,6 +420,7 @@ public class JarState {
         }
         mergedStack.add(newStack.get(i));
       } else if (mergedStack != null) {
+        assert currentStack.get(i).isCompatibleWith(newStack.get(i).type);
         mergedStack.add(currentStack.get(i));
       }
     }
