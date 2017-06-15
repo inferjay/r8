@@ -79,6 +79,7 @@ public class ObjectToOffsetMapping {
 
   private static DexProgramClass[] sortClasses(
       DexApplication application, DexProgramClass[] classes) {
+    Arrays.sort(classes, (o1, o2) -> o1.type.descriptor.slowCompareTo(o2.type.descriptor));
     SortingProgramClassVisitor classVisitor = new SortingProgramClassVisitor(application, classes);
     classVisitor.run(classes);
     return classVisitor.getSortedClasses();

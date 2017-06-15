@@ -11,6 +11,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.D8;
+import com.android.tools.r8.D8Command;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.ApplicationWriter;
@@ -39,6 +41,7 @@ import com.android.tools.r8.ir.conversion.SourceCode;
 import com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.android.tools.r8.ir.synthetic.SynthesizedCode;
+import com.android.tools.r8.jasmin.JasminBuilder;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
@@ -52,12 +55,14 @@ import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -207,6 +212,113 @@ public class MainDexListTests {
     MainDexList.parse(mainDexList, factory);
   }
 
+  @Test
+  public void checkDeterminism() throws Exception {
+    // Synthesize a dex containing a few empty classes including some in the default package.
+    // Everything can fit easaly in a single dex file.
+    String[] classes = {
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "maindexlist/A",
+        "maindexlist/B",
+        "maindexlist/C",
+        "maindexlist/D",
+        "maindexlist/E",
+        "maindexlist/F",
+        "maindexlist/A1",
+        "maindexlist/A2",
+        "maindexlist/A3",
+        "maindexlist/A4",
+        "maindexlist/A5"
+    };
+    JasminBuilder jasminBuilder = new JasminBuilder();
+    for (String name : classes) {
+      jasminBuilder.addClass(name);
+    }
+    Path input = temp.newFolder().toPath().resolve("input.zip");
+    ToolHelper.runR8(jasminBuilder.build()).writeToZip(input, OutputMode.Indexed);
+
+    // Prepare different main dex lists.
+    ArrayList<Path> mainLists = new ArrayList<>();
+    // Lets first without a main dex list.
+    mainLists.add(null);
+
+    // List with all classes.
+    List<String> mainList = new ArrayList<>();
+    for (int i = 0; i < classes.length; i++) {
+      mainList.add(classes[i] + ".class");
+    }
+    addMainListFile(mainLists, mainList);
+
+    // Full list in reverse order
+    addMainListFile(mainLists, Lists.reverse(mainList));
+
+    // Partial list without first entries (those in default package).
+    mainList.clear();
+    for (int i = classes.length / 2; i < classes.length; i++) {
+      mainList.add(classes[i] + ".class");
+    }
+    addMainListFile(mainLists, mainList);
+
+    // Same in reverese order
+    addMainListFile(mainLists, Lists.reverse(mainList));
+
+    // Mixed partial list.
+    mainList.clear();
+    for (int i = 0; i < classes.length; i += 2) {
+      mainList.add(classes[i] + ".class");
+    }
+    addMainListFile(mainLists, mainList);
+
+    // Another different mixed partial list.
+    mainList.clear();
+    for (int i = 1; i < classes.length; i += 2) {
+      mainList.add(classes[i] + ".class");
+    }
+    addMainListFile(mainLists, mainList);
+
+    // Build with all main dex lists.
+    Path tmp = temp.getRoot().toPath();
+    for (int i = 0; i < mainLists.size(); i++) {
+      Path out = tmp.resolve(String.valueOf(i));
+      Files.createDirectories(out);
+      D8Command.Builder builder = D8Command.builder()
+          .addProgramFiles(input)
+          .setOutputPath(out);
+      if (mainLists.get(i) != null) {
+        builder.setMainDexListFile(mainLists.get(i));
+      }
+      ToolHelper.runD8(builder.build());
+    }
+
+    // Check: no secondary dex and resulting dex is always the same.
+    assertFalse(Files.exists(tmp.resolve(String.valueOf(0)).resolve("classes2.dex")));
+    byte[] ref = Files.readAllBytes(
+        tmp.resolve(String.valueOf(0)).resolve(FileUtils.DEFAULT_DEX_FILENAME));
+    for (int i = 1; i < mainLists.size(); i++) {
+      assertFalse(Files.exists(tmp.resolve(String.valueOf(i)).resolve("classes2.dex")));
+      byte[] checked = Files.readAllBytes(
+          tmp.resolve(String.valueOf(i)).resolve(FileUtils.DEFAULT_DEX_FILENAME));
+      assertArrayEquals(ref, checked);
+    }
+  }
+
+  private void addMainListFile(ArrayList<Path> mainLists, List<String> content)
+      throws IOException {
+    Path listFile = temp.newFile().toPath();
+    FileUtils.writeTextFile(listFile, content);
+    mainLists.add(listFile);
+  }
+
   private static String typeToEntry(String type) {
     return type.replace(".", "/") + CLASS_EXTENSION;
   }
@@ -265,7 +377,7 @@ public class MainDexListTests {
     for (String clazz : classes) {
       DexString desc = factory.createString(DescriptorUtils.javaTypeToDescriptor(clazz));
       DexType type = factory.createType(desc);
-      DexEncodedMethod[] virtualMethods = new DexEncodedMethod[methodCount];
+      DexEncodedMethod[] directMethods = new DexEncodedMethod[methodCount];
       for (int i = 0; i < methodCount; i++) {
         DexAccessFlags access = new DexAccessFlags();
         access.setPublic();
@@ -285,7 +397,7 @@ public class MainDexListTests {
         IRCode ir = code.buildIR(method, options);
         RegisterAllocator allocator = new LinearScanRegisterAllocator(ir);
         method.setCode(ir, allocator, factory);
-        virtualMethods[i] = method;
+        directMethods[i] = method;
       }
       builder.addProgramClass(
           new DexProgramClass(
@@ -298,8 +410,8 @@ public class MainDexListTests {
               DexAnnotationSet.empty(),
               DexEncodedField.EMPTY_ARRAY,
               DexEncodedField.EMPTY_ARRAY,
-              DexEncodedMethod.EMPTY_ARRAY,
-              virtualMethods));
+              directMethods,
+              DexEncodedMethod.EMPTY_ARRAY));
     }
     DexApplication application = builder.build();
     AppInfoWithSubtyping appInfo = new AppInfoWithSubtyping(application);
