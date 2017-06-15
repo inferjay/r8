@@ -185,6 +185,127 @@ public class DexString extends IndexedDexItem implements PresortedComparable<Dex
     return slowCompareTo(other);
   }
 
+  private boolean isSimpleNameChar(char ch) {
+    if (ch >= 'A' && ch <= 'Z') {
+      return true;
+    }
+    if (ch >= 'a' && ch <= 'z') {
+      return true;
+    }
+    if (ch >= '0' && ch <= '9') {
+      return true;
+    }
+    if (ch == '$' || ch == '-' || ch == '_') {
+      return true;
+    }
+    if (ch >= 0x00a1 && ch <= 0x1fff) {
+      return true;
+    }
+    if (ch >= 0x2010 && ch <= 0x2027) {
+      return true;
+    }
+    if (ch >= 0x2030 && ch <= 0xd7ff) {
+      return true;
+    }
+    if (ch >= 0xe000 && ch <= 0xffef) {
+      return true;
+    }
+    if (ch >= 0x10000 && ch <= 0x10ffff) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isValidClassDescriptor(String string) {
+    if (string.length() < 3
+        || string.charAt(0) != 'L'
+        || string.charAt(string.length() - 1) != ';') {
+      return false;
+    }
+    if (string.charAt(1) == '/' || string.charAt(string.length() - 2) == '/') {
+      return false;
+    }
+    for (int i = 1; i < string.length() - 1; i++) {
+      char ch = string.charAt(i);
+      if (ch == '/') {
+        continue;
+      }
+      if (isSimpleNameChar(ch)) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private boolean isValidMethodName(String string) {
+    if (string.isEmpty()) {
+      return false;
+    }
+    // According to https://source.android.com/devices/tech/dalvik/dex-format#membername
+    // '<' SimpleName '>' should be valid. However, the art verifier only allows <init>
+    // and <clinit> which is reasonable.
+    if ((string.charAt(0) == '<') &&
+        (string.equals("<init>") || string.equals("<clinit>"))) {
+      return true;
+    }
+    for (int i = 0; i < string.length(); i++) {
+      char ch = string.charAt(i);
+      if (isSimpleNameChar(ch)) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private boolean isValidFieldName(String string) {
+    if (string.isEmpty()) {
+      return false;
+    }
+    int start = 0;
+    int end = string.length();
+    if (string.charAt(0) == '<') {
+      if (string.charAt(string.length() - 1) == '>') {
+        start = 1;
+        end = string.length() - 1;
+      } else {
+        return false;
+      }
+    }
+    for (int i = start; i < end; i++) {
+      if (isSimpleNameChar(string.charAt(i))) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  public boolean isValidMethodName() {
+    try {
+      return isValidMethodName(decode());
+    } catch (UTFDataFormatException e) {
+      return false;
+    }
+  }
+
+  public boolean isValidFieldName() {
+    try {
+      return isValidFieldName(decode());
+    } catch (UTFDataFormatException e) {
+      return false;
+    }
+  }
+
+  public boolean isValidClassDescriptor() {
+    try {
+      return isValidClassDescriptor(decode());
+    } catch (UTFDataFormatException e) {
+      return false;
+    }
+  }
+
   public String dump() {
     StringBuilder builder = new StringBuilder();
     builder.append(toString());

@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,9 @@ public class JasminTestBase {
     for (ClassBuilder clazz : builder.getClasses()) {
       ClassFile file = new ClassFile();
       file.readJasmin(new StringReader(clazz.toString()), clazz.name, true);
-      file.write(new FileOutputStream(out.toPath().resolve(clazz.name + ".class").toFile()));
+      Path path = out.toPath().resolve(clazz.name + ".class");
+      Files.createDirectories(path.getParent());
+      file.write(new FileOutputStream(path.toFile()));
     }
     return ToolHelper.runJava(ImmutableList.of(out.getPath()), main);
   }

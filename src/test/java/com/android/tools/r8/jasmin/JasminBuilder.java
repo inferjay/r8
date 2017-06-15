@@ -6,6 +6,7 @@ package com.android.tools.r8.jasmin;
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.naming.MemberNaming.FieldSignature;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.DescriptorUtils;
@@ -25,6 +26,7 @@ public class JasminBuilder {
   public static class ClassBuilder {
     public final String name;
     private final List<String> methods = new ArrayList<>();
+    private final List<String> fields = new ArrayList<>();
     private boolean makeInit = false;
 
     public ClassBuilder(String name) {
@@ -85,6 +87,12 @@ public class JasminBuilder {
       return new MethodSignature(name, returnJavaType, argumentJavaTypes);
     }
 
+    public FieldSignature addStaticField(String name, String type, String value) {
+      fields.add(
+          ".field public static " + name + " " + type + (value != null ? (" = " + value) : ""));
+      return new FieldSignature(name, type);
+    }
+
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
@@ -100,6 +108,9 @@ public class JasminBuilder {
             .append("  invokespecial java/lang/Object/<init>()V\n")
             .append("  return\n")
             .append(".end method\n");
+      }
+      for (String field : fields) {
+        builder.append(field).append("\n");
       }
       for (String method : methods) {
         builder.append(method).append("\n");
