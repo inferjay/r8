@@ -124,8 +124,8 @@ public abstract class SingleBlockSourceCode implements SourceCode {
   }
 
   @Override
-  public final boolean traceInstruction(int instructionIndex, IRBuilder builder) {
-    return instructionIndex == constructors.size() - 1;
+  public final int traceInstruction(int instructionIndex, IRBuilder builder) {
+    return (instructionIndex == constructors.size() - 1) ? instructionIndex : -1;
   }
 
   @Override

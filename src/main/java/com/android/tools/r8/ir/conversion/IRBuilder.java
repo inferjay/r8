@@ -106,7 +106,7 @@ import java.util.Set;
  */
 public class IRBuilder {
 
-  private static final int INITIAL_BLOCK_OFFSET = -1;
+  public static final int INITIAL_BLOCK_OFFSET = -1;
 
   // SSA construction uses a worklist of basic blocks reachable from the entry and their
   // instruction offsets.
@@ -165,7 +165,7 @@ public class IRBuilder {
     }
   }
 
-  private static class BlockInfo {
+  public static class BlockInfo {
     BasicBlock block = new BasicBlock();
     IntSet normalPredecessors = new IntArraySet();
     IntSet normalSuccessors = new IntArraySet();
@@ -282,6 +282,10 @@ public class IRBuilder {
     this.options = options;
   }
 
+  public Int2ReferenceSortedMap<BlockInfo> getCFG() {
+    return targets;
+  }
+
   private void addToWorklist(BasicBlock block, int firstInstructionIndex) {
     // TODO(ager): Filter out the ones that are already in the worklist, mark bit in block?
     if (!block.isFilled()) {
@@ -318,8 +322,11 @@ public class IRBuilder {
       // Process each instruction until the block is closed.
       for (int index = startOfBlockIndex; index < source.instructionCount(); ++index) {
         markIndexProcessed(index);
-        boolean closed = source.traceInstruction(index, this);
-        if (closed) {
+        int closedAt = source.traceInstruction(index, this);
+        if (closedAt != -1) {
+          if (closedAt + 1 < source.instructionCount()) {
+            ensureBlockWithoutEnqueuing(source.instructionOffset(closedAt + 1));
+          }
           break;
         }
         // If the next instruction starts a block, fall through to it.
@@ -1079,6 +1086,7 @@ public class IRBuilder {
 
   public void addMoveException(int dest) {
     Value out = writeRegister(dest, MoveType.OBJECT, ThrowingInfo.NO_THROW);
+    assert out.getDebugInfo() == null;
     MoveException instruction = new MoveException(out);
     assert !instruction.instructionTypeCanThrow();
     if (!currentBlock.getInstructions().isEmpty()) {

@@ -268,7 +268,7 @@ public class DexSourceCode implements SourceCode {
   }
 
   @Override
-  public boolean traceInstruction(int index, IRBuilder builder) {
+  public int traceInstruction(int index, IRBuilder builder) {
     Instruction dex = code.instructions[index];
     int offset = dex.getOffset();
     assert !dex.isPayload();
@@ -279,7 +279,7 @@ public class DexSourceCode implements SourceCode {
       for (int relativeOffset : targets) {
         builder.ensureNormalSuccessorBlock(offset, offset + relativeOffset);
       }
-      return true;
+      return index;
     }
     if (dex.canThrow()) {
       // If the instruction can throw and is in a try block, add edges to its catch successors.
@@ -309,10 +309,10 @@ public class DexSourceCode implements SourceCode {
         if (!(dex instanceof Throw)) {
           builder.ensureNormalSuccessorBlock(offset, dex.getOffset() + dex.getSize());
         }
-        return true;
+        return index;
       }
       // Close the block if the instruction is a throw, otherwise the block remains open.
-      return dex instanceof Throw;
+      return dex instanceof Throw ? index : -1;
     }
     if (dex.isSwitch()) {
       // TODO(zerny): Remove this from block computation.
@@ -322,14 +322,14 @@ public class DexSourceCode implements SourceCode {
         builder.ensureNormalSuccessorBlock(offset, target);
       }
       builder.ensureNormalSuccessorBlock(offset, offset + dex.getSize());
-      return true;
+      return index;
     }
     // TODO(zerny): Remove this from block computation.
     if (dex.hasPayload()) {
       arrayFilledDataPayloadResolver.addPayloadUser((FillArrayData) dex);
     }
     // This instruction does not close the block.
-    return false;
+    return -1;
   }
 
   private boolean inTryRange(Try tryItem, int offset) {
