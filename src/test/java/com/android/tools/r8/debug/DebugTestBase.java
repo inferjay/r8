@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.function.Consumer;
@@ -245,7 +246,10 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command checkNoLocal() {
-    return inspect(t -> Assert.assertTrue(t.getLocalNames().isEmpty()));
+    return inspect(t -> {
+      List<String> localNames = t.getLocalNames();
+      Assert.assertTrue("Local variables: " + String.join(",", localNames), localNames.isEmpty());
+    });
   }
 
   protected final JUnit3Wrapper.Command checkLine(String sourceFile, int line) {
@@ -475,11 +479,13 @@ public abstract class DebugTestBase {
       }
 
       public void checkLocal(String localName) {
-        getVariableAt(getLocation(), localName);
+        Optional<Variable> localVar = getVariableAt(getLocation(), localName);
+        Assert.assertTrue("No local '" + localName + "'", localVar.isPresent());
       }
 
       public void checkLocal(String localName, Value expectedValue) {
-        Variable localVar = getVariableAt(getLocation(), localName);
+        Optional<Variable> localVar = getVariableAt(getLocation(), localName);
+        Assert.assertTrue("No local '" + localName + "'", localVar.isPresent());
 
         // Get value
         CommandPacket commandPacket = new CommandPacket(
@@ -488,8 +494,8 @@ public abstract class DebugTestBase {
         commandPacket.setNextValueAsThreadID(getThreadId());
         commandPacket.setNextValueAsFrameID(getFrameId());
         commandPacket.setNextValueAsInt(1);
-        commandPacket.setNextValueAsInt(localVar.getSlot());
-        commandPacket.setNextValueAsByte(localVar.getTag());
+        commandPacket.setNextValueAsInt(localVar.get().getSlot());
+        commandPacket.setNextValueAsByte(localVar.get().getTag());
         ReplyPacket replyPacket = getMirror().performCommand(commandPacket);
         checkReplyPacket(replyPacket, "StackFrame.GetValues command");
         int valuesCount = replyPacket.getNextValueAsInt();
@@ -594,11 +600,10 @@ public abstract class DebugTestBase {
       return index >= varStart && index < varEnd;
     }
 
-    private Variable getVariableAt(Location location, String localName) {
+    private Optional<Variable> getVariableAt(Location location, String localName) {
       return getVariablesAt(location).stream()
           .filter(v -> localName.equals(v.getName()))
-          .findFirst()
-          .get();
+          .findFirst();
     }
 
     private List<Variable> getVariablesAt(Location location) {
@@ -858,13 +863,16 @@ public abstract class DebugTestBase {
 
         @Override
         public void perform(JUnit3Wrapper testBase) {
-          Variable v = testBase.getVariableAt(testBase.debuggeeState.location, localName);
+          Optional<Variable> localVar = testBase
+              .getVariableAt(testBase.debuggeeState.location, localName);
+          Assert.assertTrue("No local '" + localName + "'", localVar.isPresent());
+
           CommandPacket setValues = new CommandPacket(StackFrameCommandSet.CommandSetID,
               StackFrameCommandSet.SetValuesCommand);
           setValues.setNextValueAsThreadID(testBase.getDebuggeeState().getThreadId());
           setValues.setNextValueAsFrameID(testBase.getDebuggeeState().getFrameId());
           setValues.setNextValueAsInt(1);
-          setValues.setNextValueAsInt(v.getSlot());
+          setValues.setNextValueAsInt(localVar.get().getSlot());
           setValues.setNextValueAsValue(newValue);
           ReplyPacket replyPacket = testBase.getMirror().performCommand(setValues);
           testBase.checkReplyPacket(replyPacket, "StackFrame.SetValues");
