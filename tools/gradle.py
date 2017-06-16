@@ -14,7 +14,7 @@ import utils
 
 GRADLE_DIR = os.path.join(utils.REPO_ROOT, 'third_party', 'gradle')
 GRADLE_SHA1 = os.path.join(GRADLE_DIR, 'gradle.tar.gz.sha1')
-if os.name == 'nt':
+if utils.IsWindows():
   GRADLE = os.path.join(GRADLE_DIR, 'gradle', 'bin', 'gradle.bat')
 else:
   GRADLE = os.path.join(GRADLE_DIR, 'gradle', 'bin', 'gradle')

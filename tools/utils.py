@@ -14,7 +14,6 @@ import tempfile
 
 TOOLS_DIR = os.path.abspath(os.path.normpath(os.path.join(__file__, '..')))
 REPO_ROOT = os.path.realpath(os.path.join(TOOLS_DIR, '..'))
-DOWNLOAD_DEPS = os.path.join(REPO_ROOT, 'scripts', 'download-deps.sh')
 
 def PrintCmd(s):
   if type(s) is list:
@@ -23,8 +22,13 @@ def PrintCmd(s):
   # I know this will hit os on windows eventually if we don't do this.
   sys.stdout.flush()
 
+def IsWindows():
+  return os.name == 'nt'
+
 def DownloadFromGoogleCloudStorage(sha1_file, bucket='r8-deps'):
-  cmd = ["download_from_google_storage", "-n", "-b", bucket, "-u", "-s",
+  suffix = '.bat' if IsWindows() else ''
+  download_script = 'download_from_google_storage%s' % suffix
+  cmd = [download_script, '-n', '-b', bucket, '-u', '-s',
          sha1_file]
   PrintCmd(cmd)
   subprocess.check_call(cmd)
@@ -64,11 +68,11 @@ class ChangedWorkingDirectory(object):
 
  def __enter__(self):
    self._old_cwd = os.getcwd()
-   print "Enter directory = ", self._working_directory
+   print 'Enter directory = ', self._working_directory
    os.chdir(self._working_directory)
 
  def __exit__(self, *_):
-   print "Enter directory = ", self._old_cwd
+   print 'Enter directory = ', self._old_cwd
    os.chdir(self._old_cwd)
 
 # Reading Android CTS test_result.xml
@@ -105,5 +109,5 @@ def read_cts_test_result(file_xml):
       m = re_test.search(line)
       if m:
         outcome = m.groups()[0]
-        assert outcome in ["fail", "pass"]
+        assert outcome in ['fail', 'pass']
         yield CtsTest(m.groups()[1], outcome == 'pass')
