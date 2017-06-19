@@ -72,7 +72,7 @@ public class InvalidMethodNames extends JasminTestBase {
         ".limit locals 0",
         "  getstatic java/lang/System/out Ljava/io/PrintStream;",
         "  ldc \"CALLED\"",
-        "  invokevirtual java/io/PrintStream.println(Ljava/lang/String;)V",
+        "  invokevirtual java/io/PrintStream.print(Ljava/lang/String;)V",
         "  return");
 
     clazz.addMainMethod(
@@ -81,6 +81,6 @@ public class InvalidMethodNames extends JasminTestBase {
         "  invokestatic Test/" + name + "()V",
         "  return");
 
-    runTest(builder, clazz.name, "CALLED\n");
+    runTest(builder, clazz.name, "CALLED");
   }
 }
