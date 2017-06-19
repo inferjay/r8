@@ -71,9 +71,9 @@ public class InvalidClassNames extends JasminTestBase {
         ".limit locals 1",
         "  getstatic java/lang/System/out Ljava/io/PrintStream;",
         "  ldc \"MAIN\"",
-        "  invokevirtual java/io/PrintStream.println(Ljava/lang/String;)V",
+        "  invokevirtual java/io/PrintStream.print(Ljava/lang/String;)V",
         "  return");
 
-    runTest(builder, clazz.name, "MAIN\n");
+    runTest(builder, clazz.name, "MAIN");
   }
 }

@@ -70,9 +70,9 @@ public class InvalidFieldNames extends JasminTestBase {
         ".limit locals 1",
         "  getstatic java/lang/System/out Ljava/io/PrintStream;",
         "  getstatic Test/" + name + " I",
-        "  invokevirtual java/io/PrintStream.println(I)V",
+        "  invokevirtual java/io/PrintStream.print(I)V",
         "  return");
 
-    runTest(builder, clazz.name, "42\n");
+    runTest(builder, clazz.name, "42");
   }
 }
