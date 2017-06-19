@@ -7,12 +7,14 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.ir.conversion.CallGraph;
 import com.android.tools.r8.shaking.ProguardConfigurationRule;
 import com.android.tools.r8.shaking.ProguardTypeMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public class InternalOptions {
 
@@ -136,7 +138,7 @@ public class InternalOptions {
 
   public static class TestingOptions {
 
-    public boolean randomizeCallGraphLeaves = false;
+    public BiFunction<List<DexEncodedMethod>, CallGraph.Leaves, List<DexEncodedMethod>> irOrdering;
   }
 
   public static class AttributeRemovalOptions {

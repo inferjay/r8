@@ -37,11 +37,10 @@ import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -66,6 +65,7 @@ public class IRConverter {
   private final LensCodeRewriter lensCodeRewriter;
   private final Inliner inliner;
   private CallGraph callGraph;
+  private OptimizationFeedback ignoreOptimizationFeedback = new OptimizationFeedbackIgnore();
 
   private DexString highestSortingString;
 
@@ -204,7 +204,7 @@ public class IRConverter {
         boolean matchesMethodFilter = options.methodMatchesFilter(method);
         if (matchesMethodFilter) {
           if (method.getCode().isJarCode()) {
-            rewriteCode(method, Outliner::noProcessing);
+            rewriteCode(method, ignoreOptimizationFeedback, Outliner::noProcessing);
           }
           updateHighestSortingStrings(method);
         }
@@ -236,34 +236,41 @@ public class IRConverter {
 
     // Process the application identifying outlining candidates.
     timing.begin("IR conversion phase 1");
+    int count = 0;
+    OptimizationFeedback directFeedback = new OptimizationFeedbackDirect();
+    OptimizationFeedbackDelayed delayedFeedback = new OptimizationFeedbackDelayed();
     while (!callGraph.isEmpty()) {
+      count++;
       CallGraph.Leaves leaves = callGraph.pickLeaves();
-      List<DexEncodedMethod> leafMethods = leaves.getLeaves();
-      assert leafMethods.size() > 0;
-      // If cycles where broken to produce leaves, don't do parallel processing to keep
-      // deterministic output.
-      // TODO(37133161): Most likely the failing:
-      //  java.com.android.tools.r8.internal.R8GMSCoreDeterministicTest
-      // is caused by processing in multiple threads.
-      if (true || leaves.brokeCycles()) {
-        for (DexEncodedMethod method : leafMethods) {
-          processMethod(method,
-              outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
-        }
-      } else {
-        List<Future<?>> futures = new ArrayList<>();
-        // For testing we have the option to randomize the processing order for the
-        // deterministic tests.
-        if (options.testing.randomizeCallGraphLeaves) {
-          Collections.shuffle(leafMethods, new Random(System.nanoTime()));
-        }
-        for (DexEncodedMethod method : leafMethods) {
+      List<DexEncodedMethod> methods = leaves.getLeaves();
+      assert methods.size() > 0;
+      List<Future<?>> futures = new ArrayList<>();
+
+      // For testing we have the option to determine the processing order of the methods.
+      if (options.testing.irOrdering != null) {
+        methods = options.testing.irOrdering.apply(methods, leaves);
+      }
+
+      while (methods.size() > 0) {
+        // Process the methods on multiple threads. If cycles where broken collect the
+        // optimization feedback to reprocess methods affected by it. This is required to get
+        // deterministic behaviour, as the processing order within each set of leaves is
+        // non-deterministic.
+        for (DexEncodedMethod method : methods) {
           futures.add(executorService.submit(() -> {
             processMethod(method,
+                leaves.brokeCycles() ? delayedFeedback : directFeedback,
                 outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
           }));
         }
         ThreadUtils.awaitFutures(futures);
+        if (leaves.brokeCycles()) {
+          // If cycles in the call graph were broken, then re-process all methods which are
+          // affected by the optimization feedback of other methods in this group.
+          methods = delayedFeedback.applyAndClear(methods, leaves);
+        } else {
+          methods = ImmutableList.of();
+        }
       }
     }
     timing.end();
@@ -276,8 +283,7 @@ public class IRConverter {
     if ((inliner != null) && (inliner.doubleInlineCallers.size() > 0)) {
       inliner.applyDoubleInlining = true;
       for (DexEncodedMethod method : inliner.doubleInlineCallers) {
-        method.markNotProcessed();
-        processMethod(method, Outliner::noProcessing);
+        processMethod(method, ignoreOptimizationFeedback, Outliner::noProcessing);
         assert method.isProcessed();
       }
     }
@@ -295,8 +301,7 @@ public class IRConverter {
         for (DexEncodedMethod method : outliner.getMethodsSelectedForOutlining()) {
           // This is the second time we compile this method first mark it not processed.
           assert !method.getCode().isOutlineCode();
-          method.markNotProcessed();
-          processMethod(method, outliner::applyOutliningCandidate);
+          processMethod(method, ignoreOptimizationFeedback, outliner::applyOutliningCandidate);
           assert method.isProcessed();
         }
         builder.addSynthesizedClass(outlineClass, true);
@@ -377,28 +382,28 @@ public class IRConverter {
 
   public void optimizeSynthesizedMethod(DexEncodedMethod method) {
     // Process the generated method, but don't apply any outlining.
-    processMethod(method, Outliner::noProcessing);
+    processMethod(method, ignoreOptimizationFeedback, Outliner::noProcessing);
   }
 
   private String logCode(InternalOptions options, DexEncodedMethod method) {
     return options.useSmaliSyntax ? method.toSmaliString(null) : method.codeToString();
   }
 
-  private void processMethod(
-      DexEncodedMethod method, BiConsumer<IRCode, DexEncodedMethod> outlineHandler) {
+  private void processMethod(DexEncodedMethod method,
+      OptimizationFeedback feedback,
+      BiConsumer<IRCode, DexEncodedMethod> outlineHandler) {
     Code code = method.getCode();
     boolean matchesMethodFilter = options.methodMatchesFilter(method);
     if (code != null && matchesMethodFilter) {
-      assert !method.isProcessed();
-      Constraint state = rewriteCode(method, outlineHandler);
-      method.markProcessed(state);
+      rewriteCode(method, feedback, outlineHandler);
     } else {
       // Mark abstract methods as processed as well.
       method.markProcessed(Constraint.NEVER);
     }
   }
 
-  private Constraint rewriteCode(DexEncodedMethod method,
+  private void rewriteCode(DexEncodedMethod method,
+      OptimizationFeedback feedback,
       BiConsumer<IRCode, DexEncodedMethod> outlineHandler) {
     if (options.verbose) {
       System.out.println("Processing: " + method.toSourceString());
@@ -409,7 +414,8 @@ public class IRConverter {
     }
     IRCode code = method.buildIR(options);
     if (code == null) {
-      return Constraint.NEVER;
+      feedback.markProcessed(method, Constraint.NEVER);
+      return;
     }
     if (Log.ENABLED) {
       Log.debug(getClass(), "Initial (SSA) flow graph for %s:\n%s", method.toSourceString(), code);
@@ -470,7 +476,7 @@ public class IRConverter {
     }
 
     codeRewriter.shortenLiveRanges(code);
-    codeRewriter.identifyReturnsArgument(method, code);
+    codeRewriter.identifyReturnsArgument(method, code, feedback);
 
     // Insert code to log arguments if requested.
     if (options.methodMatchesLogArgumentsFilter(method)) {
@@ -489,10 +495,13 @@ public class IRConverter {
     printMethod(code, "Final IR (non-SSA)");
 
     // After all the optimizations have take place, we compute whether method should be inlined.
+    Constraint state;
     if (!options.inlineAccessors || inliner == null) {
-      return Constraint.NEVER;
+      state = Constraint.NEVER;
+    } else {
+      state = inliner.identifySimpleMethods(code, method);
     }
-    return inliner.identifySimpleMethods(code, method);
+    feedback.markProcessed(method, state);
   }
 
   private void updateHighestSortingStrings(DexEncodedMethod method) {
