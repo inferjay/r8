@@ -66,8 +66,13 @@ VERSIONS = {
     },
     'deploy' : {
       'inputs': ['%s_deploy.jar' % V12_22_PREFIX],
-      'pgconf': ['%s_proguard.config' % V12_22_PREFIX,
-                 '%s/proguardsettings/YouTubeRelease_proguard.config' % THIRD_PARTY],
+      'pgconf': [
+          '%s_proguard.config' % V12_22_PREFIX,
+          '%s/proguardsettings/YouTubeRelease_proguard.config' % THIRD_PARTY],
+      'multidexrules' : [
+          os.path.join(V12_22_BASE, 'mainDexClasses.rules'),
+          os.path.join(V12_22_BASE, 'main-dex-classes-release.cfg'),
+          os.path.join(V12_22_BASE, 'main_dex_YouTubeRelease_proguard.cfg')],
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V12_22_PREFIX],
