@@ -4,6 +4,7 @@
 package com.android.tools.r8.ir.regalloc;
 
 import java.util.Arrays;
+import java.util.BitSet;
 
 /**
  * Simple mapping from a register to an int value.
@@ -16,6 +17,7 @@ public class RegisterPositions {
   private static final int INITIAL_SIZE = 16;
   private int limit;
   private int[] backing;
+  private BitSet registerHoldsConstant;
 
   public RegisterPositions(int limit) {
     this.limit = limit;
@@ -23,13 +25,19 @@ public class RegisterPositions {
     for (int i = 0; i < INITIAL_SIZE; i++) {
       backing[i] = Integer.MAX_VALUE;
     }
+    registerHoldsConstant = new BitSet(limit);
   }
 
-  public void set(int index, int value) {
+  public boolean holdsConstant(int index) {
+    return registerHoldsConstant.get(index);
+  }
+
+  public void set(int index, int value, boolean holdsConstant) {
     if (index >= backing.length) {
       grow(index + 1);
     }
     backing[index] = value;
+    registerHoldsConstant.set(index, holdsConstant);
   }
 
   public int get(int index) {

@@ -468,4 +468,8 @@ public class LiveIntervals {
       splitChild.print(printer, number + delta, number);
     }
   }
+
+  public boolean isConstantNumberInterval() {
+    return value.definition != null && value.definition.isConstNumber();
+  }
 }
