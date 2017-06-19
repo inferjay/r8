@@ -113,6 +113,7 @@ def cloudDependencies = [
                 "android_jar/lib-v25.tar.gz",
                 "android_jar/lib-v26.tar.gz",
                 "proguard/proguard5.2.1.tar.gz",
+                "proguard/proguard5.3.3.tar.gz",
                 "gradle/gradle.tar.gz",
                 "jdwp-tests.tar.gz",
                 "jasmin.tar.gz",
