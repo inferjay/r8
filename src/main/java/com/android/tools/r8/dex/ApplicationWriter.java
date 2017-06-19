@@ -114,7 +114,7 @@ public class ApplicationWriter {
       SortAnnotations sortAnnotations = new SortAnnotations();
       application.classes().forEach((clazz) -> clazz.addDependencies(sortAnnotations));
       Map<Integer, VirtualFile> newFiles =
-          VirtualFile.fileSetFrom(this, packageDistribution, executorService);
+          new VirtualFile.Distributor(this, packageDistribution, executorService).run();
 
       // Write the dex files and the Proguard mapping file in parallel.
       LinkedHashMap<VirtualFile, Future<byte[]>> dexDataFutures = new LinkedHashMap<>();
