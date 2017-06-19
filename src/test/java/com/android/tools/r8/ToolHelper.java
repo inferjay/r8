@@ -381,6 +381,10 @@ public class ToolHelper {
     return getPlatform().startsWith("Mac");
   }
 
+  public static boolean isWindows() {
+    return getPlatform().startsWith("Windows");
+  }
+
   public static boolean artSupported() {
     if (!isLinux() && !isMac()) {
       System.err.println("Testing on your platform is not fully supported. " +

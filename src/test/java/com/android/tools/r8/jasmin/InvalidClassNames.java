@@ -6,6 +6,7 @@ package com.android.tools.r8.jasmin;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.fail;
 
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.errors.CompilationError;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,19 +47,19 @@ public class InvalidClassNames extends JasminTestBase {
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
         { new String(new int[] { 0x00a0 }, 0, 1), true },
-        { new String(new int[] { 0x2000 }, 0, 1), true },
-        { new String(new int[] { 0x200f }, 0, 1), true },
-        { new String(new int[] { 0x2028 }, 0, 1), true },
-        { new String(new int[] { 0x202f }, 0, 1), true },
+        { new String(new int[] { 0x2000 }, 0, 1), !ToolHelper.isWindows() },
+        { new String(new int[] { 0x200f }, 0, 1), !ToolHelper.isWindows() },
+        { new String(new int[] { 0x2028 }, 0, 1), !ToolHelper.isWindows() },
+        { new String(new int[] { 0x202f }, 0, 1), !ToolHelper.isWindows() },
         { new String(new int[] { 0xd800 }, 0, 1), false },
         { new String(new int[] { 0xdfff }, 0, 1), false },
-        { new String(new int[] { 0xfff0 }, 0, 1), true },
-        { new String(new int[] { 0xffff }, 0, 1), true },
+        { new String(new int[] { 0xfff0 }, 0, 1), !ToolHelper.isWindows() },
+        { new String(new int[] { 0xffff }, 0, 1), !ToolHelper.isWindows() },
         { "a/b/c/a/D/", true },
-        { "a<b", true },
-        { "a>b", true },
-        { "<a>b", true },
-        { "<a>", true }
+        { "a<b", !ToolHelper.isWindows() },
+        { "a>b", !ToolHelper.isWindows() },
+        { "<a>b", !ToolHelper.isWindows() },
+        { "<a>", !ToolHelper.isWindows() }
     });
   }
 
