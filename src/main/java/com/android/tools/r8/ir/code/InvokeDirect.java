@@ -39,7 +39,7 @@ public class InvokeDirect extends InvokeMethodWithReceiver {
     com.android.tools.r8.code.Instruction instruction;
     int argumentRegisters = requiredArgumentRegisters();
     builder.requestOutgoingRegisters(argumentRegisters);
-    if (argumentRegisters > 5 || hasHighArgumentRegister(builder)) {
+    if (needsRangedInvoke(builder)) {
       assert argumentsConsecutive(builder);
       int firstRegister = argumentRegisterValue(0, builder);
       instruction = new InvokeDirectRange(firstRegister, argumentRegisters, getInvokedMethod());
