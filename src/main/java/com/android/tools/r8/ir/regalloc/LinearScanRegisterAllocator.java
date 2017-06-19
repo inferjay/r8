@@ -1231,13 +1231,13 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
 
     // Treat active linked argument intervals as pinned. They cannot be given another register
     // at their uses.
-    blockLinkedRegisters(
-        active, unhandledInterval, registerConstraint, usePositions, blockedPositions);
+    blockLinkedRegisters(active, unhandledInterval, registerConstraint, usePositions,
+        blockedPositions);
 
     // Treat inactive linked argument intervals as pinned. They cannot be given another register
     // at their uses.
-    blockLinkedRegisters(
-        inactive, unhandledInterval, registerConstraint, usePositions, blockedPositions);
+    blockLinkedRegisters(inactive, unhandledInterval, registerConstraint, usePositions,
+        blockedPositions);
 
     // Get the register (pair) that has the highest use position.
     boolean needsRegisterPair = unhandledInterval.requiredRegisters() == 2;
@@ -1456,16 +1456,12 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         if (register <= registerConstraint && other.overlaps(interval)) {
           for (int i = 0; i < other.requiredRegisters(); i++) {
             if (register + i <= registerConstraint) {
-              for (LiveIntervalsUse use : other.getUses()) {
-                if (use.getPosition() > interval.getStart()) {
-                  blockedPositions.set(
-                      register + i,
-                      Math.min(blockedPositions.get(register + i), use.getPosition()));
-                  usePositions.set(
-                      register + i,
-                      Math.min(usePositions.get(register + i), use.getPosition()));
-                }
-              }
+              blockedPositions.set(register + i,
+                  Math.min(blockedPositions.get(register + i),
+                      other.firstUseAfter(interval.getStart())));
+              // If we start blocking registers other than linked arguments, we might need to
+              // explicitly update the use positions as well as blocked positions.
+              assert usePositions.get(register + i) <= blockedPositions.get(register + i);
             }
           }
         }
