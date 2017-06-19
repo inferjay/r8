@@ -43,8 +43,6 @@ public class InternalOptions {
   public boolean verbose = false;
   // Silencing output.
   public boolean quiet = false;
-  // Eagerly fill dex files as much as possible.
-  public boolean fillDexFiles = false;
 
   public List<String> methodsFilter = ImmutableList.of();
   public int minApiLevel = Constants.DEFAULT_ANDROID_API;
