@@ -194,7 +194,6 @@ public class D8Command extends BaseCommand {
     assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
-    internal.fillDexFiles = true;
     // Assert and fixup defaults.
     assert !internal.skipMinification;
     internal.skipMinification = true;

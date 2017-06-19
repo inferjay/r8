@@ -3,6 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.dex;
 
+import com.android.tools.r8.dex.VirtualFile.FilePerClassDistributor;
+import com.android.tools.r8.dex.VirtualFile.FillFilesDistributor;
+import com.android.tools.r8.dex.VirtualFile.PackageMapDistributor;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexAnnotationSet;
@@ -20,6 +23,7 @@ import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.PackageDistribution;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -113,8 +117,19 @@ public class ApplicationWriter {
       application.dexItemFactory.sort(namingLens);
       SortAnnotations sortAnnotations = new SortAnnotations();
       application.classes().forEach((clazz) -> clazz.addDependencies(sortAnnotations));
-      Map<Integer, VirtualFile> newFiles =
-          new VirtualFile.Distributor(this, packageDistribution, executorService).run();
+
+      // Distribute classes into dex files.
+      VirtualFile.Distributor distributor = null;
+      if (options.outputMode == OutputMode.FilePerClass) {
+        assert packageDistribution == null :
+            "Cannot combine package distribution definition with file-per-class option.";
+        distributor = new FilePerClassDistributor(this);
+      } else if (packageDistribution != null) {
+        distributor = new PackageMapDistributor(this, packageDistribution, executorService);
+      } else {
+        distributor = new FillFilesDistributor(this);
+      }
+      Map<Integer, VirtualFile> newFiles = distributor.run();
 
       // Write the dex files and the Proguard mapping file in parallel.
       LinkedHashMap<VirtualFile, Future<byte[]>> dexDataFutures = new LinkedHashMap<>();
