@@ -73,6 +73,11 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     return compilationState != CompilationState.NOT_PROCESSED;
   }
 
+  public boolean cannotInline() {
+    return compilationState == CompilationState.NOT_PROCESSED
+        || compilationState == CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
+  }
+
   public boolean isInliningCandidate(DexEncodedMethod container, boolean alwaysInline) {
     if (container.accessFlags.isStatic() && container.accessFlags.isConstructor()) {
       // This will probably never happen but never inline a class initializer.
@@ -102,7 +107,8 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     return compilationState == PROCESSED_INLINING_CANDIDATE_PUBLIC;
   }
 
-  public void markProcessed(Constraint state) {
+  public boolean markProcessed(Constraint state) {
+    CompilationState prevCompilationState = compilationState;
     switch (state) {
       case ALWAYS:
         compilationState = PROCESSED_INLINING_CANDIDATE_PUBLIC;
@@ -117,6 +123,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
         compilationState = PROCESSED_NOT_INLINING_CANDIDATE;
         break;
     }
+    return prevCompilationState != compilationState;
   }
 
   public void markNotProcessed() {

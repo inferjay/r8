@@ -10,6 +10,8 @@ import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.Resource;
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.ir.conversion.CallGraph;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.OutputMode;
@@ -19,17 +21,29 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 public class R8GMSCoreDeterministicTest extends GMSCoreCompilationTestBase {
 
+  public List<DexEncodedMethod> shuffle(List<DexEncodedMethod> methods, CallGraph.Leaves leaves) {
+    Collections.shuffle(methods);
+    return methods;
+  }
+
   private AndroidApp doRun()
       throws IOException, ProguardRuleParserException, CompilationException, ExecutionException {
     R8Command command =
         R8Command.builder().addProgramFiles(Paths.get(GMSCORE_V7_DIR, GMSCORE_APK)).build();
-    return ToolHelper.runR8(command, options -> options.testing.randomizeCallGraphLeaves = true);
+    return ToolHelper.runR8(
+        command, options -> {
+          // For this test just do random shuffle.
+          options.testing.irOrdering = this::shuffle;
+          // Only use one thread to process to process in the order decided by the callback.
+          options.numberOfThreads = 1;
+        });
   }
 
   @Test

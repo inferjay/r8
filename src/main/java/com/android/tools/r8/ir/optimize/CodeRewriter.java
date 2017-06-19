@@ -48,6 +48,7 @@ import com.android.tools.r8.ir.code.StaticPut;
 import com.android.tools.r8.ir.code.Switch;
 import com.android.tools.r8.ir.code.Switch.Type;
 import com.android.tools.r8.ir.code.Value;
+import com.android.tools.r8.ir.conversion.OptimizationFeedback;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LongInterval;
 import com.google.common.base.Equivalence;
@@ -607,7 +608,7 @@ public class CodeRewriter {
   }
 
   public void identifyReturnsArgument(
-      DexEncodedMethod method, IRCode code) {
+      DexEncodedMethod method, IRCode code, OptimizationFeedback feedback) {
     if (code.getNormalExitBlock() != null) {
       Return ret = code.getNormalExitBlock().exit().asReturn();
       if (!ret.isReturnVoid()) {
@@ -616,14 +617,14 @@ public class CodeRewriter {
           // Find the argument number.
           int index = code.collectArguments().indexOf(returnValue);
           assert index != -1;
-          method.markReturnsArgument(index);
+          feedback.methodReturnsArgument(method, index);
         }
         if (returnValue.isConstant() && returnValue.definition.isConstNumber()) {
           long value = returnValue.definition.asConstNumber().getRawValue();
-          method.markReturnsConstant(value);
+          feedback.methodReturnsConstant(method, value);
         }
         if (returnValue.isNeverNull()) {
-          method.markNeverReturnsNull();
+          feedback.methodNeverReturnsNull(method);
         }
       }
     }
