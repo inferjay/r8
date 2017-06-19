@@ -91,7 +91,7 @@ public abstract class Invoke extends Instruction {
   }
 
   protected int argumentRegisterValue(int i, DexBuilder builder) {
-    assert requiredArgumentRegisters() > 5;
+    assert needsRangedInvoke(builder);
     if (i < arguments().size()) {
       // If argument values flow into ranged invokes, all the ranged invoke arguments
       // are arguments to this method in order. Therefore, we use the incoming registers
@@ -168,7 +168,43 @@ public abstract class Invoke extends Instruction {
     if (requiredArgumentRegisters() > 5) {
       return Constants.U16BIT_MAX;
     }
+    if (argumentsAreConsecutiveInputArguments()) {
+      return Constants.U16BIT_MAX;
+    }
     return Constants.U4BIT_MAX;
+  }
+
+  private boolean argumentsAreConsecutiveInputArguments() {
+    if (arguments().size() == 0) {
+      return false;
+    }
+    Value current = arguments().get(0);
+    if (!current.isArgument()) {
+      return false;
+    }
+    for (int i = 1; i < arguments().size(); i++) {
+      Value next = arguments().get(i);
+      if (current.getNextConsecutive() != next) {
+        return false;
+      }
+      current = next;
+    }
+    return true;
+  }
+
+  private boolean argumentsAreConsecutiveInputArgumentsWithHighRegisters(
+      DexBuilder builder) {
+    if (!argumentsAreConsecutiveInputArguments()) {
+      return false;
+    }
+    Value lastArgument = arguments().get(arguments().size() - 1);
+    return builder.argumentOrAllocateRegister(lastArgument, getNumber()) > Constants.U4BIT_MAX;
+  }
+
+  protected boolean needsRangedInvoke(DexBuilder builder) {
+    return requiredArgumentRegisters() > 5
+        || hasHighArgumentRegister(builder)
+        || argumentsAreConsecutiveInputArgumentsWithHighRegisters(builder);
   }
 
   @Override
