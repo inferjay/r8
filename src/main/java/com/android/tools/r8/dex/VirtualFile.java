@@ -298,7 +298,7 @@ public class VirtualFile {
 
       new PackageSplitPopulator(
           nameToFileMap, classes, originalNames, null, application.dexItemFactory,
-          false, writer.namingLens)
+          true, writer.namingLens)
           .call();
       return nameToFileMap;
     }
@@ -345,7 +345,7 @@ public class VirtualFile {
         newAssignments =
             new PackageSplitPopulator(
                 nameToFileMap, classes, originalNames, usedPrefixes, application.dexItemFactory,
-                true, writer.namingLens)
+                false, writer.namingLens)
                 .call();
         if (!newAssignments.isEmpty() && nameToFileMap.size() > 1) {
           System.err.println(" * The used package map is missing entries. The following default "
