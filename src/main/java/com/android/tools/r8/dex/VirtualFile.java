@@ -53,6 +53,11 @@ import java.util.function.Function;
 
 public class VirtualFile {
 
+  enum FillStrategy {
+    FILL_MAX,
+    LEAVE_SPACE_FOR_GROWTH,
+  }
+
   private static final int MAX_ENTRIES = (Short.MAX_VALUE << 1) + 1;
   /**
    * When distributing classes across files we aim to leave some space. The amount of space left is
@@ -156,11 +161,11 @@ public class VirtualFile {
     return isFull(transaction.getNumberOfMethods(), transaction.getNumberOfFields(), MAX_ENTRIES);
   }
 
-  private boolean isFilledEnough(boolean fillDexFiles) {
+  private boolean isFilledEnough(FillStrategy fillStrategy) {
     return isFull(
         transaction.getNumberOfMethods(),
         transaction.getNumberOfFields(),
-        fillDexFiles ? MAX_ENTRIES : MAX_PREFILL_ENTRIES);
+        fillStrategy == FillStrategy.FILL_MAX ? MAX_ENTRIES : MAX_PREFILL_ENTRIES);
   }
 
   public void abortTransaction() {
@@ -298,7 +303,7 @@ public class VirtualFile {
 
       new PackageSplitPopulator(
           nameToFileMap, classes, originalNames, null, application.dexItemFactory,
-          true, writer.namingLens)
+          FillStrategy.FILL_MAX, writer.namingLens)
           .call();
       return nameToFileMap;
     }
@@ -345,7 +350,7 @@ public class VirtualFile {
         newAssignments =
             new PackageSplitPopulator(
                 nameToFileMap, classes, originalNames, usedPrefixes, application.dexItemFactory,
-                false, writer.namingLens)
+                FillStrategy.LEAVE_SPACE_FOR_GROWTH, writer.namingLens)
                 .call();
         if (!newAssignments.isEmpty() && nameToFileMap.size() > 1) {
           System.err.println(" * The used package map is missing entries. The following default "
@@ -735,7 +740,7 @@ public class VirtualFile {
     private final Map<DexProgramClass, String> originalNames;
     private final Set<String> previousPrefixes;
     private final DexItemFactory dexItemFactory;
-    private final boolean fillDexFiles;
+    private final FillStrategy fillStrategy;
     private final NamingLens namingLens;
 
     PackageSplitPopulator(
@@ -744,14 +749,14 @@ public class VirtualFile {
         Map<DexProgramClass, String> originalNames,
         Set<String> previousPrefixes,
         DexItemFactory dexItemFactory,
-        boolean fillDexFile,
+        FillStrategy fillStrategy,
         NamingLens namingLens) {
       this.files = files;
       this.classes = new ArrayList<>(classes);
       this.originalNames = originalNames;
       this.previousPrefixes = previousPrefixes;
       this.dexItemFactory = dexItemFactory;
-      this.fillDexFiles = fillDexFile;
+      this.fillStrategy = fillStrategy;
       this.namingLens = namingLens;
     }
 
@@ -815,7 +820,7 @@ public class VirtualFile {
           nonPackageClasses.add(clazz);
           continue;
         }
-        if (current.isFilledEnough(fillDexFiles) || current.isFull()) {
+        if (current.isFilledEnough(fillStrategy) || current.isFull()) {
           current.abortTransaction();
           // We allow for a final rollback that has at most 20% of classes in it.
           // This is a somewhat random number that was empirically chosen.
@@ -866,7 +871,7 @@ public class VirtualFile {
       VirtualFile current;
       current = activeFiles.next();
       for (DexProgramClass clazz : nonPackageClasses) {
-        if (current.isFilledEnough(fillDexFiles)) {
+        if (current.isFilledEnough(fillStrategy)) {
           current = getVirtualFile(activeFiles);
         }
         current.addClass(clazz);
@@ -888,8 +893,8 @@ public class VirtualFile {
     private VirtualFile getVirtualFile(Iterator<VirtualFile> activeFiles) {
       VirtualFile current = null;
       while (activeFiles.hasNext()
-          && (current = activeFiles.next()).isFilledEnough(fillDexFiles)) {}
-      if (current == null || current.isFilledEnough(fillDexFiles)) {
+          && (current = activeFiles.next()).isFilledEnough(fillStrategy)) {}
+      if (current == null || current.isFilledEnough(fillStrategy)) {
         current = new VirtualFile(files.size(), namingLens);
         files.put(files.size(), current);
       }
