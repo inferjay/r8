@@ -142,9 +142,9 @@ public class MainDexTracingTest {
           .collect(Collectors.toList());
       Collections.sort(resultMainDexList);
       String[] refList = new String(Files.readAllBytes(
-          expectedMainDexList), StandardCharsets.UTF_8).split(ToolHelper.LINE_SEPARATOR);
+          expectedMainDexList), StandardCharsets.UTF_8).split("\n");
       for (int i = 0; i < refList.length; i++) {
-        String reference = refList[i];
+        String reference = refList[i].trim();
         String computed = resultMainDexList.get(i);
         if (reference.contains("-$$Lambda$")) {
           // For lambda classes we check that there is a lambda class for the right containing
