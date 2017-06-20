@@ -111,7 +111,8 @@ public class MainDexListTests {
     if (!verifyApplications && !regenerateApplications) {
       return;
     }
-    AndroidApp generated = generateApplication(TWO_LARGE_CLASSES, MAX_METHOD_COUNT);
+    AndroidApp generated =
+        generateApplication(TWO_LARGE_CLASSES, Constants.ANDROID_N_API, MAX_METHOD_COUNT);
     if (regenerateApplications) {
       generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed, true);
     } else {
@@ -126,7 +127,7 @@ public class MainDexListTests {
     if (!verifyApplications && !regenerateApplications) {
       return;
     }
-    AndroidApp generated = generateApplication(MANY_CLASSES, 1);
+    AndroidApp generated = generateApplication(MANY_CLASSES, Constants.DEFAULT_ANDROID_API, 1);
     if (regenerateApplications) {
       generated.write(getManyClassesAppPath(), OutputMode.Indexed, true);
     } else {
@@ -368,10 +369,11 @@ public class MainDexListTests {
     }
   }
 
-  private static AndroidApp generateApplication(List<String> classes, int methodCount)
+  private static AndroidApp generateApplication(List<String> classes, int minApi, int methodCount)
       throws IOException, ExecutionException {
     Timing timing = new Timing("MainDexListTests");
     InternalOptions options = new InternalOptions();
+    options.minApiLevel = minApi;
     DexItemFactory factory = options.itemFactory;
     DexApplication.Builder builder = new DexApplication.Builder(factory, timing);
     for (String clazz : classes) {
