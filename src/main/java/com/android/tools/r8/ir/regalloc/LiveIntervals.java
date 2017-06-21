@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.regalloc;
 
+import static com.android.tools.r8.dex.Constants.U16BIT_MAX;
 import static com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator.NO_REGISTER;
 
 import com.android.tools.r8.dex.Constants;
@@ -29,7 +30,7 @@ public class LiveIntervals {
   private boolean spilled = false;
 
   // Only registers up to and including the registerLimit are allowed for this interval.
-  private int registerLimit = Constants.U16BIT_MAX;
+  private int registerLimit = U16BIT_MAX;
 
   // Max register used for any of the non-spilled splits for these live intervals or for any of the
   // live intervals that this live interval is connected to by phi moves. This is used to
@@ -331,7 +332,7 @@ public class LiveIntervals {
 
   public LiveIntervalsUse firstUseWithConstraint() {
     for (LiveIntervalsUse use : uses) {
-      if (use.getLimit() < Constants.U16BIT_MAX) {
+      if (use.hasConstraint()) {
         return use;
       }
     }
@@ -386,13 +387,14 @@ public class LiveIntervals {
   }
 
   private void recomputeLimit() {
-    registerLimit = Constants.U16BIT_MAX;
+    registerLimit = U16BIT_MAX;
     for (LiveIntervalsUse use : uses) {
       updateRegisterConstraint(use.getLimit());
     }
   }
 
   public LiveIntervals getSplitCovering(int instructionNumber) {
+    assert getSplitParent() == this;
     // Check if this interval itself is covering the instruction.
     if (getStart() <= instructionNumber && getEnd() > instructionNumber) {
       return this;
@@ -415,6 +417,20 @@ public class LiveIntervals {
     }
     assert false : "Couldn't find split covering instruction position.";
     return null;
+  }
+
+  public boolean isConstantNumberInterval() {
+    return value.definition != null && value.definition.isConstNumber();
+  }
+
+  public int numberOfUsesWithConstraint() {
+    int count = 0;
+    for (LiveIntervalsUse use : getUses()) {
+      if (use.hasConstraint()) {
+        count++;
+      }
+    }
+    return count;
   }
 
   @Override
@@ -467,9 +483,5 @@ public class LiveIntervals {
       delta += 10000;
       splitChild.print(printer, number + delta, number);
     }
-  }
-
-  public boolean isConstantNumberInterval() {
-    return value.definition != null && value.definition.isConstNumber();
   }
 }
