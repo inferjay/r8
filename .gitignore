@@ -34,7 +34,7 @@ third_party/jdwp-tests.tar.gz
 third_party/jdwp-tests
 third_party/photos/*
 !third_party/photos/*.sha1
-third_party/proguard/
+third_party/proguard/*
 !third_party/proguard/*.sha1
 third_party/proguardsettings.tar.gz
 third_party/proguardsettings/
