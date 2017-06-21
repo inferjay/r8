@@ -9,6 +9,7 @@ import r8
 import d8
 import sys
 import utils
+import time
 
 import gmscore_data
 import youtube_data
@@ -67,6 +68,11 @@ def ParseOptions():
                     help='Dump a file with the arguments for the specified ' +
                     'configuration. For use as a @<file> argument to perform ' +
                     'the run.')
+  result.add_option('--print-runtimeraw',
+                    metavar='BENCHMARKNAME',
+                    help='Prints the line \'<BENCHMARKNAME>(RunTimeRaw):' +
+                         ' <elapsed> ms\' at the end where <elapsed> is' +
+                         ' the elapsed time in milliseconds.')
   return result.parse_args()
 
 # Most apps have the -printmapping and -printseeds in the Proguard
@@ -150,6 +156,8 @@ def main():
   if inputs:
     args.extend(inputs)
 
+  t0 = time.time()
+
   if options.dump_args_file:
     with open(options.dump_args_file, 'w') as args_file:
       args_file.writelines([arg + os.linesep for arg in args])
@@ -168,6 +176,10 @@ def main():
         args.extend(['--pg-conf', additional_pg_conf])
         r8.run(args, not options.no_build, not options.no_debug, options.profile,
                options.track_memory_to_file)
+
+  if options.print_runtimeraw:
+    print('{}(RunTimeRaw): {} ms'
+        .format(options.print_runtimeraw, 1000.0 * (time.time() - t0)))
 
 if __name__ == '__main__':
   sys.exit(main())
