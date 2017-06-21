@@ -385,14 +385,17 @@ public class R8 {
   static void writeOutputs(R8Command command, InternalOptions options, AndroidApp outputApp)
       throws IOException {
     if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath(), options.outputMode);
+      outputApp.write(command.getOutputPath(), options.outputMode, options.overwriteOutputs);
     }
 
     if (options.printMapping && !options.skipMinification) {
       assert outputApp.hasProguardMap();
       try (Closer closer = Closer.create()) {
-        OutputStream mapOut =
-            openPathWithDefault(closer, options.printMappingFile, true, System.out);
+        OutputStream mapOut = openPathWithDefault(
+            closer,
+            options.printMappingFile,
+            options.overwriteOutputs,
+            System.out);
         outputApp.writeProguardMap(closer, mapOut);
       }
     }
@@ -400,7 +403,7 @@ public class R8 {
       assert outputApp.hasProguardSeeds();
       try (Closer closer = Closer.create()) {
         OutputStream seedsOut =
-            openPathWithDefault(closer, options.seedsFile, true, System.out);
+            openPathWithDefault(closer, options.seedsFile, options.overwriteOutputs, System.out);
         outputApp.writeProguardSeeds(closer, seedsOut);
       }
     }

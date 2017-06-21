@@ -346,6 +346,7 @@ public class R8Command extends BaseCommand {
     internal.useTreeShaking = useTreeShaking();
     assert !internal.ignoreMissingClasses;
     internal.ignoreMissingClasses = ignoreMissingClasses;
+    internal.overwriteOutputs = true;
 
     // TODO(zerny): Consider which other proguard options should be given flags.
     assert internal.packagePrefix.length() == 0;

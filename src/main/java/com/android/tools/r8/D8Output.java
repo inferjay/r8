@@ -16,7 +16,7 @@ public class D8Output extends BaseOutput {
   }
 
   @Override
-  public void write(Path output) throws IOException {
-    getAndroidApp().write(output, getOutputMode());
+  public void write(Path output, boolean overwrite) throws IOException {
+    getAndroidApp().write(output, getOutputMode(), overwrite);
   }
 }

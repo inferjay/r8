@@ -989,7 +989,7 @@ public abstract class R8RunArtTestsTest {
             builder.setMinApiLevel(minSdkVersion);
           }
           D8Output output = D8.run(builder.build());
-          output.write(Paths.get(resultPath));
+          output.write(Paths.get(resultPath), true);
           break;
         }
       case R8:

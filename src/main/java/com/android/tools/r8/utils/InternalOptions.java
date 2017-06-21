@@ -91,6 +91,8 @@ public class InternalOptions {
 
   public String warningInvalidParameterAnnotations = null;
 
+  public boolean overwriteOutputs; // default value is set in D/R8Command
+
   public boolean printWarnings() {
     boolean printed = false;
     if (warningInvalidParameterAnnotations != null) {

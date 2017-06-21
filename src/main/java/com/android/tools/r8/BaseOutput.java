@@ -49,6 +49,7 @@ abstract class BaseOutput {
    * Write the output resources to a zip-archive or directory.
    *
    * @param output Path to existing directory or non-existing zip-archive.
+   * @param overwrite true to allow overwriting existing files with outputs.
    */
-  abstract public void write(Path output) throws IOException;
+  abstract public void write(Path output, boolean overwrite) throws IOException;
 }
