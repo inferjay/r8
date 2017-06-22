@@ -3,17 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.maindexlist;
 
-import static com.android.tools.r8.utils.FileUtils.CLASS_EXTENSION;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.android.tools.r8.CompilationException;
-import com.android.tools.r8.D8;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.R8Command;
+import com.android.tools.r8.TestBase;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.ApplicationWriter;
 import com.android.tools.r8.dex.Constants;
@@ -47,6 +45,7 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.DexInspector;
+import com.android.tools.r8.utils.DexInspector.FoundClassSubject;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
@@ -56,123 +55,100 @@ import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-public class MainDexListTests {
-
-  private static final Path BASE =
-      Paths.get("src", "test", "java", "com", "android", "tools", "r8", "maindexlist");
-
-  private static boolean verifyApplications = true;
-  private static boolean regenerateApplications = false;
+public class MainDexListTests extends TestBase {
 
   private static final int MAX_METHOD_COUNT = Constants.U16BIT_MAX;
+
   private static final List<String> TWO_LARGE_CLASSES = ImmutableList.of("A", "B");
-  private static final String TWO_LARGE_CLASSES_APP = "two-large-classes.zip";
+  private static final int MANY_CLASSES_COUNT = 10000;
+  private static final int MANY_CLASSES_SINGLE_DEX_METHODS_PER_CLASS = 2;
+  private static final int MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS = 10;
+  private static List<String> MANY_CLASSES;
 
-  private static final int MANY_CLASSES_COUNT = 1000;
-  private static final List<String> MANY_CLASSES;
-  private static final String MANY_CLASSES_APP = "many-classes.zip";
+  @ClassRule
+  public static TemporaryFolder generatedApplicationsFolder = new TemporaryFolder();
 
-  static {
+  // Generate the test applications in a @BeforeClass method, as they are used by several tests.
+  @BeforeClass
+  public static void generateTestApplications() throws Throwable {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     for (int i = 0; i < MANY_CLASSES_COUNT; ++i) {
       String pkg = i % 2 == 0 ? "a" : "b";
       builder.add(pkg + ".Class" + i);
     }
     MANY_CLASSES = builder.build();
+
+    // Generates an application with many classes, every even in one package and every odd in
+    // another. Keep the number of methods low enough for single dex application.
+    AndroidApp generated = generateApplication(
+        MANY_CLASSES, Constants.DEFAULT_ANDROID_API, MANY_CLASSES_SINGLE_DEX_METHODS_PER_CLASS);
+    generated.write(getManyClassesSingleDexAppPath(), OutputMode.Indexed, false);
+
+    // Generates an application with many classes, every even in one package and every odd in
+    // another. Add enough methods so the application cannot fit into one dex file.
+    generated = generateApplication(
+        MANY_CLASSES, Constants.ANDROID_L_API, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
+    generated.write(getManyClassesMultiDexAppPath(), OutputMode.Indexed, false);
+
+    // Generates an application with two classes, each with the maximum possible number of methods.
+    generated = generateApplication(TWO_LARGE_CLASSES, Constants.ANDROID_N_API, MAX_METHOD_COUNT);
+    generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed, false);
   }
 
-  public static Path getTwoLargeClassesAppPath() {
-    return BASE.resolve(TWO_LARGE_CLASSES_APP);
+  private static Path getTwoLargeClassesAppPath() {
+    return generatedApplicationsFolder.getRoot().toPath().resolve("two-large-classes.zip");
   }
 
-  public static Path getManyClassesAppPath() {
-    return BASE.resolve(MANY_CLASSES_APP);
+  private static Path getManyClassesSingleDexAppPath() {
+    return generatedApplicationsFolder.getRoot().toPath().resolve("many-classes-mono.zip");
   }
 
-  // Generates an application with two classes, each with the maximum possible number of methods.
-  @Test
-  public void generateTwoLargeClasses() throws IOException, ExecutionException {
-    if (!verifyApplications && !regenerateApplications) {
-      return;
-    }
-    AndroidApp generated = generateApplication(TWO_LARGE_CLASSES, MAX_METHOD_COUNT);
-    if (regenerateApplications) {
-      generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed, true);
-    } else {
-      AndroidApp cached = AndroidApp.fromProgramFiles(getTwoLargeClassesAppPath());
-      compareToCachedVersion(cached, generated, TWO_LARGE_CLASSES_APP);
-    }
+  private static Path getManyClassesMultiDexAppPath() {
+    return generatedApplicationsFolder.getRoot().toPath().resolve("many-classes-stereo.zip");
   }
-
-  // Generates an application with many classes, every even in one package and every odd in another.
-  @Test
-  public void generateManyClasses() throws IOException, ExecutionException {
-    if (!verifyApplications && !regenerateApplications) {
-      return;
-    }
-    AndroidApp generated = generateApplication(MANY_CLASSES, 1);
-    if (regenerateApplications) {
-      generated.write(getManyClassesAppPath(), OutputMode.Indexed, true);
-    } else {
-      AndroidApp cached = AndroidApp.fromProgramFiles(getManyClassesAppPath());
-      compareToCachedVersion(cached, generated, MANY_CLASSES_APP);
-    }
-  }
-
-  private static void compareToCachedVersion(AndroidApp cached, AndroidApp generated, String name)
-      throws IOException {
-    assertEquals("On-disk cached app (" + name + ") differs in file count from regeneration"
-            + "Set 'regenerateApplications = true' and rerun this test to update the cache.",
-        cached.getDexProgramResources().size(), generated.getDexProgramResources().size());
-    try (Closer closer = Closer.create()) {
-      for (int i = 0; i < cached.getDexProgramResources().size(); i++) {
-        byte[] cachedBytes =
-            ByteStreams.toByteArray(cached.getDexProgramResources().get(i).getStream(closer));
-        byte[] generatedBytes =
-            ByteStreams.toByteArray(generated.getDexProgramResources().get(i).getStream(closer));
-        assertArrayEquals("On-disk cached app differs in byte content from regeneration"
-                + "Set 'regenerateApplications = true' and rerun this test to update the cache.",
-            cachedBytes, generatedBytes);
-      }
-    }
-  }
-
-  @Rule
-  public TemporaryFolder temp = ToolHelper.getTemporaryFolderForTest();
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
   @Test
+  public void checkGeneratedFileFitInSingleDexFile() {
+    assertTrue(MANY_CLASSES_COUNT * MANY_CLASSES_SINGLE_DEX_METHODS_PER_CLASS <= MAX_METHOD_COUNT);
+  }
+
+  @Test
+  public void checkGeneratedFileNeedsTwoDexFiles() {
+    assertTrue(MANY_CLASSES_COUNT * MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS > MAX_METHOD_COUNT);
+  }
+
+  @Test
   public void putFirstClassInMainDexList() throws Throwable {
-    verifyMainDexContains(TWO_LARGE_CLASSES.subList(0, 1), getTwoLargeClassesAppPath());
+    verifyMainDexContains(TWO_LARGE_CLASSES.subList(0, 1), getTwoLargeClassesAppPath(), false);
   }
 
   @Test
   public void putSecondClassInMainDexList() throws Throwable {
-    verifyMainDexContains(TWO_LARGE_CLASSES.subList(1, 2), getTwoLargeClassesAppPath());
+    verifyMainDexContains(TWO_LARGE_CLASSES.subList(1, 2), getTwoLargeClassesAppPath(), false);
   }
 
   @Test
   public void cannotFitBothIntoMainDex() throws Throwable {
     thrown.expect(CompilationError.class);
-    verifyMainDexContains(TWO_LARGE_CLASSES, getTwoLargeClassesAppPath());
+    verifyMainDexContains(TWO_LARGE_CLASSES, getTwoLargeClassesAppPath(), false);
   }
 
   @Test
@@ -184,7 +160,28 @@ public class MainDexListTests {
         mainDexBuilder.add(clazz);
       }
     }
-    verifyMainDexContains(mainDexBuilder.build(), getManyClassesAppPath());
+    verifyMainDexContains(mainDexBuilder.build(), getManyClassesSingleDexAppPath(), true);
+    verifyMainDexContains(mainDexBuilder.build(), getManyClassesMultiDexAppPath(), false);
+  }
+
+  @Test
+  public void singleClassInMainDex() throws Throwable {
+    ImmutableList<String> mainDex = ImmutableList.of(MANY_CLASSES.get(0));
+    verifyMainDexContains(mainDex, getManyClassesSingleDexAppPath(), true);
+    verifyMainDexContains(mainDex, getManyClassesMultiDexAppPath(), false);
+  }
+
+  @Test
+  public void allClassesInMainDex() throws Throwable {
+    // Degenerated case with an app thats fit into a single dex, and where the main dex list
+    // contains all classes.
+    verifyMainDexContains(MANY_CLASSES, getManyClassesSingleDexAppPath(), true);
+  }
+
+  @Test
+  public void cannotFitAllIntoMainDex() throws Throwable {
+    thrown.expect(CompilationError.class);
+    verifyMainDexContains(MANY_CLASSES, getManyClassesMultiDexAppPath(), false);
   }
 
   @Test
@@ -320,10 +317,39 @@ public class MainDexListTests {
   }
 
   private static String typeToEntry(String type) {
-    return type.replace(".", "/") + CLASS_EXTENSION;
+    return type.replace(".", "/") + FileUtils.CLASS_EXTENSION;
   }
 
-  private void verifyMainDexContains(List<String> mainDex, Path app)
+  private void failedToFindClassInExpectedFile(Path outDir, String clazz) throws IOException {
+    Files.list(outDir)
+        .filter(FileUtils::isDexFile)
+        .forEach(
+            p -> {
+              try {
+                DexInspector i = new DexInspector(AndroidApp.fromProgramFiles(p));
+                assertFalse("Found " + clazz + " in file " + p, i.clazz(clazz).isPresent());
+              } catch (IOException | ExecutionException e) {
+                e.printStackTrace();
+              }
+            });
+    fail("Failed to find class " + clazz + "in any file...");
+  }
+
+  private void assertMainDexClass(FoundClassSubject clazz, List<String> mainDex) {
+    if (!mainDex.contains(clazz.toString())) {
+      StringBuilder builder = new StringBuilder();
+      for (int i = 0; i < mainDex.size(); i++) {
+        builder.append(i == 0 ? "[" : ", ");
+        builder.append(mainDex.get(i));
+      }
+      builder.append("]");
+      fail("Class " + clazz + " found in main dex, " +
+          "only expected explicit main dex classes " + builder +" in main dex file");
+    }
+  }
+
+  private void doVerifyMainDexContains(
+      List<String> mainDex, Path app, boolean singleDexApp, boolean minimalMainDex)
       throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
     AndroidApp originalApp = AndroidApp.fromProgramFiles(app);
     DexInspector originalInspector = new DexInspector(originalApp);
@@ -331,44 +357,42 @@ public class MainDexListTests {
       assertTrue("Class " + clazz + " does not exist in input",
           originalInspector.clazz(clazz).isPresent());
     }
-    Path outDir = temp.newFolder("out").toPath();
-    Path mainDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    Path outDir = temp.newFolder().toPath();
+    Path mainDexList = temp.newFile().toPath();
     FileUtils.writeTextFile(mainDexList, ListUtils.map(mainDex, MainDexListTests::typeToEntry));
-    Path packageDistribution = temp.getRoot().toPath().resolve("package.map");
-    FileUtils.writeTextFile(packageDistribution, ImmutableList.of("a.*:2", "b.*:1"));
     R8Command command =
         R8Command.builder()
             .addProgramFiles(app)
-            .setPackageDistributionFile(packageDistribution)
             .setMainDexListFile(mainDexList)
+            .setMinimalMainDex(minimalMainDex)
             .setOutputPath(outDir)
             .setTreeShaking(false)
             .setMinification(false)
             .build();
     ToolHelper.runR8(command);
-    assertTrue("Output run only produced one dex file. Invalid test",
-        1 < Files.list(outDir).filter(FileUtils::isDexFile).count());
+    if (!singleDexApp && !minimalMainDex) {
+      assertTrue("Output run only produced one dex file.",
+          1 < Files.list(outDir).filter(FileUtils::isDexFile).count());
+    }
     DexInspector inspector =
         new DexInspector(AndroidApp.fromProgramFiles(outDir.resolve("classes.dex")));
     for (String clazz : mainDex) {
       if (!inspector.clazz(clazz).isPresent()) {
-        Files.list(outDir)
-            .filter(FileUtils::isDexFile)
-            .forEach(
-                p -> {
-                  try {
-                    DexInspector i = new DexInspector(AndroidApp.fromProgramFiles(p));
-                    assertFalse("Found " + clazz + " in file " + p, i.clazz(clazz).isPresent());
-                  } catch (IOException | ExecutionException e) {
-                    e.printStackTrace();
-                  }
-                });
-        fail("Failed to find class " + clazz + "in any file...");
+        failedToFindClassInExpectedFile(outDir, clazz);
       }
+    }
+    if (minimalMainDex) {
+      inspector.forAllClasses(clazz -> assertMainDexClass(clazz, mainDex));
     }
   }
 
-  private static AndroidApp generateApplication(List<String> classes, int methodCount)
+  private void verifyMainDexContains(List<String> mainDex, Path app, boolean singleDexApp)
+      throws Throwable {
+    doVerifyMainDexContains(mainDex, app, singleDexApp, false);
+    doVerifyMainDexContains(mainDex, app, singleDexApp, true);
+  }
+
+  public static AndroidApp generateApplication(List<String> classes, int minApi, int methodCount)
       throws IOException, ExecutionException {
     Timing timing = new Timing("MainDexListTests");
     InternalOptions options = new InternalOptions();

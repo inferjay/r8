@@ -8,11 +8,15 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.maindexlist.MainDexListTests;
+import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
+import com.android.tools.r8.utils.OutputMode;
 import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.StringUtils.BraceType;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -95,9 +100,14 @@ public class CompatDxTests {
   }
 
   @Test
-  public void singleDexProgramIsTooLarge() throws IOException {
+  public void singleDexProgramIsTooLarge() throws IOException, ExecutionException {
+    // Generate an application that will not fit into a single dex file.
+    AndroidApp generated = MainDexListTests.generateApplication(
+        ImmutableList.of("A", "B"), Constants.DEFAULT_ANDROID_API, Constants.U16BIT_MAX / 2 + 1);
+    Path applicationJar = temp.newFile("application.jar").toPath();
+    generated.write(applicationJar, OutputMode.Indexed, true);
     thrown.expect(CompilationError.class);
-    runDexer(MainDexListTests.getTwoLargeClassesAppPath().toString());
+    runDexer(applicationJar.toString());
   }
 
   @Test
