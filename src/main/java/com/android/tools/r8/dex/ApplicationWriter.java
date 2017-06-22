@@ -6,7 +6,6 @@ package com.android.tools.r8.dex;
 import com.android.tools.r8.dex.VirtualFile.FilePerClassDistributor;
 import com.android.tools.r8.dex.VirtualFile.FillFilesDistributor;
 import com.android.tools.r8.dex.VirtualFile.PackageMapDistributor;
-import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexAnnotationSet;
@@ -125,16 +124,6 @@ public class ApplicationWriter {
         assert packageDistribution == null :
             "Cannot combine package distribution definition with file-per-class option.";
         distributor = new FilePerClassDistributor(this);
-      } else if (options.minApiLevel < Constants.ANDROID_L_API
-            && options.mainDexKeepRules.isEmpty()
-            && application.mainDexList.isEmpty()) {
-        if (packageDistribution != null) {
-          throw new CompilationError("Cannot apply package distribution. Multidex is not"
-              + " supported with API level " + options.minApiLevel +"."
-              + " For API level < " + Constants.ANDROID_L_API + ", main dex classes list or"
-              + " rules must be specified.");
-        }
-        distributor = new VirtualFile.MonoDexDistributor(this);
       } else if (packageDistribution != null) {
         distributor = new PackageMapDistributor(this, packageDistribution, executorService);
       } else {

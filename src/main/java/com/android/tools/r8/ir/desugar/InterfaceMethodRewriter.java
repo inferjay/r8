@@ -166,7 +166,7 @@ public final class InterfaceMethodRewriter {
 
   private boolean isInMainDexList(DexType iface) {
     ImmutableSet<DexType> list = converter.application.mainDexList;
-    return list.contains(iface);
+    return list != null && list.contains(iface);
   }
 
   // Represent a static interface method as a method of companion class.
