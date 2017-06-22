@@ -207,7 +207,6 @@ public class R8 {
       RootSet rootSet;
       byte[] proguardSeedsData = null;
       timing.begin("Strip unused code");
-      Set<DexType> mainDexBaseClasses = null;
       try {
         Set<DexType> missingClasses = appInfo.getMissingClasses();
         missingClasses = filterMissingClasses(missingClasses, options.dontWarnPatterns);
@@ -281,7 +280,7 @@ public class R8 {
         // Lets find classes which may have code executed before secondary dex files installation.
         RootSet mainDexRootSet =
             new RootSetBuilder(application, appInfo, options.mainDexKeepRules).run(executorService);
-        mainDexBaseClasses = enqueuer.traceMainDex(mainDexRootSet, timing);
+        Set<DexType> mainDexBaseClasses = enqueuer.traceMainDex(mainDexRootSet, timing);
 
         // Calculate the automatic main dex list according to legacy multidex constraints.
         // Add those classes to an eventual manual list of classes.
