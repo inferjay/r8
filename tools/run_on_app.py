@@ -87,6 +87,7 @@ def GenerateAdditionalProguardConfiguration(temp, outdir):
     return os.path.abspath(file.name)
 
 def main():
+  app_provided_pg_conf = False;
   (options, args) = ParseOptions()
   outdir = options.out
   data = None
@@ -131,6 +132,7 @@ def main():
     if 'pgconf' in values and not options.k:
       for pgconf in values['pgconf']:
         args.extend(['--pg-conf', pgconf])
+        app_provided_pg_conf = True
     if options.k:
       args.extend(['--pg-conf', options.k])
     if 'multidexrules' in values:
@@ -167,13 +169,16 @@ def main():
              options.track_memory_to_file)
     else:
       with utils.TempDir() as temp:
-        if outdir.endswith('.zip') or outdir.endswith('.jar'):
-          pg_outdir = os.path.dirname(outdir)
-        else:
-          pg_outdir = outdir
-        additional_pg_conf = GenerateAdditionalProguardConfiguration(
-            temp, os.path.abspath(pg_outdir))
-        args.extend(['--pg-conf', additional_pg_conf])
+        if app_provided_pg_conf:
+          # Ensure that output of -printmapping and -printseeds go to the output
+          # location and not where the app Proguard configuration places them.
+          if outdir.endswith('.zip') or outdir.endswith('.jar'):
+            pg_outdir = os.path.dirname(outdir)
+          else:
+            pg_outdir = outdir
+          additional_pg_conf = GenerateAdditionalProguardConfiguration(
+              temp, os.path.abspath(pg_outdir))
+          args.extend(['--pg-conf', additional_pg_conf])
         r8.run(args, not options.no_build, not options.no_debug, options.profile,
                options.track_memory_to_file)
 
