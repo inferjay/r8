@@ -103,7 +103,7 @@ public class CompatDxTests {
   public void singleDexProgramIsTooLarge() throws IOException, ExecutionException {
     // Generate an application that will not fit into a single dex file.
     AndroidApp generated = MainDexListTests.generateApplication(
-        ImmutableList.of("A", "B"), Constants.DEFAULT_ANDROID_API, Constants.U16BIT_MAX / 2 + 1);
+        ImmutableList.of("A", "B"), Constants.ANDROID_L_API, Constants.U16BIT_MAX / 2 + 1);
     Path applicationJar = temp.newFile("application.jar").toPath();
     generated.write(applicationJar, OutputMode.Indexed, true);
     thrown.expect(CompilationError.class);
