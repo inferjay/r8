@@ -125,6 +125,8 @@ def main():
     inputs = values['inputs']
 
   args.extend(['--output', outdir])
+  if 'min-sdk-version' in values:
+    args.extend(['--min-sdk-version', values['min-sdk-version']])
 
   if options.compiler == 'r8':
     if 'pgmap' in values:
