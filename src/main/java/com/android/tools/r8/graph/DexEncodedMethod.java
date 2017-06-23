@@ -348,7 +348,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
   }
 
   public String codeToString() {
-    return code == null ? "<no code>" : code.toString();
+    return code == null ? "<no code>" : code.toString(this, null);
   }
 
   @Override

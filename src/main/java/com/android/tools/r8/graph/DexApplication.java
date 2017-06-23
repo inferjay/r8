@@ -174,7 +174,7 @@ public class DexApplication {
         ps.println("Bytecode for");
         ps.println("Class: '" + clazzName + "'");
         ps.println("Method: '" + methodName + "':");
-        ps.println(method.getCode().toString(naming));
+        ps.println(method.getCode().toString(method, naming));
       } catch (IOException e) {
         e.printStackTrace();
       } finally {

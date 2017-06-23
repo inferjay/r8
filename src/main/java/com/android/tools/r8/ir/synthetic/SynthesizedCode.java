@@ -37,7 +37,7 @@ public final class SynthesizedCode extends Code {
 
   @Override
   public final String toString() {
-    return toString(null);
+    return toString(null, null);
   }
 
   private static void registerReachableDefinitionsDefault(UseRegistry registry) {
@@ -61,7 +61,7 @@ public final class SynthesizedCode extends Code {
   }
 
   @Override
-  public final String toString(ClassNameMapper naming) {
+  public final String toString(DexEncodedMethod method, ClassNameMapper naming) {
     return "SynthesizedCode: " + sourceCode.toString();
   }
 }
