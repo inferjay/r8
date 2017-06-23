@@ -125,16 +125,20 @@ public class ApplicationWriter {
             "Cannot combine package distribution definition with file-per-class option.";
         distributor = new FilePerClassDistributor(this);
       } else if (packageDistribution != null) {
+        assert !options.minimalMainDex :
+            "Cannot combine package distribution definition with minimal-main-dex option.";
         distributor = new PackageMapDistributor(this, packageDistribution, executorService);
       } else {
-        distributor = new FillFilesDistributor(this);
+        distributor = new FillFilesDistributor(this, options.minimalMainDex);
       }
       Map<Integer, VirtualFile> newFiles = distributor.run();
 
-      // Write the dex files and the Proguard mapping file in parallel.
+      // Write the dex files and the Proguard mapping file in parallel. Use a linked hash map
+      // as the order matters when addDexProgramData is called below.
       LinkedHashMap<VirtualFile, Future<byte[]>> dexDataFutures = new LinkedHashMap<>();
-      for (Integer index : newFiles.keySet()) {
-        VirtualFile newFile = newFiles.get(index);
+      for (int i = 0; i < newFiles.size(); i++) {
+        VirtualFile newFile = newFiles.get(i);
+        assert newFile.getId() == i;
         if (!newFile.isEmpty()) {
           dexDataFutures.put(newFile, executorService.submit(() -> writeDexFile(newFile)));
         }

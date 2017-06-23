@@ -26,6 +26,7 @@ public class R8Command extends BaseCommand {
   public static class Builder extends BaseCommand.Builder<R8Command, Builder> {
 
     private final List<Path> mainDexRules = new ArrayList<>();
+    private boolean minimalMainDex = false;
     private final List<Path> proguardConfigFiles = new ArrayList<>();
     private Optional<Boolean> treeShaking = Optional.empty();
     private Optional<Boolean> minification = Optional.empty();
@@ -76,6 +77,16 @@ public class R8Command extends BaseCommand {
       return this;
     }
 
+    /**
+     * Request minimal main dex generated when main dex rules are used.
+     *
+     * The main purpose of this is to verify that the main dex rules are sufficient
+     * for running on a platform without native multi dex support.
+     */
+    public Builder setMinimalMainDex(boolean value) {
+      minimalMainDex = value;
+      return this;
+    }
     /**
      * Add proguard configuration file resources.
      */
@@ -161,6 +172,7 @@ public class R8Command extends BaseCommand {
           getOutputPath(),
           getOutputMode(),
           mainDexKeepRules,
+          minimalMainDex,
           configuration,
           getMode(),
           getMinApiLevel(),
@@ -196,6 +208,7 @@ public class R8Command extends BaseCommand {
       "  --help                  # Print this message."));
 
   private final ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
+  private final boolean minimalMainDex;
   private final ProguardConfiguration proguardConfiguration;
   private final boolean useTreeShaking;
   private final boolean useMinification;
@@ -259,6 +272,8 @@ public class R8Command extends BaseCommand {
         builder.setMinification(false);
       } else if (arg.equals("--multidex-rules")) {
         builder.addMainDexRules(Paths.get(args[++i]));
+      } else if (arg.equals("--minimal-maindex")) {
+        builder.setMinimalMainDex(true);
       } else if (arg.equals("--pg-conf")) {
         builder.addProguardConfigurationFiles(Paths.get(args[++i]));
       } else if (arg.equals("--pg-map")) {
@@ -300,6 +315,7 @@ public class R8Command extends BaseCommand {
       Path outputPath,
       OutputMode outputMode,
       ImmutableList<ProguardConfigurationRule> mainDexKeepRules,
+      boolean minimalMainDex,
       ProguardConfiguration proguardConfiguration,
       CompilationMode mode,
       int minApiLevel,
@@ -311,6 +327,7 @@ public class R8Command extends BaseCommand {
     assert mainDexKeepRules != null;
     assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";
     this.mainDexKeepRules = mainDexKeepRules;
+    this.minimalMainDex = minimalMainDex;
     this.proguardConfiguration = proguardConfiguration;
     this.useTreeShaking = useTreeShaking;
     this.useMinification = useMinification;
@@ -320,6 +337,7 @@ public class R8Command extends BaseCommand {
   private R8Command(boolean printHelp, boolean printVersion) {
     super(printHelp, printVersion);
     mainDexKeepRules = ImmutableList.of();
+    minimalMainDex = false;
     proguardConfiguration = null;
     useTreeShaking = false;
     useMinification = false;
@@ -376,6 +394,7 @@ public class R8Command extends BaseCommand {
     internal.classObfuscationDictionary = proguardConfiguration.getClassObfuscationDictionary();
     internal.obfuscationDictionary = proguardConfiguration.getObfuscationDictionary();
     internal.mainDexKeepRules = mainDexKeepRules;
+    internal.minimalMainDex = minimalMainDex;
     internal.keepRules = proguardConfiguration.getRules();
     internal.dontWarnPatterns = proguardConfiguration.getDontWarnPatterns();
     internal.outputMode = getOutputMode();
