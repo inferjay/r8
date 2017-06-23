@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.ir.code.MoveType;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,19 +61,19 @@ public class DexDebugEntryBuilder {
     DexCode code = method.getCode().asDexCode();
     DexDebugInfo info = code.getDebugInfo();
     int argumentRegister = code.registerSize - code.incomingRegisterSize;
-    int argumentCount = code.incomingRegisterSize;
     if (!method.accessFlags.isStatic()) {
-      --argumentCount;
       DexString name = factory.thisName;
       DexType type = method.method.getHolder();
-      startLocal(argumentRegister++, name, type, null);
+      startLocal(argumentRegister, name, type, null);
+      argumentRegister += MoveType.fromDexType(type).requiredRegisters();
     }
     DexType[] types = method.method.proto.parameters.values;
     DexString[] names = info.parameters;
-    for (int i = 0; i < argumentCount; i++) {
+    for (int i = 0; i < types.length; i++) {
       // If null, the parameter has a parameterized type and the local is introduced in the stream.
       if (names[i] != null) {
-        startLocal(argumentRegister++, names[i], types[i], null);
+        startLocal(argumentRegister, names[i], types[i], null);
+        argumentRegister += MoveType.fromDexType(types[i]).requiredRegisters();
       }
     }
     currentLine = info.startLine;
