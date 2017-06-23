@@ -112,7 +112,7 @@ public class JarCode extends Code {
   }
 
   @Override
-  public String toString(ClassNameMapper naming) {
+  public String toString(DexEncodedMethod method, ClassNameMapper naming) {
     return toString();
   }
 

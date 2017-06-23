@@ -19,7 +19,7 @@ public abstract class Code extends CanonicalizedDexItem {
 
   public abstract String toString();
 
-  public abstract String toString(ClassNameMapper naming);
+  public abstract String toString(DexEncodedMethod method, ClassNameMapper naming);
 
   public boolean isDexCode() {
     return false;

@@ -15,9 +15,11 @@ import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.StringUtils;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -157,10 +159,10 @@ public class DexCode extends Code {
   }
 
   public String toString() {
-    return toString(null);
+    return toString(null, null);
   }
 
-  public String toString(ClassNameMapper naming) {
+  public String toString(DexEncodedMethod method, ClassNameMapper naming) {
     StringBuilder builder = new StringBuilder();
     builder.append("registers: ").append(registerSize);
     builder.append(", inputs: ").append(incomingRegisterSize);
@@ -168,12 +170,22 @@ public class DexCode extends Code {
     builder.append("------------------------------------------------------------\n");
     builder.append("inst#  offset  instruction         arguments\n");
     builder.append("------------------------------------------------------------\n");
+    DexDebugEntry debugInfo = null;
+    Iterator<DexDebugEntry> debugInfoIterator = Collections.emptyIterator();
+    if (getDebugInfo() != null && method != null) {
+      debugInfoIterator = new DexDebugEntryBuilder(method, new DexItemFactory()).build().iterator();
+      debugInfo = debugInfoIterator.hasNext() ? debugInfoIterator.next() : null;
+    }
     int instructionNumber = 0;
     for (Instruction insn : instructions) {
       StringUtils.appendLeftPadded(builder, Integer.toString(instructionNumber++), 5);
       builder.append(": ")
           .append(insn.toString(naming))
           .append('\n');
+      if (debugInfo != null && debugInfo.address == insn.getOffset()) {
+        builder.append("      ").append(debugInfo).append("\n");
+        debugInfo = debugInfoIterator.hasNext() ? debugInfoIterator.next() : null;
+      }
     }
     if (tries.length > 0) {
       builder.append("Tries (numbers are offsets)\n");
