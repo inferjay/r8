@@ -25,6 +25,7 @@ import com.android.tools.r8.ir.code.Value.DebugInfo;
 import com.android.tools.r8.ir.code.Xor;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.utils.CfgPrinter;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.HashMultiset;
@@ -109,6 +110,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   private final IRCode code;
   // Number of registers used for arguments.
   private final int numberOfArgumentRegisters;
+  // Compiler options.
+  private final InternalOptions options;
 
   // Mapping from basic blocks to the set of values live at entry to that basic block.
   private Map<BasicBlock, Set<Value>> liveAtEntrySets = new IdentityHashMap<>();
@@ -144,8 +147,9 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   // register.
   private boolean hasDedicatedMoveExceptionRegister = false;
 
-  public LinearScanRegisterAllocator(IRCode code) {
+  public LinearScanRegisterAllocator(IRCode code, InternalOptions options) {
     this.code = code;
+    this.options = options;
     int argumentRegisters = 0;
     for (Instruction instruction : code.blocks.getFirst().getInstructions()) {
       if (instruction.isArgument()) {
@@ -919,6 +923,13 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     if (mode == ArgumentReuseMode.ALLOW_ARGUMENT_REUSE) {
       // The sentinel registers cannot be used and we block them.
       freePositions.set(0, 0, false);
+      if (options.debug && !code.method.accessFlags.isStatic()) {
+        // If we are generating debug information, we pin the this value register since the
+        // debugger expects to always be able to find it in the input register.
+        assert numberOfArgumentRegisters > 0;
+        assert preArgumentSentinelValue.getNextConsecutive().requiredRegisters() == 1;
+        freePositions.set(1, 0, false);
+      }
       int lastSentinelRegister = numberOfArgumentRegisters + NUMBER_OF_SENTINEL_REGISTERS - 1;
       if (lastSentinelRegister <= registerConstraint) {
         freePositions.set(lastSentinelRegister, 0, false);

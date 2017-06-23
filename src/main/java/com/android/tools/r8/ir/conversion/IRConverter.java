@@ -556,7 +556,7 @@ public class IRConverter {
     // Always perform dead code elimination before register allocation. The register allocator
     // does not allow dead code (to make sure that we do not waste registers for unneeded values).
     DeadCodeRemover.removeDeadCode(code, codeRewriter, options);
-    LinearScanRegisterAllocator registerAllocator = new LinearScanRegisterAllocator(code);
+    LinearScanRegisterAllocator registerAllocator = new LinearScanRegisterAllocator(code, options);
     registerAllocator.allocateRegisters(options.debug);
     printMethod(code, "After register allocation (non-SSA)");
     printLiveRanges(registerAllocator, "Final live ranges.");
