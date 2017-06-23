@@ -109,6 +109,7 @@ def cloudDependencies = [
         "third_party": [
                 "android_jar/lib-v14.tar.gz",
                 "android_jar/lib-v19.tar.gz",
+                "android_jar/lib-v21.tar.gz",
                 "android_jar/lib-v24.tar.gz",
                 "android_jar/lib-v25.tar.gz",
                 "android_jar/lib-v26.tar.gz",
