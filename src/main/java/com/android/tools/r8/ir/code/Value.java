@@ -341,9 +341,6 @@ public class Value {
   }
 
   public boolean internalComputeNeedsRegister() {
-    if (getLocalInfo() != null) {
-      return true;
-    }
     if (!isConstant()) {
       return true;
     }
@@ -368,7 +365,7 @@ public class Value {
     StringBuilder builder = new StringBuilder();
     builder.append("v");
     builder.append(number);
-    boolean isConstant = definition != null && isConstant();
+    boolean isConstant = definition != null && definition.isConstNumber();
     boolean hasLocalInfo = getLocalInfo() != null;
     if (isConstant || hasLocalInfo) {
       builder.append("(");
@@ -396,12 +393,12 @@ public class Value {
   }
 
   public ConstInstruction getConstInstruction() {
-    assert definition.isOutConstant();
+    assert isConstant();
     return definition.getOutConstantConstInstruction();
   }
 
   public boolean isConstant() {
-    return definition.isOutConstant();
+    return definition.isOutConstant() && getLocalInfo() == null;
   }
 
   public boolean isPhi() {

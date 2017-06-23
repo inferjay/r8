@@ -433,9 +433,13 @@ public class IRConverter {
       memberValuePropagation.rewriteWithConstantValues(code);
     }
     if (options.removeSwitchMaps) {
+      // TODO(zerny): Should we support removeSwitchMaps in debug mode? b/62936642
+      assert !options.debug;
       codeRewriter.removeSwitchMaps(code);
     }
     if (options.inlineAccessors && inliner != null) {
+      // TODO(zerny): Should we support inlining in debug mode? b/62937285
+      assert !options.debug;
       inliner.performInlining(method, code, callGraph);
     }
     codeRewriter.rewriteLongCompareAndRequireNonNull(code, options.canUseObjectsNonNull());

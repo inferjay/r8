@@ -28,7 +28,7 @@ public class ConstNumber extends ConstInstruction {
     // We create const numbers after register allocation for rematerialization of values. Those
     // are all for fixed register values. All other values that are used as the destination for
     // const number instructions should be marked as constants.
-    assert dest.isFixedRegisterValue() || dest.isConstant();
+    assert dest.isFixedRegisterValue() || dest.definition.isConstNumber();
     assert type != ConstType.OBJECT;
     this.type = type;
     this.value = value;
