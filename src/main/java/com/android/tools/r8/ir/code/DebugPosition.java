@@ -35,7 +35,7 @@ public class DebugPosition extends Instruction {
 
   @Override
   public void buildDex(DexBuilder builder) {
-    builder.addNop(this);
+    builder.addDebugPosition(this);
   }
 
   @Override

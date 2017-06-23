@@ -27,14 +27,8 @@ public class BackBranchToSelfTestRunner extends DebugInfoTestBase {
   }
 
   private void checkBackBranchToSelf(DebugInfoInspector info, boolean dx) {
-    if (dx) {
-      info.checkStartLine(10);
-      // b/37494646 D8/R8 if-simplification has replaced if by a goto and lost this position.
-      info.checkLineHasExactLocals(10, "loop", "boolean");
-    } else {
-      // D8/R8 will always start at the first debuggable line.
-      info.checkStartLine(13);
-    }
+    info.checkStartLine(10);
+    info.checkLineHasExactLocals(10, "loop", "boolean");
     info.checkNoLine(11);
     info.checkNoLine(12);
     info.checkLineHasExactLocals(13, "loop", "boolean");

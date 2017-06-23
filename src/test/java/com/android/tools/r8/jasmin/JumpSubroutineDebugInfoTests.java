@@ -60,8 +60,7 @@ public class JumpSubroutineDebugInfoTests extends JasminTestBase {
     assertEquals(expected, artResult);
 
     DebugInfoInspector info = new DebugInfoInspector(d8App, clazz.name, foo);
-    // The first debuggable line will be line 3.
-    info.checkStartLine(3);
+    info.checkStartLine(1);
     // Check the subroutine line is duplicated 3 times.
     assertEquals(3, info.checkLineHasExactLocals(3, "x", "int"));
   }

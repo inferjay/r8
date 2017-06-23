@@ -44,6 +44,7 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.Argument;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.CatchHandlers;
+import com.android.tools.r8.ir.code.DebugPosition;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.If;
 import com.android.tools.r8.ir.code.InstructionIterator;
@@ -331,8 +332,13 @@ public class DexBuilder {
   public void addGoto(com.android.tools.r8.ir.code.Goto jump) {
     if (jump.getTarget() != nextBlock) {
       add(jump, new GotoInfo(jump));
+      return;
+    }
+    List<com.android.tools.r8.ir.code.Instruction> instructions = jump.getBlock().getInstructions();
+    if (instructions.size() > 1) {
+      addFallThroughOrNop(jump, instructions.get(instructions.size() - 2), nextBlock.entry());
     } else {
-      addNop(jump);
+      addFallThrough(jump);
     }
   }
 
@@ -345,8 +351,30 @@ public class DexBuilder {
     add(move, new MoveInfo(move));
   }
 
-  public void addNop(com.android.tools.r8.ir.code.Instruction instruction) {
+  public void addFallThrough(com.android.tools.r8.ir.code.Instruction instruction) {
     add(instruction, new FallThroughInfo(instruction));
+  }
+
+  private void addFallThroughOrNop(
+      com.android.tools.r8.ir.code.Instruction key,
+      com.android.tools.r8.ir.code.Instruction instruction,
+      com.android.tools.r8.ir.code.Instruction nextInstruction) {
+    if (nextInstruction != null
+        && instruction.isDebugPosition()
+        && nextInstruction.isDebugPosition()) {
+      add(key, new FixedSizeInfo(key, new Nop()));
+    } else {
+      addFallThrough(key);
+    }
+  }
+
+  public void addDebugPosition(DebugPosition position) {
+    BasicBlock block = position.getBlock();
+    int nextIndex = block.getInstructions().indexOf(position) + 1;
+    List<com.android.tools.r8.ir.code.Instruction> instructions = block.getInstructions();
+    com.android.tools.r8.ir.code.Instruction nextInstruction =
+        nextIndex < instructions.size() ? instructions.get(nextIndex) : null;
+    addFallThroughOrNop(position, position, nextInstruction);
   }
 
   public void add(com.android.tools.r8.ir.code.Instruction ir, Instruction dex) {
