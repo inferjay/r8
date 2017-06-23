@@ -79,7 +79,7 @@ public class CodeRewriter {
   private static final int UNKNOWN_CAN_THROW = 0;
   private static final int CAN_THROW = 1;
   private static final int CANNOT_THROW = 2;
-  private static final int MAX_FILL_ARRAY_SIZE = 4 * Constants.KILOBYTE;
+  private static final int MAX_FILL_ARRAY_SIZE = 8 * Constants.KILOBYTE;
 
   private final AppInfo appInfo;
   private final DexItemFactory dexItemFactory;
