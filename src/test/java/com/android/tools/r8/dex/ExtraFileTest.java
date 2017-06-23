@@ -47,6 +47,7 @@ public class ExtraFileTest {
         R8Command.builder()
             .addProgramFiles(original)
             .setOutputPath(out)
+            .setMinApiLevel(Constants.ANDROID_L_API) // Allow native multidex.
             .setProguardMapFile(proguardMap)
             .setPackageDistributionFile(packageMap)
             .build();

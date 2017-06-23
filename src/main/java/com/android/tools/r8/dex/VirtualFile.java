@@ -325,6 +325,27 @@ public class VirtualFile {
     }
   }
 
+  public static class MonoDexDistributor extends DistributorBase {
+    public MonoDexDistributor(ApplicationWriter writer) {
+      super(writer);
+    }
+
+    @Override
+    public Map<Integer, VirtualFile> run() throws ExecutionException, IOException {
+      VirtualFile mainDexFile = new VirtualFile(0, writer.namingLens);
+      nameToFileMap.put(0, mainDexFile);
+
+      for (DexProgramClass programClass : classes) {
+        mainDexFile.addClass(programClass);
+        if (mainDexFile.isFull()) {
+          throw new CompilationError("Cannot fit all classes in a single dex file.");
+        }
+      }
+      mainDexFile.commitTransaction();
+      return nameToFileMap;
+    }
+  }
+
   public static class PackageMapDistributor extends DistributorBase {
     private final PackageDistribution packageDistribution;
     private final ExecutorService executorService;

@@ -10,8 +10,8 @@ public class Constants {
 
   public static final int ANDROID_O_API = 26;
   public static final int ANDROID_N_API = 24;
-  public static final int ANDROID_K_API = 19;
   public static final int ANDROID_L_API = 21;
+  public static final int ANDROID_K_API = 19;
   public static final int DEFAULT_ANDROID_API = 1;
 
   /** dex file version number for Android O (API level 26) */

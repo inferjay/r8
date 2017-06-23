@@ -11,6 +11,7 @@ import com.android.tools.r8.D8Command;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.ArtErrorParser;
@@ -70,6 +71,7 @@ public abstract class CompilationTestBase {
       outputApp = ToolHelper.runR8(builder.build(),
                   options -> {
                     options.printSeeds = false;
+                    options.minApiLevel = Constants.ANDROID_L_API;
                   });
     } else {
       assert compiler == CompilerUnderTest.D8;
@@ -78,6 +80,7 @@ public abstract class CompilationTestBase {
               D8Command.builder()
                   .addProgramFiles(ListUtils.map(inputs, Paths::get))
                   .setMode(mode)
+                  .setMinApiLevel(Constants.ANDROID_L_API)
                   .build());
     }
     Path out = temp.getRoot().toPath().resolve("all.zip");

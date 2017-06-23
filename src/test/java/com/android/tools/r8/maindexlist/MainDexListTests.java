@@ -396,6 +396,7 @@ public class MainDexListTests extends TestBase {
       throws IOException, ExecutionException {
     Timing timing = new Timing("MainDexListTests");
     InternalOptions options = new InternalOptions();
+    options.minApiLevel = minApi;
     DexItemFactory factory = options.itemFactory;
     DexApplication.Builder builder = new DexApplication.Builder(factory, timing);
     for (String clazz : classes) {
