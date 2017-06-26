@@ -81,7 +81,6 @@ VERSIONS = {
           os.path.join(V12_22_BASE, 'mainDexClasses.rules'),
           os.path.join(V12_22_BASE, 'main-dex-classes-release.cfg'),
           os.path.join(V12_22_BASE, 'main_dex_YouTubeRelease_proguard.cfg')],
-      'min-sdk-version' : ANDROID_L_API,
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V12_22_PREFIX],
