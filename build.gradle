@@ -323,6 +323,20 @@ task bisect(type: Jar) {
     }
 }
 
+task DexSegments(type: Jar) {
+    from sourceSets.main.output
+    baseName 'dexsegments'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.DexSegments'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps DexSegments
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
 task sourceJar(type: Jar, dependsOn: classes) {
     classifier = 'src'
     from sourceSets.main.allSource
