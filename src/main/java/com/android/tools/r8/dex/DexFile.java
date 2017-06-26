@@ -29,7 +29,7 @@ public class DexFile {
     version = parseMagic(buffer);
   }
 
-  DexFile(InputStream input) throws IOException {
+  public DexFile(InputStream input) throws IOException {
     // TODO(zerny): Remove dependencies on file names.
     name = "input-stream.dex";
     buffer = ByteBuffer.wrap(ByteStreams.toByteArray(input));

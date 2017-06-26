@@ -54,6 +54,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ShortBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -72,10 +73,16 @@ public class DexFileReader {
   private final ClassKind classKind;
 
   public static Segment[] parseMapFrom(Path file) throws IOException {
-    DexFileReader reader =
-        new DexFileReader(
-            new DexFile(file.toString()), ClassKind.PROGRAM, new DexItemFactory());
-    return reader.parseMap();
+    return parseMapFrom(new DexFile(file.toString()));
+  }
+
+  public static Segment[] parseMapFrom(InputStream stream) throws IOException {
+    return parseMapFrom(new DexFile(stream));
+  }
+
+  private static Segment[] parseMapFrom(DexFile dex) throws IOException {
+    DexFileReader reader = new DexFileReader(dex, ClassKind.PROGRAM, new DexItemFactory());
+    return reader.segments;
   }
 
   public void close() {

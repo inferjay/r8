@@ -30,7 +30,7 @@ public class Segment {
     this.end = end;
   }
 
-  String typeName() {
+  public String typeName() {
     switch (type) {
       case Constants.TYPE_HEADER_ITEM:
         return "Header";

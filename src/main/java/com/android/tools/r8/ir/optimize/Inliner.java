@@ -236,7 +236,7 @@ public class Inliner {
               // The declared target cannot be found so skip inlining.
               continue;
             }
-            boolean forceInline = target.getOptimizationInfo().forceInline();
+            boolean forceInline = result.reason == Reason.FORCE;
             if (!target.isProcessed() && !forceInline) {
               // Do not inline code that was not processed unless we have to force inline.
               continue;
