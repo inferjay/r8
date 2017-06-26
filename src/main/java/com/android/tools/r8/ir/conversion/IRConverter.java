@@ -449,7 +449,6 @@ public class IRConverter {
       Log.debug(getClass(), "Intermediate (SSA) flow graph for %s:\n%s",
           method.toSourceString(), code);
     }
-    codeRewriter.removeUnneededCatchHandlers(code);
     // Dead code removal. Performed after simplifications to remove code that becomes dead
     // as a result of those simplifications. The following optimizations could reveal more
     // dead code which is removed right before register allocation in performRegisterAllocation.
