@@ -987,7 +987,7 @@ public class Outliner {
 
     @Override
     protected boolean computeEquals(Object other) {
-      return outline.equals(outline);
+      return outline.equals(other);
     }
 
     @Override
