@@ -1149,25 +1149,6 @@ public class CodeRewriter {
     assert code.isConsistentSSA();
   }
 
-  public void removeUnneededCatchHandlers(IRCode code) {
-    DominatorTree dominator = new DominatorTree(code);
-    code.clearMarks();
-    for (BasicBlock block : code.blocks) {
-      if (block.hasCatchHandlers() && !block.canThrow()) {
-        CatchHandlers<BasicBlock> handlers = block.getCatchHandlers();
-        for (BasicBlock target : handlers.getUniqueTargets()) {
-          for (BasicBlock unlinked : block.unlink(target, dominator)) {
-            if (!unlinked.isMarked()) {
-              unlinked.mark();
-            }
-          }
-        }
-      }
-    }
-    code.removeMarkedBlocks();
-    assert code.isConsistentSSA();
-  }
-
   public void rewriteLongCompareAndRequireNonNull(IRCode code, boolean canUseObjectsNonNull) {
     InstructionIterator iterator = code.instructionIterator();
 
@@ -1204,7 +1185,6 @@ public class CodeRewriter {
   // Note that addSuppressed() and getSuppressed() methods are final in
   // Throwable, so these changes don't have to worry about overrides.
   public void rewriteThrowableAddAndGetSuppressed(IRCode code) {
-    boolean removeUnneededCatchHandlers = false;
     DexItemFactory.ThrowableMethods throwableMethods = dexItemFactory.throwableMethods;
 
     for (BasicBlock block : code.blocks) {
@@ -1217,15 +1197,12 @@ public class CodeRewriter {
           if (matchesMethodOfThrowable(invokedMethod, throwableMethods.addSuppressed)) {
             // Remove Throwable::addSuppressed(Throwable) call.
             iterator.remove();
-            removeUnneededCatchHandlers = true;
-
           } else if (matchesMethodOfThrowable(invokedMethod, throwableMethods.getSuppressed)) {
             Value destValue = current.outValue();
             if (destValue == null) {
               // If the result of the call was not used we don't create
               // an empty array and just remove the call.
               iterator.remove();
-              removeUnneededCatchHandlers = true;
               continue;
             }
 
@@ -1243,21 +1220,10 @@ public class CodeRewriter {
             NewArrayEmpty newArray = new NewArrayEmpty(destValue, zero,
                 dexItemFactory.createType(dexItemFactory.throwableArrayDescriptor));
             iterator.replaceCurrentInstruction(newArray);
-
-            // NOTE: nothing needs to be changed in catch handlers since we replace
-            //       one throwable instruction with another.
           }
         }
       }
     }
-
-    // If at least one addSuppressed(...) call was removed, or we were able
-    // to remove getSuppressed() call without replacing it with a new empty array,
-    // we need to deal with possible unreachable catch handlers.
-    if (removeUnneededCatchHandlers) {
-      removeUnneededCatchHandlers(code);
-    }
-
     assert code.isConsistentSSA();
   }
 
