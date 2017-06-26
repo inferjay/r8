@@ -7,6 +7,7 @@ package com.android.tools.r8;
 import static com.android.tools.r8.TestCondition.D8_COMPILER;
 import static com.android.tools.r8.TestCondition.R8_AFTER_D8_COMPILER;
 import static com.android.tools.r8.TestCondition.R8_COMPILER;
+import static com.android.tools.r8.TestCondition.R8_NOT_AFTER_D8_COMPILER;
 import static com.android.tools.r8.TestCondition.any;
 import static com.android.tools.r8.TestCondition.match;
 import static com.android.tools.r8.TestCondition.runtimes;
@@ -4415,7 +4416,7 @@ public class JctfTestSpecifications {
           // 1) t02
           // java.lang.AssertionError: Failed to load serialization resource file: serialization/com/google/jctf/test/lib/java/util/concurrent/PriorityBlockingQueue/serialization/PriorityBlockingQueue_serialization_A01.golden.0.ser
 
-          .put("lang.ThreadGroup.destroy.ThreadGroup_destroy_A01", match(R8_COMPILER))
+          .put("lang.ThreadGroup.destroy.ThreadGroup_destroy_A01", match(R8_NOT_AFTER_D8_COMPILER))
           // 1) t05
           // java.lang.AssertionError: Destroyed thread group was not finalized
 
