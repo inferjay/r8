@@ -90,7 +90,7 @@ public class ConstNumber extends ConstInstruction {
   @Override
   public void buildDex(DexBuilder builder) {
     if (!dest().needsRegister()) {
-      builder.addNop(this);
+      builder.addFallThrough(this);
       return;
     }
 
