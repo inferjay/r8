@@ -215,7 +215,7 @@ public class PeepholeOptimizer {
         } else if (current.outValue() != null && current.outValue().needsRegister()) {
           Value outValue = current.outValue();
           int instructionNumber = current.getNumber();
-          if (current.isConstNumber()) {
+          if (outValue.isConstant() && current.isConstNumber()) {
             if (constantSpilledAtDefinition(current.asConstNumber(), allocator)) {
               // Remove constant instructions that are spilled at their definition and are
               // therefore unused.
