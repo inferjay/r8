@@ -406,6 +406,9 @@ final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
           add(builder -> builder.addConversion(to, type, result, register));
           return result;
         }
+        default:
+          // exception is thrown below
+          break;
       }
     }
 

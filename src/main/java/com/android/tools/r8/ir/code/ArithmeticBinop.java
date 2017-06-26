@@ -5,6 +5,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.Instruction;
+import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 
 public abstract class ArithmeticBinop extends Binop {
@@ -108,6 +109,8 @@ public abstract class ArithmeticBinop extends Binop {
         case LONG:
           instruction = CreateLong2Addr(dest, right);
           break;
+        default:
+          throw new Unreachable("Unexpected numeric type " + type.name());
       }
     } else if (!rightValue().needsRegister()) {
       assert !isSub();  // Constants in instructions for sub must be handled in subclass Sub.
@@ -134,6 +137,8 @@ public abstract class ArithmeticBinop extends Binop {
         case LONG:
           instruction = CreateLong(dest, left, right);
           break;
+        default:
+          throw new Unreachable("Unexpected numeric type " + type.name());
       }
     }
     builder.add(this, instruction);
