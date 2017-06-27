@@ -82,7 +82,7 @@ public class InliningOracle {
     return candidate;
   }
 
-  private DexEncodedMethod doubleInlining(DexEncodedMethod candidate) {
+  private synchronized DexEncodedMethod doubleInlining(DexEncodedMethod candidate) {
     if (!inliner.applyDoubleInlining) {
       if (inliner.doubleInlineeCandidates.containsKey(candidate)) {
         // Both calls can be inlined.
@@ -222,7 +222,7 @@ public class InliningOracle {
     return (clazz != null) && (!clazz.hasClassInitializer());
   }
 
-  private boolean isDoubleInliningTarget(DexEncodedMethod candidate) {
+  private synchronized boolean isDoubleInliningTarget(DexEncodedMethod candidate) {
     // 10 is found from measuring.
     return callGraph.hasDoubleCallSite(candidate)
         && candidate.getCode().isDexCode()
