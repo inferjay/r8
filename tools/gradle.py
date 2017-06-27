@@ -33,13 +33,16 @@ def EnsureGradle():
   else:
     print 'gradle.py: Gradle binary present'
 
-def RunGradle(args):
+def RunGradle(args, throw_on_failure=True):
   EnsureGradle()
   cmd = [GRADLE]
   cmd.extend(args)
   utils.PrintCmd(cmd)
   with utils.ChangedWorkingDirectory(utils.REPO_ROOT):
-    subprocess.check_call(cmd)
+    return_value = subprocess.call(cmd)
+    if throw_on_failure:
+      raise
+    return return_value
 
 def Main():
   RunGradle(sys.argv[1:])

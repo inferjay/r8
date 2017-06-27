@@ -11,13 +11,19 @@ import os
 import gradle
 import optparse
 import sys
+import utils
+import uuid
 
 ALL_ART_VMS = ["default", "7.0.0", "6.0.1", "5.1.1"]
+BUCKET = 'r8-test-results'
 
 def ParseOptions():
   result = optparse.OptionParser()
   result.add_option('--no_internal',
       help='Do not run Google internal tests.',
+      default=False, action='store_true')
+  result.add_option('--archive_failures',
+      help='Upload test results to cloud storage on failure.',
       default=False, action='store_true')
   result.add_option('--only_internal',
       help='Only run Google internal tests.',
@@ -53,6 +59,14 @@ def ParseOptions():
       default=False, action='store_true')
 
   return result.parse_args()
+
+def archive_failures():
+  upload_dir = os.path.join(utils.REPO_ROOT, 'build', 'reports', 'tests')
+  u_dir = uuid.uuid4()
+  destination = 'gs://%s/%s' % (BUCKET, u_dir)
+  utils.upload_html_to_cloud_storage(upload_dir, destination)
+  url = 'http://storage.googleapis.com/%s/%s/index.html' % (BUCKET, u_dir)
+  print 'Test results available at: %s' % url
 
 def Main():
   (options, args) = ParseOptions()
@@ -94,7 +108,12 @@ def Main():
     gradle_args.append('jctfTestsClasses')
   vms_to_test = [options.dex_vm] if options.dex_vm != "all" else ALL_ART_VMS
   for art_vm in vms_to_test:
-    gradle.RunGradle(gradle_args + ['-Pdex_vm=%s' % art_vm])
+    return_code = gradle.RunGradle(gradle_args + ['-Pdex_vm=%s' % art_vm],
+                                   throw_on_failure=False)
+    if return_code != 0:
+      if options.archive_failures:
+        archive_failures()
+      return return_code
 
 if __name__ == '__main__':
   sys.exit(Main())
