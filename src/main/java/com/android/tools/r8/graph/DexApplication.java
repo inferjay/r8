@@ -306,8 +306,6 @@ public class DexApplication {
     private ClasspathClassCollection classpathClasses;
     private LibraryClassCollection libraryClasses;
 
-    public final Hashtable<DexCode, DexCode> codeItems = new Hashtable<>();
-
     public final DexItemFactory dexItemFactory;
     public ClassNameMapper proguardMap;
     private final Timing timing;
