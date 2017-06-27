@@ -21,7 +21,6 @@ import com.android.tools.r8.ir.code.Or;
 import com.android.tools.r8.ir.code.Phi;
 import com.android.tools.r8.ir.code.Sub;
 import com.android.tools.r8.ir.code.Value;
-import com.android.tools.r8.ir.code.Value.DebugInfo;
 import com.android.tools.r8.ir.code.Xor;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.utils.CfgPrinter;
@@ -1809,8 +1808,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     code.blocks.forEach(BasicBlock::clearUserInfo);
   }
 
-  private Value createValue(MoveType type, DebugInfo debugInfo) {
-    Value value = code.createValue(type, debugInfo);
+  private Value createValue(MoveType type) {
+    Value value = code.createValue(type, null);
     value.setNeedsRegister(true);
     return value;
   }
@@ -1830,7 +1829,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       Value previous = null;
       for (int i = 0; i < arguments.size(); i++) {
         Value argument = arguments.get(i);
-        Value newArgument = createValue(argument.outType(), argument.getDebugInfo());
+        Value newArgument = createValue(argument.outType());
         Move move = new Move(newArgument, argument);
         move.setBlock(invoke.getBlock());
         replaceArgument(invoke, i, newArgument);
@@ -1857,7 +1856,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   private Value createSentinelRegisterValue() {
-    return createValue(MoveType.OBJECT, null);
+    return createValue(MoveType.OBJECT);
   }
 
   private LiveIntervals createSentinelLiveInterval(Value sentinelValue) {
