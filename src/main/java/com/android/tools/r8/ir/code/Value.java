@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.regalloc.LiveIntervals;
 import com.android.tools.r8.utils.InternalOptions;
@@ -349,6 +350,15 @@ public class Value {
     }
     for (Instruction user : uniqueUsers()) {
       if (user.needsValueInRegister(this)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean hasRegisterConstraint() {
+    for (Instruction instruction : uniqueUsers()) {
+      if (instruction.maxInValueRegister() != Constants.U16BIT_MAX) {
         return true;
       }
     }

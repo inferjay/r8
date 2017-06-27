@@ -647,6 +647,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       // consecutive arguments now and add hints to the move sources. This looks forward
       // and propagate hints backwards to avoid many moves in connection with ranged invokes.
       allocateArgumentIntervalsWithSrc(unhandledInterval);
+      if (unhandledInterval.getRegister() != NO_REGISTER) {
+        // The value itself could be in the chain that has now gotten registers allocated.
+        continue;
+      }
 
       int start = unhandledInterval.getStart();
       // Check for active intervals that expired or became inactive.
@@ -1829,11 +1833,27 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       Value previous = null;
       for (int i = 0; i < arguments.size(); i++) {
         Value argument = arguments.get(i);
-        Value newArgument = createValue(argument.outType());
-        Move move = new Move(newArgument, argument);
-        move.setBlock(invoke.getBlock());
-        replaceArgument(invoke, i, newArgument);
-        insertAt.add(move);
+        Value newArgument = argument;
+        // In debug mode, we have debug instructions that are also moves. Do not generate another
+        // move if there already is a move instruction that we can use. We generate moves if:
+        //
+        // 1. the argument is not defined by a move,
+        //
+        // 2. the argument is already linked or would cause a cycle if linked, or
+        //
+        // 3. the argument has a register constraint (the argument moves are there to make the
+        //    input value to a ranged invoke unconstrained.)
+        if (argument.definition == null ||
+            !argument.definition.isMove() ||
+            argument.isLinked() ||
+            argument == previous ||
+            argument.hasRegisterConstraint()) {
+          newArgument = createValue(argument.outType());
+          Move move = new Move(newArgument, argument);
+          move.setBlock(invoke.getBlock());
+          replaceArgument(invoke, i, newArgument);
+          insertAt.add(move);
+        }
         if (previous != null) {
           previous.linkTo(newArgument);
         }
