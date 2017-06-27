@@ -4,30 +4,26 @@
 package com.android.tools.r8.dex;
 
 public class Segment {
-
-  final int type;
-  final int size;
+  public final int type;
+  public final int length;
   public final int offset;
-  int end;
+  private int end;
 
-  public Segment(int type, int unused, int size, int offset) {
+  public Segment(int type, int unused, int length, int offset) {
     this.type = type;
     assert unused == 0;
-    this.size = size;
+    this.length = length;
     this.offset = offset;
     this.end = -1;
   }
 
-  public int getType() {
-    return type;
-  }
-
-  public int getSize() {
-    return size;
-  }
-
   void setEnd(int end) {
     this.end = end;
+  }
+
+  // Returns the byte size of this segment.
+  public int size() {
+    return end - offset;
   }
 
   public String typeName() {
@@ -74,6 +70,6 @@ public class Segment {
   }
 
   public String toString() {
-    return typeName() + " @" + offset + " " + size;
+    return typeName() + " @" + offset + " " + length;
   }
 }

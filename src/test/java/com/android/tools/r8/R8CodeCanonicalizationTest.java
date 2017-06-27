@@ -24,8 +24,8 @@ public class R8CodeCanonicalizationTest {
   private int readNumberOfCodes(Path file) throws IOException {
     Segment[] segments = DexFileReader.parseMapFrom(file);
     for (Segment segment : segments) {
-      if (segment.getType() == Constants.TYPE_CODE_ITEM) {
-        return segment.getSize();
+      if (segment.type == Constants.TYPE_CODE_ITEM) {
+        return segment.length;
       }
     }
     return 0;

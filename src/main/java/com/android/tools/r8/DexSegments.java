@@ -117,7 +117,7 @@ public class DexSegments {
       for (Resource resource : app.getDexProgramResources()) {
         for (Segment segment: DexFileReader.parseMapFrom(resource.getStream(closer))) {
           int value = result.computeIfAbsent(segment.typeName(), (key) -> 0);
-          result.put(segment.typeName(), value + segment.getSize());
+          result.put(segment.typeName(), value + segment.size());
         }
       }
     }
