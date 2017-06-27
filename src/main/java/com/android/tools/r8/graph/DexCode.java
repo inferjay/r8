@@ -4,6 +4,7 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.code.Instruction;
+import com.android.tools.r8.code.ReturnVoid;
 import com.android.tools.r8.code.SwitchPayload;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
@@ -133,6 +134,10 @@ public class DexCode extends Code {
       return Arrays.equals(instructions, o.instructions);
     }
     return false;
+  }
+
+  boolean isEmptyVoidMethod() {
+    return instructions.length == 1 && instructions[0] instanceof ReturnVoid;
   }
 
   @Override

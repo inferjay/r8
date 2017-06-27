@@ -437,6 +437,9 @@ public class IRConverter {
       assert !options.debug;
       codeRewriter.removeSwitchMaps(code);
     }
+    if (options.disableAssertions) {
+      codeRewriter.disableAssertions(code);
+    }
     if (options.inlineAccessors && inliner != null) {
       // TODO(zerny): Should we support inlining in debug mode? b/62937285
       assert !options.debug;

@@ -680,6 +680,65 @@ public class CodeRewriter {
     assert code.isConsistentGraph();
   }
 
+  // For supporting assert javac adds the static field $assertionsDisabled to all classes which
+  // have methods with assertions. This is used to support the Java VM -ea flag.
+  //
+  //  The class:
+  //
+  //  class A {
+  //    void m() {
+  //      assert xxx;
+  //    }
+  //  }
+  //
+  //  Is compiled into:
+  //
+  //  class A {
+  //    static boolean $assertionsDisabled;
+  //    static {
+  //      $assertionsDisabled = A.class.desiredAssertionStatus();
+  //    }
+  //
+  //    // method with "assert xxx";
+  //    void m() {
+  //      if (!$assertionsDisabled) {
+  //        if (xxx) {
+  //          throw new AssertionError(...);
+  //        }
+  //      }
+  //    }
+  //  }
+  //
+  //  With the rewriting below (and other rewritings) the resulting code is:
+  //
+  //  class A {
+  //    void m() {
+  //    }
+  //  }
+  //
+  public void disableAssertions(IRCode code) {
+    InstructionIterator iterator = code.instructionIterator();
+    while (iterator.hasNext()) {
+      Instruction current = iterator.next();
+      if (current.isInvokeMethod()) {
+        InvokeMethod invoke = current.asInvokeMethod();
+        if (invoke.getInvokedMethod() == dexItemFactory.classMethods.desiredAssertionStatus) {
+          iterator.replaceCurrentInstruction(code.createFalse());
+        }
+      } else if (current.isStaticPut()) {
+        StaticPut staticPut = current.asStaticPut();
+        if (staticPut.getField().name == dexItemFactory.assertionsDisabled) {
+          iterator.remove();
+        }
+      } else if (current.isStaticGet()) {
+        StaticGet staticGet = current.asStaticGet();
+        if (staticGet.getField().name == dexItemFactory.assertionsDisabled) {
+          iterator.replaceCurrentInstruction(code.createTrue());
+        }
+      }
+    }
+  }
+
   private boolean canBeFolded(Instruction instruction) {
     return (instruction.isBinop() && instruction.asBinop().canBeFolded()) ||
         (instruction.isUnop() && instruction.asUnop().canBeFolded());

@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.naming.NamingLens;
 import java.io.UTFDataFormatException;
@@ -246,7 +247,8 @@ public class DexString extends IndexedDexItem implements PresortedComparable<Dex
     // '<' SimpleName '>' should be valid. However, the art verifier only allows <init>
     // and <clinit> which is reasonable.
     if ((string.charAt(0) == '<') &&
-        (string.equals("<init>") || string.equals("<clinit>"))) {
+        (string.equals(Constants.INSTANCE_INITIALIZER_NAME) ||
+            string.equals(Constants.CLASS_INITIALIZER_NAME))) {
       return true;
     }
     for (int i = 0; i < string.length(); i++) {

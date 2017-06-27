@@ -103,7 +103,7 @@ public class ArrayPut extends Instruction {
   }
 
   @Override
-  public boolean canBeDeadCode(InternalOptions options) {
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     // ArrayPut has side-effects on input values.
     return false;
   }

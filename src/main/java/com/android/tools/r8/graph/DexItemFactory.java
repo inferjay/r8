@@ -83,6 +83,8 @@ public class DexItemFactory {
 
   public DexString getClassMethodName = createString("getClass");
   public DexString ordinalMethodName = createString("ordinal");
+  public final DexString desiredAssertionStatusMethodName = createString("desiredAssertionStatus");
+  public final DexString assertionsDisabled = createString("$assertionsDisabled");
 
   public DexString stringDescriptor = createString("Ljava/lang/String;");
   public DexString objectDescriptor = createString("Ljava/lang/Object;");
@@ -134,6 +136,7 @@ public class DexItemFactory {
   public ObjectMethods objectMethods = new ObjectMethods();
   public LongMethods longMethods = new LongMethods();
   public ThrowableMethods throwableMethods = new ThrowableMethods();
+  public ClassMethods classMethods = new ClassMethods();
 
   public void clearSubtypeInformation() {
     types.values().forEach(DexType::clearSubtypeInformation);
@@ -181,6 +184,17 @@ public class DexItemFactory {
           createString("requireNonNull"), objectDescriptor, new DexString[]{objectDescriptor});
     }
   }
+
+  public class ClassMethods {
+
+    public DexMethod desiredAssertionStatus;
+
+    private ClassMethods() {
+      desiredAssertionStatus = createMethod(classDescriptor,
+          desiredAssertionStatusMethodName, booleanDescriptor, new DexString[]{});
+    }
+  }
+
 
   public class StringBuildingMethods {
 

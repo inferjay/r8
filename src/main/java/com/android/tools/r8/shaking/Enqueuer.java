@@ -348,10 +348,11 @@ public class Enqueuer {
       }
       // We also need to add the corresponding <clinit> to the set of live methods, as otherwise
       // static field initialization (and other class-load-time sideeffects) will not happen.
-      DexEncodedMethod clinit = holder.getClassInitializer();
-      if (clinit != null) {
+      if (holder.hasNonTrivialClassInitializer()) {
+        DexEncodedMethod clinit = holder.getClassInitializer();
         markDirectStaticOrConstructorMethodAsLive(clinit, KeepReason.reachableFromLiveType(type));
       }
+
       // If this type has deferred annotations, we have to process those now, too.
       Set<DexAnnotation> annotations = deferredAnnotations.remove(type);
       if (annotations != null) {

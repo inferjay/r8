@@ -252,7 +252,7 @@ public abstract class Instruction {
   }
 
   /** Returns true is this instruction can be treated as dead code if its outputs are not used. */
-  public boolean canBeDeadCode(InternalOptions options) {
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     return !instructionInstanceCanThrow();
   }
 

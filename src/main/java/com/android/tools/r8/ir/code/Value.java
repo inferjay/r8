@@ -507,7 +507,7 @@ public class Value {
     // currently active values.
     active.add(this);
     for (Instruction instruction : uniqueUsers()) {
-      if (!instruction.canBeDeadCode(options)) {
+      if (!instruction.canBeDeadCode(null, options)) {
         return false;
       }
       Value outValue = instruction.outValue();

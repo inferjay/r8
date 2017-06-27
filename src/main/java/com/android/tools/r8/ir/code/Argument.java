@@ -21,7 +21,7 @@ public class Argument extends Instruction {
   }
 
   @Override
-  public boolean canBeDeadCode(InternalOptions options) {
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     // Never remove argument instructions. That would change the signature of the method.
     // TODO(ager): If we can tell that a method never uses an argument we might be able to
     // rewrite the signature and call-sites.

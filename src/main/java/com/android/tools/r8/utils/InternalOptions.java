@@ -74,6 +74,7 @@ public class InternalOptions {
   public boolean allowAccessModification = true;
   public boolean inlineAccessors = true;
   public boolean removeSwitchMaps = true;
+  public boolean disableAssertions = true;
   public final OutlineOptions outline = new OutlineOptions();
   public boolean debugKeepRules = false;
   public final AttributeRemovalOptions attributeRemoval = new AttributeRemovalOptions();

@@ -219,7 +219,7 @@ public class InliningOracle {
       return true;
     }
     DexClass clazz = inliner.appInfo.definitionFor(targetHolder);
-    return (clazz != null) && (!clazz.hasClassInitializer());
+    return (clazz != null) && (!clazz.hasNonTrivialClassInitializer());
   }
 
   private synchronized boolean isDoubleInliningTarget(DexEncodedMethod candidate) {

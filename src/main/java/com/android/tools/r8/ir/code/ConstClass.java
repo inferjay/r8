@@ -7,6 +7,7 @@ package com.android.tools.r8.ir.code;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.utils.InternalOptions;
 
 public class ConstClass extends ConstInstruction {
 
@@ -54,6 +55,16 @@ public class ConstClass extends ConstInstruction {
   @Override
   public int compareNonValueParts(Instruction other) {
     return clazz.slowCompareTo(other.asConstClass().clazz);
+  }
+
+  @Override
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
+    // A const-class instruction can be dead code only if the resulting program is known to contain
+    // the class mentioned.
+    // The simple conservative check is for the holder of the method.
+    // TODO(sgjesse): It might be beneficial to check for program classes in the super hierarchy or
+    // interfaces implemented.
+    return code.method.method.holder == clazz;
   }
 
   @Override

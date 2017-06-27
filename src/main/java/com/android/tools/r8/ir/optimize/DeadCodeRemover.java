@@ -31,7 +31,7 @@ public class DeadCodeRemover {
         // Ignore marked blocks, as they are scheduled for removal.
         continue;
       }
-      removeDeadInstructions(worklist, block, options);
+      removeDeadInstructions(worklist, code, block, options);
       removeDeadPhis(worklist, block, options);
       removeUnneededCatchHandlers(worklist, block, dominator);
     }
@@ -96,7 +96,7 @@ public class DeadCodeRemover {
   }
 
   private static void removeDeadInstructions(
-      Queue<BasicBlock> worklist, BasicBlock block, InternalOptions options) {
+      Queue<BasicBlock> worklist, IRCode code, BasicBlock block, InternalOptions options) {
     InstructionListIterator iterator = block.listIterator(block.getInstructions().size());
     while (iterator.hasPrevious()) {
       Instruction current = iterator.previous();
@@ -106,8 +106,8 @@ public class DeadCodeRemover {
           && current.outValue().numberOfAllUsers() == 0) {
         current.setOutValue(null);
       }
-      // Never remove instructions that can have side effects.
-      if (!current.canBeDeadCode(options)) {
+      // Never remove instructions that can have side effects, except for const-class.
+      if (!current.canBeDeadCode(code, options)) {
         continue;
       }
       Value outValue = current.outValue();

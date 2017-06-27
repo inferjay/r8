@@ -80,7 +80,7 @@ public class NewArrayFilledData extends Instruction {
   }
 
   @Override
-  public boolean canBeDeadCode(InternalOptions options) {
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     // Side-effects its input values.
     return false;
   }

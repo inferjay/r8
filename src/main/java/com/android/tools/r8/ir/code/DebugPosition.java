@@ -61,7 +61,7 @@ public class DebugPosition extends Instruction {
   }
 
   @Override
-  public boolean canBeDeadCode(InternalOptions options) {
+  public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     return false;
   }
 
