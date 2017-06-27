@@ -40,7 +40,7 @@ def RunGradle(args, throw_on_failure=True):
   utils.PrintCmd(cmd)
   with utils.ChangedWorkingDirectory(utils.REPO_ROOT):
     return_value = subprocess.call(cmd)
-    if throw_on_failure:
+    if throw_on_failure and return_value != 0:
       raise
     return return_value
 
