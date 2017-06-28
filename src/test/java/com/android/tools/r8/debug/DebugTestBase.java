@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.harmony.jpda.tests.framework.jdwp.CommandPacket;
 import org.apache.harmony.jpda.tests.framework.jdwp.Event;
@@ -213,7 +214,7 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command stepOver(StepFilter stepFilter) {
-    return step(StepDepth.OVER, stepFilter);
+    return step(StepKind.OVER, stepFilter);
   }
 
   protected final JUnit3Wrapper.Command stepOut() {
@@ -221,7 +222,7 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command stepOut(StepFilter stepFilter) {
-    return step(StepDepth.OUT, stepFilter);
+    return step(StepKind.OUT, stepFilter);
   }
 
   protected final JUnit3Wrapper.Command stepInto() {
@@ -229,12 +230,46 @@ public abstract class DebugTestBase {
   }
 
   protected final JUnit3Wrapper.Command stepInto(StepFilter stepFilter) {
-    return step(StepDepth.INTO, stepFilter);
+    return step(StepKind.INTO, stepFilter);
   }
 
-  private JUnit3Wrapper.Command step(byte stepDepth,
+  public enum StepKind {
+    INTO(StepDepth.INTO),
+    OVER(StepDepth.OVER),
+    OUT(StepDepth.OUT);
+
+    private final byte jdwpValue;
+
+    StepKind(byte jdwpValue) {
+      this.jdwpValue = jdwpValue;
+    }
+  }
+
+  public enum StepLevel {
+    LINE(StepSize.LINE),
+    INSTRUCTION(StepSize.MIN);
+
+    private final byte jdwpValue;
+
+    StepLevel(byte jdwpValue) {
+      this.jdwpValue = jdwpValue;
+    }
+  }
+
+  private JUnit3Wrapper.Command step(StepKind stepKind, StepFilter stepFilter) {
+    return step(stepKind, StepLevel.LINE, stepFilter);
+  }
+
+  private JUnit3Wrapper.Command step(StepKind stepKind, StepLevel stepLevel,
       StepFilter stepFilter) {
-    return new JUnit3Wrapper.Command.StepCommand(stepDepth, stepFilter);
+    return new JUnit3Wrapper.Command.StepCommand(stepKind.jdwpValue, stepLevel.jdwpValue,
+        stepFilter, state -> true);
+  }
+
+  protected JUnit3Wrapper.Command stepUntil(StepKind stepKind, StepLevel stepLevel,
+      Function<JUnit3Wrapper.DebuggeeState, Boolean> stepUntil) {
+    return new JUnit3Wrapper.Command.StepCommand(stepKind.jdwpValue, stepLevel.jdwpValue, NO_FILTER,
+        stepUntil);
   }
 
   protected final JUnit3Wrapper.Command checkLocal(String localName) {
@@ -819,12 +854,22 @@ public abstract class DebugTestBase {
       class StepCommand implements Command {
 
         private final byte stepDepth;
+        private final byte stepSize;
         private final StepFilter stepFilter;
 
+        /**
+         * A {@link Function} taking a {@link DebuggeeState} as input and returns {@code true} to
+         * stop stepping, {@code false} to continue.
+         */
+        private final Function<JUnit3Wrapper.DebuggeeState, Boolean> stepUntil;
+
         public StepCommand(byte stepDepth,
-            StepFilter stepFilter) {
+            byte stepSize, StepFilter stepFilter,
+            Function<DebuggeeState, Boolean> stepUntil) {
           this.stepDepth = stepDepth;
+          this.stepSize = stepSize;
           this.stepFilter = stepFilter;
+          this.stepUntil = stepUntil;
         }
 
         @Override
@@ -833,13 +878,14 @@ public abstract class DebugTestBase {
           int stepRequestID;
           {
             EventBuilder eventBuilder = Event.builder(EventKind.SINGLE_STEP, SuspendPolicy.ALL);
-            eventBuilder.setStep(threadId, StepSize.LINE, stepDepth);
+            eventBuilder.setStep(threadId, stepSize, stepDepth);
             stepFilter.getExcludedClasses().stream().forEach(s -> eventBuilder.setClassExclude(s));
             ReplyPacket replyPacket = testBase.getMirror().setEvent(eventBuilder.build());
             stepRequestID = replyPacket.getNextValueAsInt();
             testBase.assertAllDataRead(replyPacket);
           }
-          testBase.events.put(stepRequestID, new StepEventHandler(stepRequestID, stepFilter));
+          testBase.events.put(stepRequestID, new StepEventHandler(stepRequestID, stepFilter,
+              stepUntil));
 
           // Resume all threads.
           testBase.resume();
@@ -847,7 +893,8 @@ public abstract class DebugTestBase {
 
         @Override
         public String toString() {
-          return "step " + JDWPConstants.StepDepth.getName(stepDepth);
+          return String.format("step %s/%s", JDWPConstants.StepDepth.getName(stepDepth),
+              JDWPConstants.StepSize.getName(stepSize));
         }
       }
 
@@ -900,11 +947,14 @@ public abstract class DebugTestBase {
 
       private final int stepRequestID;
       private final StepFilter stepFilter;
+      private final Function<DebuggeeState, Boolean> stepUntil;
 
       private StepEventHandler(int stepRequestID,
-          StepFilter stepFilter) {
+          StepFilter stepFilter,
+          Function<DebuggeeState, Boolean> stepUntil) {
         this.stepRequestID = stepRequestID;
         this.stepFilter = stepFilter;
+        this.stepUntil = stepUntil;
       }
 
       @Override
@@ -912,6 +962,9 @@ public abstract class DebugTestBase {
         if (stepFilter
             .skipLocation(testBase.getMirror(), testBase.getDebuggeeState().getLocation())) {
           // Keep the step active and resume so that we do another step.
+          testBase.resume();
+        } else if (stepUntil.apply(testBase.getDebuggeeState()) == Boolean.FALSE) {
+          // We must not stop yet.
           testBase.resume();
         } else {
           // When hit, the single step must be cleared.
