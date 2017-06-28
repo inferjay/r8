@@ -7,6 +7,7 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexType;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -54,12 +55,18 @@ public abstract class ClassMap<T extends DexClass> {
   public T get(DexType type) {
     final Value<T> value = getOrCreateValue(type);
 
+    if (value == null) {
+      return null;
+    }
+
     if (!value.ready) {
       // Load the value in a context synchronized on value instance. This way
       // we avoid locking the whole collection during expensive resource loading
       // and classes construction operations.
       synchronized (value) {
-        if (!value.ready && classProvider != null) {
+        if (!value.ready) {
+          assert classProvider != null : "getOrCreateValue() created "
+              + "Value for missing type when there is no classProvider.";
           classProvider.collectClass(type, clazz -> {
             assert clazz != null;
             assert getClassKind().isOfKind(clazz);
@@ -83,8 +90,8 @@ public abstract class ClassMap<T extends DexClass> {
               value.clazz = resolveClassConflict(oldClass, clazz);
             }
           });
+          value.ready = true;
         }
-        value.ready = true;
       }
     }
 
@@ -94,22 +101,31 @@ public abstract class ClassMap<T extends DexClass> {
 
   private Value<T> getOrCreateValue(DexType type) {
     synchronized (classes) {
-      return classes.computeIfAbsent(type, k -> new Value<>());
+      Value<T> value = classes.get(type);
+      if (value == null && classProvider != null) {
+        value = new Value<>();
+        classes.put(type, value);
+      }
+      return value;
     }
   }
 
-  /** Returns currently loaded classes */
+  /**
+   * Returns currently loaded classes.
+   *
+   * Method is assumed to be called when the collection is fully loaded,
+   * otherwise only a subset of potentially loaded classes may be returned.
+   */
   public List<T> collectLoadedClasses() {
     List<T> loadedClasses = new ArrayList<>();
     synchronized (classes) {
       for (Value<T> value : classes.values()) {
-        // Method collectLoadedClasses() must always be called when there
-        // is no risk of concurrent loading of the classes, otherwise the
-        // behaviour of this method is undefined. Note that value mutations
-        // are NOT synchronized in `classes`, so the assertion below does
-        // not enforce this requirement, but may help detect wrong behaviour.
-        assert value.ready : "";
-        if (value.clazz != null) {
+        // NOTE: value mutations are NOT synchronized on `classes`, here we actually
+        // can see value which is not ready yet. Since everything that exists should
+        // be guaranteed by the caller to be loaded at this point, this can only happen
+        // if the code references classes that do not exist. Therefore, if the value is
+        // not ready here, we know that the loaded value will be 'null' once it is ready.
+        if (value.ready && value.clazz != null) {
           loadedClasses.add(value.clazz);
         }
       }
@@ -120,9 +136,9 @@ public abstract class ClassMap<T extends DexClass> {
   /** Forces loading of all the classes satisfying the criteria specified. */
   public void forceLoad(Predicate<DexType> load) {
     if (classProvider != null) {
-      Set<DexType> loaded;
+      Set<DexType> loaded = Sets.newIdentityHashSet();
       synchronized (classes) {
-        loaded = classes.keySet();
+        loaded.addAll(classes.keySet());
       }
       Collection<DexType> types = classProvider.collectTypes();
       for (DexType type : types) {
