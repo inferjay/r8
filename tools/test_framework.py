@@ -6,8 +6,8 @@
 # Run D8 or DX on 'third_party/framework/framework_<version>.jar'.
 # Report Golem-compatible CodeSize and RunTimeRaw values:
 #
-#     <NAME>(CodeSize): <size>
-#     <NAME>(RunTimeRaw>: <time> ms
+#     <NAME>-Total(CodeSize): <size>
+#     <NAME>-Total(RunTimeRaw>: <time> ms
 #
 # and also detailed segment sizes for each dex segment:
 #
@@ -49,7 +49,7 @@ def parse_arguments():
   parser.add_argument('--name',
       required = True,
       help = 'Results will be printed using the specified benchmark name (e.g.'
-          ' <NAME>(CodeSize): <bytes>)')
+          ' <NAME>-<segment>(CodeSize): <bytes>)')
   return parser.parse_args()
 
 # Return a dictionary: {segment_name -> segments_size}
@@ -100,10 +100,10 @@ def Main():
     for dex_file in dex_files:
       code_size += os.path.getsize(dex_file)
 
-    print('{}(RunTimeRaw): {} ms'
+    print('{}-Total(RunTimeRaw): {} ms'
       .format(args.name, 1000.0 * dt))
 
-    print('{}(CodeSize): {}'
+    print('{}-Total(CodeSize): {}'
       .format(args.name, code_size))
 
     for segment_name, size in getDexSegmentSizes(dex_files).items():
