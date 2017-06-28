@@ -301,7 +301,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         ListIterator<LocalRange> it = openRanges.listIterator(0);
         while (it.hasNext()) {
           LocalRange openRange = it.next();
-          if (openRange.end < index) {
+          if (openRange.end <= index) {
             it.remove();
             assert currentLocals.get(openRange.register) == openRange.local;
             currentLocals.put(openRange.register, null);
