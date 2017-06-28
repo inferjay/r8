@@ -67,7 +67,7 @@ public class LambdaTest extends DebugTestBase {
         checkMethod(debuggeeClass, initialMethodName),
         checkLine(SOURCE_FILE, 46),
         stepInto(INTELLIJ_FILTER),
-        inspect(t -> Assert.assertTrue(t.getCurrentMethodName().startsWith("lambda$"))),
+        inspect(t -> Assert.assertTrue(t.getMethodName().startsWith("lambda$"))),
         stepInto(INTELLIJ_FILTER),
         checkMethod(debuggeeClass, "concatObjects"),
         checkLine(SOURCE_FILE, 57),
