@@ -54,6 +54,13 @@ public class DexProgramClass extends DexClass {
   }
 
   @Override
+  void collectMixedSectionItems(MixedSectionCollection mixedItems) {
+    if (hasAnnotations()) {
+      mixedItems.setAnnotationsDirectoryForClass(this, new DexAnnotationDirectory(this));
+    }
+  }
+
+  @Override
   public void addDependencies(MixedSectionCollection collector) {
     // We only have a class data item if there are methods or fields.
     if (hasMethodsOrFields()) {
@@ -104,6 +111,14 @@ public class DexProgramClass extends DexClass {
         || hasAnnotations(directMethods)
         || hasAnnotations(staticFields)
         || hasAnnotations(instanceFields);
+  }
+
+  public boolean hasInternalizableAnnotation() {
+    return !annotations.isEmpty()
+        && !hasAnnotations(virtualMethods)
+        && !hasAnnotations(directMethods)
+        && !hasAnnotations(staticFields)
+        && !hasAnnotations(instanceFields);
   }
 
   private boolean hasAnnotations(DexEncodedField[] fields) {

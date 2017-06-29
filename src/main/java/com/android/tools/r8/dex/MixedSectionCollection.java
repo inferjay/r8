@@ -4,6 +4,7 @@
 package com.android.tools.r8.dex;
 
 import com.android.tools.r8.graph.DexAnnotation;
+import com.android.tools.r8.graph.DexAnnotationDirectory;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexCode;
@@ -95,4 +96,14 @@ public abstract class MixedSectionCollection {
    * @return true if the item was not added before
    */
   public abstract boolean add(DexAnnotation annotation);
+
+  /**
+   * Adds the given annotation directory to the collection.
+   *
+   * Add a dependency between the clazz and the annotation directory.
+   *
+   * @return true if the item was not added before
+   */
+  public abstract boolean setAnnotationsDirectoryForClass(DexProgramClass clazz,
+      DexAnnotationDirectory annotationDirectory);
 }

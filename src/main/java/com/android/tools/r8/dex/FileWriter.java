@@ -10,6 +10,7 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.Descriptor;
 import com.android.tools.r8.graph.DexAnnotation;
+import com.android.tools.r8.graph.DexAnnotationDirectory;
 import com.android.tools.r8.graph.DexAnnotationElement;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
@@ -48,7 +49,6 @@ import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LebUtils;
-import com.android.tools.r8.utils.OrderedMergingIterator;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.security.MessageDigest;
@@ -76,7 +76,6 @@ public class FileWriter {
   private final NamingLens namingLens;
   private final DexOutputBuffer dest = new DexOutputBuffer();
   private final MixedSectionOffsets mixedSectionOffsets;
-  private int numberOfAnnotationDirectories;
 
   public FileWriter(
       ObjectToOffsetMapping mapping,
@@ -124,7 +123,8 @@ public class FileWriter {
 
   public FileWriter collect() {
     // Use the class array from the mapping, as it has a deterministic iteration order.
-    new ProgramClassDependencyCollector(application, mapping.getClasses()).run(mapping.getClasses());
+    new ProgramClassDependencyCollector(application, mapping.getClasses())
+        .run(mapping.getClasses());
 
     // Sort the class members.
     // Needed before adding static-value arrays and writing annotation directories and classes.
@@ -144,6 +144,8 @@ public class FileWriter {
     }
 
     DexItem.collectAll(mixedSectionOffsets, mapping.getCallSites());
+
+    DexItem.collectAll(mixedSectionOffsets, mapping.getClasses());
 
     return this;
   }
@@ -218,8 +220,8 @@ public class FileWriter {
     writeItems(mixedSectionOffsets.getAnnotationSetRefLists(),
         layout::setAnnotationSetRefListsOffset, this::writeAnnotationSetRefList, 4);
     // Write the annotation directories.
-    writeItems(Arrays.asList(mapping.getClasses()), layout::setAnnotationDirectoriesOffset,
-        this::writeAnnotationDirectoryForClass, 4);
+    writeItems(mixedSectionOffsets.getAnnotationDirectories(),
+        layout::setAnnotationDirectoriesOffset, this::writeAnnotationDirectory, 4);
     // Write the rest.
     writeItems(mixedSectionOffsets.getClassesWithData(), layout::setClassDataOffset,
         this::writeClassData);
@@ -584,47 +586,21 @@ public class FileWriter {
     }
   }
 
-  private void writeAnnotationDirectoryForClass(DexProgramClass clazz) {
-    if (clazz.hasAnnotations()) {
-      mixedSectionOffsets.setOffsetForAnnotationsDirectory(clazz, dest.align(4));
-      numberOfAnnotationDirectories++;
-      assert isSorted(clazz.directMethods());
-      assert isSorted(clazz.virtualMethods());
-      OrderedMergingIterator<DexEncodedMethod, DexMethod> methods =
-          new OrderedMergingIterator<>(clazz.directMethods(), clazz.virtualMethods());
-      List<DexEncodedMethod> methodAnnotations = new ArrayList<>();
-      List<DexEncodedMethod> parameterAnnotations = new ArrayList<>();
-      while (methods.hasNext()) {
-        DexEncodedMethod method = methods.next();
-        if (!method.annotations.isEmpty()) {
-          methodAnnotations.add(method);
-        }
-        if (!method.parameterAnnotations.isEmpty()) {
-          parameterAnnotations.add(method);
-        }
-      }
-      assert isSorted(clazz.staticFields());
-      assert isSorted(clazz.instanceFields());
-      OrderedMergingIterator<DexEncodedField, DexField> fields =
-          new OrderedMergingIterator<>(clazz.staticFields(), clazz.instanceFields());
-      List<DexEncodedField> fieldAnnotations = new ArrayList<>();
-      while (fields.hasNext()) {
-        DexEncodedField field = fields.next();
-        if (!field.annotations.isEmpty()) {
-          fieldAnnotations.add(field);
-        }
-      }
-      dest.putInt(mixedSectionOffsets.getOffsetFor(clazz.annotations));
-      dest.putInt(fieldAnnotations.size());
-      dest.putInt(methodAnnotations.size());
-      dest.putInt(parameterAnnotations.size());
-      writeMemberAnnotations(fieldAnnotations,
-          item -> mixedSectionOffsets.getOffsetFor(item.annotations));
-      writeMemberAnnotations(methodAnnotations,
-          item -> mixedSectionOffsets.getOffsetFor(item.annotations));
-      writeMemberAnnotations(parameterAnnotations,
-          item -> mixedSectionOffsets.getOffsetFor(item.parameterAnnotations));
-    }
+  private void writeAnnotationDirectory(DexAnnotationDirectory annotationDirectory) {
+    mixedSectionOffsets.setOffsetForAnnotationsDirectory(annotationDirectory, dest.align(4));
+    dest.putInt(mixedSectionOffsets.getOffsetFor(annotationDirectory.getClazzAnnotations()));
+    List<DexEncodedMethod> methodAnnotations = annotationDirectory.getMethodAnnotations();
+    List<DexEncodedMethod> parameterAnnotations = annotationDirectory.getParameterAnnotations();
+    List<DexEncodedField> fieldAnnotations = annotationDirectory.getFieldAnnotations();
+    dest.putInt(fieldAnnotations.size());
+    dest.putInt(methodAnnotations.size());
+    dest.putInt(parameterAnnotations.size());
+    writeMemberAnnotations(fieldAnnotations,
+        item -> mixedSectionOffsets.getOffsetFor(item.annotations));
+    writeMemberAnnotations(methodAnnotations,
+        item -> mixedSectionOffsets.getOffsetFor(item.annotations));
+    writeMemberAnnotations(parameterAnnotations,
+        item -> mixedSectionOffsets.getOffsetFor(item.parameterAnnotations));
   }
 
   private void writeEncodedFields(DexEncodedField[] fields) {
@@ -788,7 +764,7 @@ public class FileWriter {
         mixedSectionOffsets.getAnnotationSetRefLists().size());
     size += writeMapItem(Constants.TYPE_ANNOTATIONS_DIRECTORY_ITEM,
         layout.getAnnotationDirectoriesOffset(),
-        numberOfAnnotationDirectories);
+        mixedSectionOffsets.getAnnotationDirectories().size());
     size += writeMapItem(Constants.TYPE_CLASS_DATA_ITEM, layout.getClassDataOffset(),
         mixedSectionOffsets.getClassesWithData().size());
     size += writeMapItem(Constants.TYPE_ENCODED_ARRAY_ITEM, layout.getEncodedArrarysOffset(),
@@ -1093,8 +1069,11 @@ public class FileWriter {
     private final Hashtable<DexAnnotationSetRefList, Integer> annotationSetRefLists
         = new Hashtable<>();
     private final List<DexAnnotationSetRefList> annotationSetRefListsList = new LinkedList<>();
-    private final Hashtable<DexProgramClass, Integer> annotationDirectories
+    private final Hashtable<DexProgramClass, DexAnnotationDirectory> clazzToAnnotationDirectory
         = new Hashtable<>();
+    private final Hashtable<DexAnnotationDirectory, Integer> annotationDirectories
+        = new Hashtable<>();
+    private final List<DexAnnotationDirectory> annotationDirectoriesList = new LinkedList<>();
     private final Hashtable<DexProgramClass, Integer> classesWithData = new Hashtable<>();
     private final List<DexProgramClass> classesWithDataList = new LinkedList<>();
     private final Hashtable<DexEncodedArray, Integer> encodedArrays = new Hashtable<>();
@@ -1157,6 +1136,14 @@ public class FileWriter {
       return add(annotations, annotationsList, annotation);
     }
 
+    @Override
+    public boolean setAnnotationsDirectoryForClass(DexProgramClass clazz,
+        DexAnnotationDirectory annotationDirectory) {
+      DexAnnotationDirectory previous = clazzToAnnotationDirectory.put(clazz, annotationDirectory);
+      assert previous == null;
+      return add(annotationDirectories, annotationDirectoriesList, annotationDirectory);
+    }
+
     public boolean add(DexString string) {
       return add(stringData, stringDataList, string);
     }
@@ -1191,6 +1178,10 @@ public class FileWriter {
 
     public List<DexProgramClass> getClassesWithData() {
       return Collections.unmodifiableList(classesWithDataList);
+    }
+
+    public List<DexAnnotationDirectory> getAnnotationDirectories() {
+      return Collections.unmodifiableList(annotationDirectoriesList);
     }
 
     public List<DexEncodedArray> getEncodedArrays() {
@@ -1232,10 +1223,11 @@ public class FileWriter {
 
 
     public int getOffsetForAnnotationsDirectory(DexProgramClass clazz) {
-      Integer offset = annotationDirectories.get(clazz);
-      if (offset == null) {
+      if (!clazz.hasAnnotations()) {
         return Constants.NO_OFFSET;
       }
+      Integer offset = annotationDirectories.get(clazzToAnnotationDirectory.get(clazz));
+      assert offset != null;
       return offset;
     }
 
@@ -1292,10 +1284,8 @@ public class FileWriter {
       setOffsetFor(annotationSet, offset, annotationSets);
     }
 
-    void setOffsetForAnnotationsDirectory(DexProgramClass clazz,
-        int offset) {
-      Integer previous = annotationDirectories.put(clazz, offset);
-      assert previous == null;
+    void setOffsetForAnnotationsDirectory(DexAnnotationDirectory annotationDirectory, int offset) {
+      setOffsetFor(annotationDirectory, offset, annotationDirectories);
     }
 
     void setOffsetFor(DexProgramClass aClassWithData, int offset) {
