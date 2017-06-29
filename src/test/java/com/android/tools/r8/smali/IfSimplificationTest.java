@@ -8,6 +8,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.code.Const4;
+import com.android.tools.r8.code.IfEqz;
+import com.android.tools.r8.code.IfGez;
+import com.android.tools.r8.code.IfGtz;
+import com.android.tools.r8.code.IfLez;
+import com.android.tools.r8.code.IfLtz;
+import com.android.tools.r8.code.IfNez;
 import com.android.tools.r8.code.InvokeVirtual;
 import com.android.tools.r8.code.Return;
 import com.android.tools.r8.code.ReturnObject;
@@ -22,6 +28,17 @@ import java.util.List;
 import org.junit.Test;
 
 public class IfSimplificationTest extends SmaliTestBase {
+
+  static String[] ifOpcode;
+  static {
+    ifOpcode = new String[6];
+    ifOpcode[Type.EQ.ordinal()] = "if-eq";
+    ifOpcode[Type.NE.ordinal()] = "if-ne";
+    ifOpcode[Type.LE.ordinal()] = "if-le";
+    ifOpcode[Type.GE.ordinal()] = "if-ge";
+    ifOpcode[Type.LT.ordinal()] = "if-lt";
+    ifOpcode[Type.GT.ordinal()] = "if-gt";
+  }
 
   @Test
   public void ifZeroNeqZero() {
@@ -189,14 +206,6 @@ public class IfSimplificationTest extends SmaliTestBase {
 
   @Test
   public void simplifyNonZeroTests() {
-    String[] ifOpcode = new String[6];
-    ifOpcode[Type.EQ.ordinal()] = "if-eq";
-    ifOpcode[Type.NE.ordinal()] = "if-ne";
-    ifOpcode[Type.LE.ordinal()] = "if-le";
-    ifOpcode[Type.GE.ordinal()] = "if-ge";
-    ifOpcode[Type.LT.ordinal()] = "if-lt";
-    ifOpcode[Type.GT.ordinal()] = "if-gt";
-
     class TestData {
 
       final int a;
@@ -254,6 +263,49 @@ public class IfSimplificationTest extends SmaliTestBase {
         assertTrue(code.instructions[1] instanceof Return);
       }
     }
+  }
+
+  public void runRewriteIfWithConstZeroTest(Type type, boolean zeroLeft, Class expected) {
+    String ifInstruction;
+    if (zeroLeft) {
+      ifInstruction = "  " + ifOpcode[type.ordinal()] + " v0, v1, :label_2";
+    } else {
+      ifInstruction = "  " + ifOpcode[type.ordinal()] + " v1, v0, :label_2";
+    }
+
+    DexEncodedMethod method = oneMethodApplication(
+        "int",
+        Collections.singletonList("int"),
+        1,
+        "  const v0, 0x00",
+        ifInstruction,
+        "  const v0, 0",
+        ":label_1",
+        "  return v0",
+        ":label_2",
+        "  const v0, 1",
+        "  goto :label_1");
+    DexCode code = method.getCode().asDexCode();
+    assertEquals(5, code.instructions.length);
+    assertTrue(expected.isInstance(code.instructions[0]));
+    assertTrue(code.instructions[4] instanceof Return);
+  }
+
+  @Test
+  public void testRewriteIfWithConstZero() {
+    runRewriteIfWithConstZeroTest(Type.EQ, true, IfEqz.class);
+    runRewriteIfWithConstZeroTest(Type.NE, true, IfNez.class);
+    runRewriteIfWithConstZeroTest(Type.LE, true, IfGez.class);
+    runRewriteIfWithConstZeroTest(Type.GE, true, IfLez.class);
+    runRewriteIfWithConstZeroTest(Type.LT, true, IfGtz.class);
+    runRewriteIfWithConstZeroTest(Type.GT, true, IfLtz.class);
+
+    runRewriteIfWithConstZeroTest(Type.EQ, false, IfEqz.class);
+    runRewriteIfWithConstZeroTest(Type.NE, false, IfNez.class);
+    runRewriteIfWithConstZeroTest(Type.LE, false, IfLez.class);
+    runRewriteIfWithConstZeroTest(Type.GE, false, IfGez.class);
+    runRewriteIfWithConstZeroTest(Type.LT, false, IfLtz.class);
+    runRewriteIfWithConstZeroTest(Type.GT, false, IfGtz.class);
   }
 
   @Test

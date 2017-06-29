@@ -35,7 +35,6 @@ import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.InvokeDirect;
 import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.InvokeVirtual;
-import com.android.tools.r8.ir.code.JumpInstruction;
 import com.android.tools.r8.ir.code.MemberType;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.NewArrayEmpty;
@@ -1182,9 +1181,12 @@ public class CodeRewriter {
       if (block.isMarked()) {
         continue;
       }
-      JumpInstruction exit = block.exit();
-      if (exit.isIf()) {
-        If theIf = exit.asIf();
+      if (block.exit().isIf()) {
+        // First rewrite zero comparison.
+        rewriteIfWithConstZero(block);
+
+        // Simplify if conditions when possible.
+        If theIf = block.exit().asIf();
         List<Value> inValues = theIf.inValues();
         int cond;
         if (inValues.get(0).isConstant()
@@ -1230,15 +1232,48 @@ public class CodeRewriter {
           }
         }
         assert theIf == block.exit();
-        InstructionListIterator iterator = block.listIterator(block.getInstructions().size());
-        iterator.previous();
-        iterator.replaceCurrentInstruction(new Goto());
+        replaceLastInstruction(block, new Goto());
         assert block.exit().isGoto();
         assert block.exit().asGoto().getTarget() == target;
       }
     }
     code.removeMarkedBlocks();
     assert code.isConsistentSSA();
+  }
+
+  private void rewriteIfWithConstZero(BasicBlock block) {
+    If theIf = block.exit().asIf();
+    if (theIf.isZeroTest()) {
+      return;
+    }
+
+    List<Value> inValues = theIf.inValues();
+    Value leftValue = inValues.get(0);
+    Value rightValue = inValues.get(1);
+    if (leftValue.isConstant() || rightValue.isConstant()) {
+      if (leftValue.isConstant()) {
+        int left = leftValue.getConstInstruction().asConstNumber().getIntValue();
+        if (left == 0) {
+          If ifz = new If(theIf.getType().forSwappedOperands(), rightValue);
+          replaceLastInstruction(block, ifz);
+          assert block.exit() == ifz;
+        }
+      } else {
+        assert rightValue.isConstant();
+        int right = rightValue.getConstInstruction().asConstNumber().getIntValue();
+        if (right == 0) {
+          If ifz = new If(theIf.getType(), leftValue);
+          replaceLastInstruction(block, ifz);
+          assert block.exit() == ifz;
+        }
+      }
+    }
+  }
+
+  private void replaceLastInstruction(BasicBlock block, Instruction instruction) {
+    InstructionListIterator iterator = block.listIterator(block.getInstructions().size());
+    iterator.previous();
+    iterator.replaceCurrentInstruction(instruction);
   }
 
   public void rewriteLongCompareAndRequireNonNull(IRCode code, boolean canUseObjectsNonNull) {
