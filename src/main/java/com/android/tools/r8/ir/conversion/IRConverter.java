@@ -451,6 +451,7 @@ public class IRConverter {
     codeRewriter.rewriteMoveResult(code);
     codeRewriter.splitConstants(code);
     codeRewriter.foldConstants(code);
+    codeRewriter.rewriteSwitch(code);
     codeRewriter.simplifyIf(code);
     if (Log.ENABLED) {
       Log.debug(getClass(), "Intermediate (SSA) flow graph for %s:\n%s",
