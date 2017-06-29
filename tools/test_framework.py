@@ -3,7 +3,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
-# Run D8 or DX on 'third_party/framework/framework_<version>.jar'.
+# Run D8, DX or Goyt on 'third_party/framework/framework_<version>.jar'.
 # Report Golem-compatible CodeSize and RunTimeRaw values:
 #
 #     <NAME>-Total(CodeSize): <size>
@@ -31,6 +31,8 @@ import utils
 DX_JAR = os.path.join(utils.REPO_ROOT, 'tools', 'linux', 'dx', 'framework',
     'dx.jar')
 D8_JAR = os.path.join(utils.REPO_ROOT, 'build', 'libs', 'd8.jar')
+GOYT_EXE = os.path.join('third_party', 'goyt',
+    'goyt_160525751')
 FRAMEWORK_JAR = os.path.join('third_party', 'framework',
     'framework_160115954.jar')
 DEX_SEGMENTS_JAR = os.path.join(utils.REPO_ROOT, 'build', 'libs',
@@ -40,10 +42,11 @@ MIN_SDK_VERSION = '24'
 
 def parse_arguments():
   parser = argparse.ArgumentParser(
-      description = 'Run D8 or DX on third_party/framework/framework*.jar.'
+      description = 'Run D8, DX or Goyt on'
+          ' third_party/framework/framework*.jar.'
           ' Report Golem-compatible CodeSize and RunTimeRaw values.')
   parser.add_argument('--tool',
-      choices = ['dx', 'd8', 'd8-release'],
+      choices = ['dx', 'd8', 'd8-release', 'goyt'],
       required = True,
       help = 'Compiler tool to use.')
   parser.add_argument('--name',
@@ -77,17 +80,27 @@ def Main():
   args = parse_arguments()
 
   with utils.TempDir() as temp_dir:
-    if args.tool == 'dx':
-      jar_file = DX_JAR
-      jar_args = ['--output=' + temp_dir, '--multi-dex',
-          '--min-sdk-version=' + MIN_SDK_VERSION, '--dex']
-    else:
-      jar_file = D8_JAR
-      jar_args = ['--output', temp_dir, '--min-sdk-version', MIN_SDK_VERSION]
-      if args.tool == 'd8-release':
-        jar_args.append('--release')
 
-    cmd = ['java', '-jar', jar_file] + jar_args + [FRAMEWORK_JAR]
+    if args.tool in ['dx', 'goyt']:
+      tool_args = ['--dex', '--output=' + temp_dir, '--multi-dex',
+          '--min-sdk-version=' + MIN_SDK_VERSION]
+
+    if args.tool == 'goyt':
+      tool_file = GOYT_EXE
+    elif args.tool == 'dx':
+      tool_file = DX_JAR
+    else:
+      tool_file = D8_JAR
+      tool_args = ['--output', temp_dir, '--min-sdk-version', MIN_SDK_VERSION]
+      if args.tool == 'd8-release':
+        tool_args.append('--release')
+
+    if tool_file.endswith('.jar'):
+      cmd = ['java', '-jar']
+    else:
+      cmd = []
+
+    cmd.extend([tool_file] + tool_args + [FRAMEWORK_JAR])
 
     utils.PrintCmd(cmd)
 
