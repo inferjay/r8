@@ -14,7 +14,45 @@ import java.util.List;
 public class If extends JumpInstruction {
 
   public enum Type {
-    EQ, GE, GT, LE, LT, NE
+    EQ, GE, GT, LE, LT, NE;
+
+    // Returns the comparison type if the operands are swapped.
+    public Type forSwappedOperands() {
+      switch (this) {
+        case EQ:
+        case NE:
+          return this;
+        case GE:
+          return Type.LE;
+        case GT:
+          return Type.LT;
+        case LE:
+          return Type.GE;
+        case LT:
+          return Type.GT;
+        default:
+          throw new Unreachable("Unknown if condition type.");
+      }
+    }
+
+    public Type inverted() {
+      switch (this) {
+        case EQ:
+          return Type.NE;
+        case GE:
+          return Type.LT;
+        case GT:
+          return Type.LE;
+        case LE:
+          return Type.GT;
+        case LT:
+          return Type.GE;
+        case NE:
+          return Type.EQ;
+        default:
+          throw new Unreachable("Unknown if condition type.");
+      }
+    }
   }
 
   private Type type;
@@ -41,28 +79,7 @@ public class If extends JumpInstruction {
     BasicBlock tmp = getTrueTarget();
     setTrueTarget(fallthroughBlock());
     setFallthroughBlock(tmp);
-    switch (type) {
-      case EQ:
-        type = Type.NE;
-        break;
-      case GE:
-        type = Type.LT;
-        break;
-      case GT:
-        type = Type.LE;
-        break;
-      case LE:
-        type = Type.GT;
-        break;
-      case LT:
-        type = Type.GE;
-        break;
-      case NE:
-        type = Type.EQ;
-        break;
-      default:
-        throw new Unreachable("Unknown if condition type.");
-    }
+    type = type.inverted();
   }
 
   public BasicBlock getTrueTarget() {
