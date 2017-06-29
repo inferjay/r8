@@ -1215,13 +1215,6 @@ public class IRBuilder {
 
     Value switchValue = readRegister(value, MoveType.SINGLE);
 
-    // Change a switch with just one case to an if.
-    // TODO(62247472): Move these into their own pass.
-    if (numberOfTargets == 1) {
-      addSwitchIf(keys[0], value, labelOffsets[0], fallthroughOffset);
-      return;
-    }
-
     // Find the keys not targeting the fallthrough.
     IntList nonFallthroughKeys = new IntArrayList(numberOfTargets);
     IntList nonFallthroughOffsets = new IntArrayList(numberOfTargets);

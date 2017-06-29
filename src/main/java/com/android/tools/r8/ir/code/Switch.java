@@ -43,7 +43,7 @@ public class Switch extends JumpInstruction {
     return true;
   }
 
-  private Value value() {
+  public Value value() {
     return inValues.get(0);
   }
 
@@ -77,7 +77,7 @@ public class Switch extends JumpInstruction {
     return canBePacked() && packedPayloadSize() <= sparsePayloadSize();
   }
 
-  private int firstKey() {
+  public int getFirstKey() {
     return keys[0];
   }
 
@@ -153,14 +153,14 @@ public class Switch extends JumpInstruction {
       int targetsCount = numberOfTargetsForPacked();
       if (targets.length == targetsCount) {
         // All targets are already present.
-        return new PackedSwitchPayload(firstKey(), targets);
+        return new PackedSwitchPayload(getFirstKey(), targets);
       } else {
         // Generate the list of targets for all key values. Set the target for keys not present
         // to the fallthrough.
         int[] packedTargets = new int[targetsCount];
         int originalIndex = 0;
         for (int i = 0; i < targetsCount; i++) {
-          int key = firstKey() + i;
+          int key = getFirstKey() + i;
           if (keys[originalIndex] == key) {
             packedTargets[i] = targets[originalIndex];
             originalIndex++;
@@ -169,7 +169,7 @@ public class Switch extends JumpInstruction {
           }
         }
         assert originalIndex == keys.length;
-        return new PackedSwitchPayload(firstKey(), packedTargets);
+        return new PackedSwitchPayload(getFirstKey(), packedTargets);
       }
     } else {
       assert numberOfKeys() == keys.length;

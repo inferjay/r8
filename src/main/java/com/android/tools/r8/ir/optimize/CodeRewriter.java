@@ -23,11 +23,11 @@ import com.android.tools.r8.ir.code.Cmp;
 import com.android.tools.r8.ir.code.Cmp.Bias;
 import com.android.tools.r8.ir.code.ConstNumber;
 import com.android.tools.r8.ir.code.ConstString;
-import com.android.tools.r8.ir.code.ConstType;
 import com.android.tools.r8.ir.code.DominatorTree;
 import com.android.tools.r8.ir.code.Goto;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.If;
+import com.android.tools.r8.ir.code.If.Type;
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionIterator;
 import com.android.tools.r8.ir.code.InstructionListIterator;
@@ -321,6 +321,37 @@ public class CodeRewriter {
     }
   }
 
+  public void rewriteSwitch(IRCode code) {
+    for (BasicBlock block : code.blocks) {
+      InstructionListIterator iterator = block.listIterator();
+      while (iterator.hasNext()) {
+        Instruction instruction = iterator.next();
+        if (instruction.isSwitch()) {
+          Switch theSwitch = instruction.asSwitch();
+          if (theSwitch.numberOfKeys() == 1) {
+            // Rewrite the switch to an if.
+            int fallthroughBlockIndex = theSwitch.getFallthroughBlockIndex();
+            int caseBlockIndex = theSwitch.targetBlockIndices()[0];
+            if (fallthroughBlockIndex < caseBlockIndex) {
+              block.swapSuccessorsByIndex(fallthroughBlockIndex, caseBlockIndex);
+            }
+            if (theSwitch.getFirstKey() == 0) {
+              iterator.replaceCurrentInstruction(new If(Type.EQ, theSwitch.value()));
+            } else {
+              ConstNumber labelConst = code.createIntConstant(theSwitch.getFirstKey());
+              iterator.previous();
+              iterator.add(labelConst);
+              Instruction dummy = iterator.next();
+              assert dummy == theSwitch;
+              If theIf = new If(Type.EQ, ImmutableList.of(theSwitch.value(), labelConst.dest()));
+              iterator.replaceCurrentInstruction(theIf);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Inline the indirection of switch maps into the switch statement.
    * <p>
@@ -383,13 +414,11 @@ public class CodeRewriter {
             if (ordinalsMap != null) {
               Int2IntMap targetMap = new Int2IntArrayMap();
               IntList keys = new IntArrayList(switchInsn.numberOfKeys());
-              // Only add key/target for non-fallthrough.
               for (int i = 0; i < switchInsn.numberOfKeys(); i++) {
-                if (switchInsn.targetBlockIndices()[i] != switchInsn.getFallthroughBlockIndex()) {
-                  int key = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
-                  keys.add(key);
-                  targetMap.put(key, switchInsn.targetBlockIndices()[i]);
-                }
+                assert switchInsn.targetBlockIndices()[i] != switchInsn.getFallthroughBlockIndex();
+                int key = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
+                keys.add(key);
+                targetMap.put(key, switchInsn.targetBlockIndices()[i]);
               }
               keys.sort(Comparator.naturalOrder());
               int[] targets = new int[keys.size()];
@@ -1274,15 +1303,15 @@ public class CodeRewriter {
             // Replace call to Throwable::getSuppressed() with new Throwable[0].
 
             // First insert the constant value *before* the current instruction.
-            Value zero = code.createValue(MoveType.SINGLE);
+            ConstNumber zero = code.createIntConstant(0);
             assert iterator.hasPrevious();
             iterator.previous();
-            iterator.add(new ConstNumber(ConstType.INT, zero, 0));
+            iterator.add(zero);
 
             // Then replace the invoke instruction with NewArrayEmpty instruction.
             Instruction next = iterator.next();
             assert current == next;
-            NewArrayEmpty newArray = new NewArrayEmpty(destValue, zero,
+            NewArrayEmpty newArray = new NewArrayEmpty(destValue, zero.outValue(),
                 dexItemFactory.createType(dexItemFactory.throwableArrayDescriptor));
             iterator.replaceCurrentInstruction(newArray);
           }

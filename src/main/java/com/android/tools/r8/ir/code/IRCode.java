@@ -356,6 +356,10 @@ public class IRCode {
     return createValue(moveType, null);
   }
 
+  public ConstNumber createIntConstant(int value) {
+    return new ConstNumber(ConstType.INT, createValue(MoveType.SINGLE), value);
+  }
+
   public ConstNumber createTrue() {
     return new ConstNumber(ConstType.INT, createValue(MoveType.SINGLE), 1);
   }

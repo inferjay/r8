@@ -262,6 +262,12 @@ public class BasicBlock {
     assert false : "replaceSuccessor did not find the predecessor to replace";
   }
 
+  public void swapSuccessorsByIndex(int index1, int index2) {
+    BasicBlock t = successors.get(index1);
+    successors.set(index1, successors.get(index2));
+    successors.set(index2, t);
+  }
+
   public void removeSuccessorsByIndex(List<Integer> successorsToRemove) {
     if (successorsToRemove.isEmpty()) {
       return;
