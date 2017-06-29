@@ -8,6 +8,7 @@ import com.android.tools.r8.code.ReturnVoid;
 import com.android.tools.r8.code.SwitchPayload;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
+import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.DexSourceCode;
@@ -187,10 +188,13 @@ public class DexCode extends Code {
       builder.append(": ")
           .append(insn.toString(naming))
           .append('\n');
-      if (debugInfo != null && debugInfo.address == insn.getOffset()) {
+      while (debugInfo != null && debugInfo.address == insn.getOffset()) {
         builder.append("      ").append(debugInfo).append("\n");
         debugInfo = debugInfoIterator.hasNext() ? debugInfoIterator.next() : null;
       }
+    }
+    if (debugInfoIterator.hasNext()) {
+      throw new Unreachable("Could not print all debug information.");
     }
     if (tries.length > 0) {
       builder.append("Tries (numbers are offsets)\n");
