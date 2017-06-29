@@ -9,6 +9,7 @@ import com.android.tools.r8.dex.VirtualFile.PackageMapDistributor;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
+import com.android.tools.r8.graph.DexAnnotationDirectory;
 import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexApplication;
@@ -92,6 +93,12 @@ public class ApplicationWriter {
 
     @Override
     public boolean add(DexAnnotationSetRefList annotationSetRefList) {
+      return true;
+    }
+
+    @Override
+    public boolean setAnnotationsDirectoryForClass(DexProgramClass clazz,
+        DexAnnotationDirectory annotationDirectory) {
       return true;
     }
   }
