@@ -4,8 +4,6 @@
 
 package com.android.tools.r8.ir.conversion;
 
-import com.android.tools.r8.code.PackedSwitchPayload;
-import com.android.tools.r8.code.SparseSwitchPayload;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InternalCompilerError;
@@ -87,6 +85,8 @@ import it.unimi.dsi.fastutil.ints.Int2ReferenceSortedMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -461,9 +461,8 @@ public class IRBuilder {
   }
 
   // Helper to resolve switch payloads and build switch instructions (dex code only).
-  public void resolveAndBuildSwitch(Switch.Type type, int value, int fallthroughOffset,
-      int payloadOffset) {
-    source.resolveAndBuildSwitch(type, value, fallthroughOffset, payloadOffset, this);
+  public void resolveAndBuildSwitch(int value, int fallthroughOffset, int payloadOffset) {
+    source.resolveAndBuildSwitch(value, fallthroughOffset, payloadOffset, this);
   }
 
   // Helper to resolve fill-array data and build new-array instructions (dex code only).
@@ -1204,10 +1203,9 @@ public class IRBuilder {
     }
   }
 
-  public void addSwitch(Switch.Type type, int value, int[] keys, int fallthroughOffset,
-      int[] labelOffsets) {
+  public void addSwitch(int value, int[] keys, int fallthroughOffset, int[] labelOffsets) {
     int numberOfTargets = labelOffsets.length;
-    assert (type == Switch.Type.PACKED && keys.length == 1) || (keys.length == numberOfTargets);
+    assert (keys.length == 1) || (keys.length == numberOfTargets);
 
     // If the switch has no targets simply add a goto to the fallthrough.
     if (numberOfTargets == 0) {
@@ -1224,66 +1222,51 @@ public class IRBuilder {
       return;
     }
 
-    // javac generates sparse switch (lookupwitch bytecode) for all two-case switch. Change
-    // to packed switch for consecutive keys.
-    if (numberOfTargets == 2 && type == Switch.Type.SPARSE && keys[0] + 1 == keys[1]) {
-      addInstruction(createSwitch(
-          Switch.Type.PACKED, switchValue, new int[]{keys[0]}, fallthroughOffset, labelOffsets));
-      closeCurrentBlock();
+    // Find the keys not targeting the fallthrough.
+    IntList nonFallthroughKeys = new IntArrayList(numberOfTargets);
+    IntList nonFallthroughOffsets = new IntArrayList(numberOfTargets);
+    int numberOfFallthroughs = 0;
+    if (keys.length == 1) {
+      int key = keys[0];
+      for (int i = 0; i < numberOfTargets; i++) {
+        if (labelOffsets[i] != fallthroughOffset) {
+          nonFallthroughKeys.add(key);
+          nonFallthroughOffsets.add(labelOffsets[i]);
+        } else {
+          numberOfFallthroughs++;
+        }
+        key++;
+      }
+    } else {
+      assert keys.length == numberOfTargets;
+      for (int i = 0; i < numberOfTargets; i++) {
+        if (labelOffsets[i] != fallthroughOffset) {
+          nonFallthroughKeys.add(keys[i]);
+          nonFallthroughOffsets.add(labelOffsets[i]);
+        } else {
+          numberOfFallthroughs++;
+        }
+      }
+    }
+    targets.get(fallthroughOffset).block.decrementUnfilledPredecessorCount(numberOfFallthroughs);
+
+    // If this was switch with only fallthrough cases we can make it a goto.
+    // Oddly, this does happen.
+    if (numberOfFallthroughs == numberOfTargets) {
+      assert nonFallthroughKeys.size() == 0;
+      addGoto(fallthroughOffset);
       return;
     }
 
-    // javac generates packed switches pretty aggressively. We convert to sparse switches
-    // if the dex sparse switch payload takes up less space than the packed payload.
-    if (type == Switch.Type.PACKED) {
-      int numberOfFallthroughs = 0;
-      for (int i = 0; i < numberOfTargets; i++) {
-        if (labelOffsets[i] == fallthroughOffset) {
-          ++numberOfFallthroughs;
-        }
-      }
-      // If this was a packed switch with only fallthrough cases we can make it a goto.
-      // Oddly, this does happen.
-      if (numberOfFallthroughs == numberOfTargets) {
-        BlockInfo info = targets.get(fallthroughOffset);
-        info.block.decrementUnfilledPredecessorCount(numberOfFallthroughs);
-        addGoto(fallthroughOffset);
-        return;
-      }
-      int numberOfSparseTargets = numberOfTargets - numberOfFallthroughs;
-      int sparseSwitchPayloadSize = SparseSwitchPayload.getSizeForTargets(numberOfSparseTargets);
-      int packedSwitchPayloadSize = PackedSwitchPayload.getSizeForTargets(numberOfTargets);
-      int bytesSaved = packedSwitchPayloadSize - sparseSwitchPayloadSize;
-      // Perform the rewrite if we can reduce the payload size by more than 20%.
-      if (bytesSaved > (packedSwitchPayloadSize / 5)) {
-        BlockInfo info = targets.get(fallthroughOffset);
-        info.block.decrementUnfilledPredecessorCount(numberOfFallthroughs);
-        int nextCaseIndex = 0;
-        int currentKey = keys[0];
-        keys = new int[numberOfSparseTargets];
-        int[] newLabelOffsets = new int[numberOfSparseTargets];
-        for (int i = 0; i < numberOfTargets; i++) {
-          if (labelOffsets[i] != fallthroughOffset) {
-            keys[nextCaseIndex] = currentKey;
-            newLabelOffsets[nextCaseIndex] = labelOffsets[i];
-            ++nextCaseIndex;
-          }
-          ++currentKey;
-        }
-        addInstruction(createSwitch(
-            Switch.Type.SPARSE, switchValue, keys, fallthroughOffset, newLabelOffsets));
-        closeCurrentBlock();
-        return;
-      }
-    }
-
-    addInstruction(createSwitch(type, switchValue, keys, fallthroughOffset, labelOffsets));
+    // Create a switch with only the non-fallthrough targets.
+    keys = nonFallthroughKeys.toIntArray();
+    labelOffsets = nonFallthroughOffsets.toIntArray();
+    addInstruction(createSwitch(switchValue, keys, fallthroughOffset, labelOffsets));
     closeCurrentBlock();
   }
 
-  private Switch createSwitch(Switch.Type type, Value value, int[] keys, int fallthroughOffset,
-      int[] targetOffsets) {
-    assert keys.length > 0;
+  private Switch createSwitch(Value value, int[] keys, int fallthroughOffset, int[] targetOffsets) {
+    assert keys.length == targetOffsets.length;
     // Compute target blocks for all keys. Only add a successor block once even
     // if it is hit by more of the keys.
     int[] targetBlockIndices = new int[targetOffsets.length];
@@ -1313,7 +1296,7 @@ public class IRBuilder {
         targetBlockIndices[i] = targetBlockIndex;
       }
     }
-    return new Switch(type, value, keys, targetBlockIndices, fallthroughBlockIndex);
+    return new Switch(value, keys, targetBlockIndices, fallthroughBlockIndex);
   }
 
   public void addThrow(int value) {

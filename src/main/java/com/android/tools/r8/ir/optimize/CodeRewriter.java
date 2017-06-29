@@ -46,7 +46,6 @@ import com.android.tools.r8.ir.code.Return;
 import com.android.tools.r8.ir.code.StaticGet;
 import com.android.tools.r8.ir.code.StaticPut;
 import com.android.tools.r8.ir.code.Switch;
-import com.android.tools.r8.ir.code.Switch.Type;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.conversion.OptimizationFeedback;
 import com.android.tools.r8.utils.InternalOptions;
@@ -60,10 +59,12 @@ import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -381,18 +382,22 @@ public class CodeRewriter {
             Reference2IntMap ordinalsMap = extractOrdinalsMapFor(switchMapHolder);
             if (ordinalsMap != null) {
               Int2IntMap targetMap = new Int2IntArrayMap();
-              int keys[] = new int[switchInsn.numberOfKeys()];
-              for (int i = 0; i < keys.length; i++) {
-                keys[i] = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
-                targetMap.put(keys[i], switchInsn.targetBlockIndices()[i]);
+              IntList keys = new IntArrayList(switchInsn.numberOfKeys());
+              // Only add key/target for non-fallthrough.
+              for (int i = 0; i < switchInsn.numberOfKeys(); i++) {
+                if (switchInsn.targetBlockIndices()[i] != switchInsn.getFallthroughBlockIndex()) {
+                  int key = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
+                  keys.add(key);
+                  targetMap.put(key, switchInsn.targetBlockIndices()[i]);
+                }
               }
-              Arrays.sort(keys);
-              int[] targets = new int[keys.length];
-              for (int i = 0; i < keys.length; i++) {
-                targets[i] = targetMap.get(keys[i]);
+              keys.sort(Comparator.naturalOrder());
+              int[] targets = new int[keys.size()];
+              for (int i = 0; i < keys.size(); i++) {
+                targets[i] = targetMap.get(keys.getInt(i));
               }
 
-              Switch newSwitch = new Switch(Type.SPARSE, ordinalInvoke.outValue(), keys,
+              Switch newSwitch = new Switch(ordinalInvoke.outValue(), keys.toIntArray(),
                   targets, switchInsn.getFallthroughBlockIndex());
               // Replace the switch itself.
               it.replaceCurrentInstruction(newSwitch);
@@ -412,6 +417,7 @@ public class CodeRewriter {
       }
     }
   }
+
 
   /**
    * Extracts the mapping from ordinal values to switch case constants.

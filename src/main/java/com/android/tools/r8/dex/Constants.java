@@ -113,6 +113,7 @@ public class Constants {
   public static final int U4BIT_MAX = (1 << 4) - 1;
   public static final int U8BIT_MAX = (1 << 8) - 1;
   public static final int U16BIT_MAX = (1 << 16) - 1;
+  public static final long U32BIT_MAX = (1L << 32) - 1;
   public static final int ACC_PUBLIC = 0x1;
   public static final int ACC_PRIVATE = 0x2;
   public static final int ACC_PROTECTED = 0x4;

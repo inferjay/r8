@@ -40,7 +40,6 @@ import com.android.tools.r8.graph.DexProto;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.MoveType;
-import com.android.tools.r8.ir.code.Switch.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -219,9 +218,9 @@ public class DexSourceCode implements SourceCode {
   }
 
   @Override
-  public void resolveAndBuildSwitch(Type type, int value, int fallthroughOffset, int payloadOffset,
+  public void resolveAndBuildSwitch(int value, int fallthroughOffset, int payloadOffset,
       IRBuilder builder) {
-    builder.addSwitch(type, value, switchPayloadResolver.getKeys(payloadOffset), fallthroughOffset,
+    builder.addSwitch(value, switchPayloadResolver.getKeys(payloadOffset), fallthroughOffset,
         switchPayloadResolver.absoluteTargets(payloadOffset));
   }
 

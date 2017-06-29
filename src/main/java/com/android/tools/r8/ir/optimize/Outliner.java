@@ -39,7 +39,6 @@ import com.android.tools.r8.ir.code.Mul;
 import com.android.tools.r8.ir.code.NewInstance;
 import com.android.tools.r8.ir.code.Rem;
 import com.android.tools.r8.ir.code.Sub;
-import com.android.tools.r8.ir.code.Switch;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.SourceCode;
@@ -912,8 +911,8 @@ public class Outliner {
     }
 
     @Override
-    public void resolveAndBuildSwitch(Switch.Type type, int value, int fallthroughOffset,
-        int payloadOffset, IRBuilder builder) {
+    public void resolveAndBuildSwitch(int value, int fallthroughOffset, int payloadOffset,
+        IRBuilder builder) {
       throw new Unreachable("Unexpected call to resolveAndBuildSwitch");
     }
 

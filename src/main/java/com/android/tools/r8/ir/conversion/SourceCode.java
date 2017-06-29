@@ -6,7 +6,6 @@ package com.android.tools.r8.ir.conversion;
 
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.code.CatchHandlers;
-import com.android.tools.r8.ir.code.Switch.Type;
 
 /**
  * Abstraction of the input/source code for the IRBuilder.
@@ -51,7 +50,7 @@ public interface SourceCode {
   void buildPostlude(IRBuilder builder);
 
   // Helper to resolve switch payloads and build switch instructions (dex code only).
-  void resolveAndBuildSwitch(Type type, int value, int fallthroughOffset, int payloadOffset,
+  void resolveAndBuildSwitch(int value, int fallthroughOffset, int payloadOffset,
       IRBuilder builder);
 
   // Helper to resolve fill-array data and build new-array instructions (dex code only).

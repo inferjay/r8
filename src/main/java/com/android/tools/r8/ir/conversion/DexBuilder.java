@@ -456,7 +456,13 @@ public class DexBuilder {
       com.android.tools.r8.ir.code.Instruction targetInstruction = targetBlock.entry();
       targets[i] = getInfo(targetInstruction).getOffset() - getInfo(ir).getOffset();
     }
-    return ir.buildPayload(targets);
+    BasicBlock fallthroughBlock = ir.fallthroughBlock();
+    com.android.tools.r8.ir.code.Instruction fallthroughTargetInstruction =
+        fallthroughBlock.entry();
+    int fallthroughTarget =
+        getInfo(fallthroughTargetInstruction).getOffset() - getInfo(ir).getOffset();
+
+    return ir.buildPayload(targets, fallthroughTarget);
   }
 
   // Helpers for computing the try items and handlers.
