@@ -33,7 +33,6 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexTypeList;
 import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.IRCode;
-import com.android.tools.r8.ir.code.Switch.Type;
 import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.SourceCode;
 import com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator;
@@ -521,7 +520,7 @@ public class MainDexListTests extends TestBase {
 
     @Override
     public void resolveAndBuildSwitch(
-        Type type, int value, int fallthroughOffset, int payloadOffset, IRBuilder builder) {
+        int value, int fallthroughOffset, int payloadOffset, IRBuilder builder) {
       throw new Unreachable();
     }
 

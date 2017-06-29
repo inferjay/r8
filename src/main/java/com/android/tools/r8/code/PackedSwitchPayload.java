@@ -25,9 +25,9 @@ public class PackedSwitchPayload extends SwitchPayload {
     }
   }
 
-  public PackedSwitchPayload(int size, int first_key, int[] targets) {
-    assert size > 0;  // Empty switches should be eliminated.
-    this.size = size;
+  public PackedSwitchPayload(int first_key, int[] targets) {
+    assert targets.length > 0;  // Empty switches should be eliminated.
+    this.size = targets.length;
     this.first_key = first_key;
     this.targets = targets;
   }
@@ -65,10 +65,6 @@ public class PackedSwitchPayload extends SwitchPayload {
 
   public int getSize() {
     return 4 + (2 * targets.length);
-  }
-
-  public static int getSizeForTargets(int targets) {
-    return 4 + (2 * targets);
   }
 
   @Override

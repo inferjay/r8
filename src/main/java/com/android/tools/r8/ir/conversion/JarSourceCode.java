@@ -27,7 +27,6 @@ import com.android.tools.r8.ir.code.MemberType;
 import com.android.tools.r8.ir.code.Monitor;
 import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.NumericType;
-import com.android.tools.r8.ir.code.Switch;
 import com.android.tools.r8.ir.conversion.IRBuilder.BlockInfo;
 import com.android.tools.r8.ir.conversion.JarState.Local;
 import com.android.tools.r8.ir.conversion.JarState.Slot;
@@ -465,7 +464,7 @@ public class JarSourceCode implements SourceCode {
   }
 
   @Override
-  public void resolveAndBuildSwitch(Switch.Type type, int value, int fallthroughOffset,
+  public void resolveAndBuildSwitch(int value, int fallthroughOffset,
       int payloadOffset, IRBuilder builder) {
     throw new Unreachable();
   }
@@ -2694,7 +2693,7 @@ public class JarSourceCode implements SourceCode {
 
   private void build(TableSwitchInsnNode insn, IRBuilder builder) {
     processLocalVariablesAtControlEdge(insn, builder);
-    buildSwitch(Switch.Type.PACKED, insn.dflt, insn.labels, new int[]{insn.min}, builder);
+    buildSwitch(insn.dflt, insn.labels, new int[]{insn.min}, builder);
   }
 
   private void build(LookupSwitchInsnNode insn, IRBuilder builder) {
@@ -2703,10 +2702,10 @@ public class JarSourceCode implements SourceCode {
     for (int i = 0; i < insn.keys.size(); i++) {
       keys[i] = (int) insn.keys.get(i);
     }
-    buildSwitch(Switch.Type.SPARSE, insn.dflt, insn.labels, keys, builder);
+    buildSwitch(insn.dflt, insn.labels, keys, builder);
   }
 
-  private void buildSwitch(Switch.Type type, LabelNode dflt, List labels, int[] keys,
+  private void buildSwitch(LabelNode dflt, List labels, int[] keys,
       IRBuilder builder) {
     int index = state.pop(Type.INT_TYPE).register;
     int fallthroughOffset = getOffset(dflt);
@@ -2715,7 +2714,7 @@ public class JarSourceCode implements SourceCode {
       int offset = getOffset((LabelNode) labels.get(i));
       labelOffsets[i] = offset;
     }
-    builder.addSwitch(type, index, keys, fallthroughOffset, labelOffsets);
+    builder.addSwitch(index, keys, fallthroughOffset, labelOffsets);
   }
 
   private void build(MultiANewArrayInsnNode insn, IRBuilder builder) {

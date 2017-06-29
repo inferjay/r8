@@ -13,7 +13,6 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.code.Argument;
 import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.MoveType;
-import com.android.tools.r8.ir.code.Switch;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.ir.conversion.SourceCode;
@@ -180,8 +179,7 @@ public abstract class SingleBlockSourceCode implements SourceCode {
 
   @Override
   public final void resolveAndBuildSwitch(
-      Switch.Type type, int value, int fallthroughOffset,
-      int payloadOffset, IRBuilder builder) {
+      int value, int fallthroughOffset, int payloadOffset, IRBuilder builder) {
     throw new Unreachable("Unexpected call to resolveAndBuildSwitch");
   }
 

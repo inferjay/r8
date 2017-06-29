@@ -29,9 +29,9 @@ public class SparseSwitchPayload extends SwitchPayload {
     }
   }
 
-  public SparseSwitchPayload(int size, int[] keys, int[] targets) {
-    assert size > 0;  // Empty switches should be eliminated.
-    this.size = size;
+  public SparseSwitchPayload(int[] keys, int[] targets) {
+    assert targets.length > 0;  // Empty switches should be eliminated.
+    this.size = targets.length;
     this.keys = keys;
     this.targets = targets;
   }
@@ -72,10 +72,6 @@ public class SparseSwitchPayload extends SwitchPayload {
 
   public int getSize() {
     return 2 + (2 * keys.length) + (2 * targets.length);
-  }
-
-  public static int getSizeForTargets(int targets) {
-    return 2 + (4 * targets);
   }
 
   @Override
