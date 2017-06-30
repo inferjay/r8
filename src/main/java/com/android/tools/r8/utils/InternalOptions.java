@@ -288,4 +288,10 @@ public class InternalOptions {
     return minApiLevel >= Constants.ANDROID_N_API;
   }
 
+  // APIs for accessing parameter names annotations are not available before Android O, thus does
+  // not emit them to avoid wasting space in Dex files because runtimes before Android O will ignore
+  // them.
+  public boolean canUseParameterNameAnnotations() {
+    return minApiLevel >= Constants.ANDROID_O_API;
+  }
 }

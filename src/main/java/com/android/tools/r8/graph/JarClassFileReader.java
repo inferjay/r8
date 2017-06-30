@@ -24,6 +24,7 @@ import com.android.tools.r8.graph.DexValue.DexValueShort;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.DexValue.DexValueType;
 import com.android.tools.r8.graph.JarCode.ReparseContext;
+import com.android.tools.r8.utils.InternalOptions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -525,10 +526,12 @@ public class JarClassFileReader {
         }
         parameterAnnotationSets = new DexAnnotationSetRefList(sets);
       }
-      if (parameterNames != null && parent.application.options.allowParameterName) {
+      InternalOptions internalOptions = parent.application.options;
+      if (parameterNames != null && internalOptions.allowParameterName
+          && internalOptions.canUseParameterNameAnnotations()) {
         assert parameterFlags != null;
         if (parameterNames.size() != parameterCount) {
-          parent.application.options.warningInvalidParameterAnnotations =
+          internalOptions.warningInvalidParameterAnnotations =
               "Invalid parameter count in MethodParameters attributes of "
                   + method.toSourceString() + " from '" + parent.file + "'. Found "
                   + parameterNames.size() + " while expecting " + parameterCount + "."
