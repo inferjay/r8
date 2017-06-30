@@ -19,6 +19,10 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 public class MinifiedNameMapPrinter {
@@ -32,6 +36,12 @@ public class MinifiedNameMapPrinter {
     this.namingLens = namingLens;
   }
 
+  private <T> T[] sortedCopy(T[] source, Comparator<? super T> comparator) {
+    T copy[] = Arrays.copyOf(source, source.length);
+    Arrays.sort(copy, comparator);
+    return copy;
+  }
+
   private void write(DexProgramClass clazz, PrintStream out) {
     seenTypes.add(clazz.type);
     DexString descriptor = namingLens.lookupDescriptor(clazz.type);
@@ -39,10 +49,14 @@ public class MinifiedNameMapPrinter {
     out.print(" -> ");
     out.print(DescriptorUtils.descriptorToJavaType(descriptor.toSourceString()));
     out.println(":");
-    write(clazz.instanceFields(), out);
-    write(clazz.staticFields(), out);
-    write(clazz.directMethods(), out);
-    write(clazz.virtualMethods(), out);
+    write(sortedCopy(
+        clazz.instanceFields(), Comparator.comparing(DexEncodedField::toSourceString)), out);
+    write(sortedCopy(
+        clazz.staticFields(), Comparator.comparing(DexEncodedField::toSourceString)), out);
+    write(sortedCopy(
+        clazz.directMethods(), Comparator.comparing(DexEncodedMethod::toSourceString)), out);
+    write(sortedCopy(
+        clazz.virtualMethods(), Comparator.comparing(DexEncodedMethod::toSourceString)), out);
   }
 
   private void write(DexType type, PrintStream out) {
@@ -86,7 +100,9 @@ public class MinifiedNameMapPrinter {
 
   public void write(PrintStream out) {
     // First write out all classes that have been renamed.
-    application.classes().forEach(clazz -> write(clazz, out));
+    List<DexProgramClass> classes = new ArrayList<>(application.classes());
+    classes.sort(Comparator.comparing(DexProgramClass::toSourceString));
+    classes.forEach(clazz -> write(clazz, out));
     // Now write out all types only mentioned in descriptors that have been renamed.
     namingLens.forAllRenamedTypes(type -> write(type, out));
   }
