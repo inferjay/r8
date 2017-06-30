@@ -310,7 +310,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         }
         while (nextStartingRange != null && nextStartingRange.start <= index) {
           // If the full range is between the two debug positions ignore it.
-          if (nextStartingRange.end >= index) {
+          if (nextStartingRange.end > index) {
             openRanges.add(nextStartingRange);
             assert currentLocals.get(nextStartingRange.register) == null;
             currentLocals.put(nextStartingRange.register, nextStartingRange.local);
