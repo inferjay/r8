@@ -6,7 +6,6 @@ package com.android.tools.r8.debug;
 import com.android.tools.r8.debug.DebugTestBase.JUnit3Wrapper.FrameInspector;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.harmony.jpda.tests.framework.TestErrorException;
 import org.apache.harmony.jpda.tests.framework.jdwp.JDWPConstants.Tag;
 import org.apache.harmony.jpda.tests.framework.jdwp.Value;
 import org.junit.Assert;
@@ -286,7 +285,7 @@ public class LocalsTest extends DebugTestBase {
         run());
   }
 
-  @Test(expected = TestErrorException.class)
+  @Test(expected = AssertionError.class)
   public void testInvokeRangeLong() throws Throwable {
     final int initialValueOfX = 21;
     final long expectedValueOfL = (long) initialValueOfX * 2;
@@ -305,7 +304,6 @@ public class LocalsTest extends DebugTestBase {
           Value valueOfX = values.get("x");
           Assert.assertEquals(Tag.INT_TAG, valueOfX.getTag());
           Assert.assertEquals(Value.createInt(expectedValueOfX), valueOfX);
-
 
           // 'obj' is an Object (Integer).
           Value valueOfObj = values.get("obj");

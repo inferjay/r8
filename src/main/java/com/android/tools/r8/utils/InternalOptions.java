@@ -275,7 +275,7 @@ public class InternalOptions {
     return minApiLevel >= Constants.ANDROID_N_API;
   }
 
-  public boolean canUseObjectsNonNull() {
+  public boolean canUseLongCompareAndObjectsNonNull() {
     return minApiLevel >= Constants.ANDROID_K_API;
   }
 

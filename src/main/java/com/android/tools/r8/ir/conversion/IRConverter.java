@@ -445,7 +445,7 @@ public class IRConverter {
       assert !options.debug;
       inliner.performInlining(method, code, callGraph);
     }
-    codeRewriter.rewriteLongCompareAndRequireNonNull(code, options.canUseObjectsNonNull());
+    codeRewriter.rewriteLongCompareAndRequireNonNull(code, options);
     codeRewriter.commonSubexpressionElimination(code);
     codeRewriter.simplifyArrayConstruction(code);
     codeRewriter.rewriteMoveResult(code);
