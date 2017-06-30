@@ -10,7 +10,6 @@
 import os
 import gradle
 import optparse
-import subprocess
 import sys
 import utils
 import uuid
@@ -70,8 +69,6 @@ def archive_failures():
   print 'Test results available at: %s' % url
 
 def Main():
-  subprocess.check_call(['df', '-h'])
-  return 1
   (options, args) = ParseOptions()
   gradle_args = ['cleanTest', 'test']
   if len(args) > 1:
