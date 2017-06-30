@@ -162,7 +162,7 @@ public final class D8 {
       Timing timing = new Timing("DX timer");
       DexApplication app = new ApplicationReader(inputApp, options, timing).read(executor);
       AppInfo appInfo = new AppInfo(app);
-      app = optimize(app, appInfo, options);
+      app = optimize(app, appInfo, options, executor);
 
       // If a method filter is present don't produce output since the application is likely partial.
       if (options.hasMethodsFilter()) {
@@ -190,12 +190,13 @@ public final class D8 {
   }
 
   private static DexApplication optimize(
-      DexApplication application, AppInfo appInfo, InternalOptions options)
-      throws IOException {
+      DexApplication application, AppInfo appInfo, InternalOptions options,
+      ExecutorService executor)
+      throws IOException, ExecutionException {
     final CfgPrinter printer = options.printCfg ? new CfgPrinter() : null;
 
     IRConverter converter = new IRConverter(application, appInfo, options, printer);
-    application = converter.convertToDex();
+    application = converter.convertToDex(executor);
 
     if (options.printCfg) {
       if (options.printCfgFile == null || options.printCfgFile.isEmpty()) {

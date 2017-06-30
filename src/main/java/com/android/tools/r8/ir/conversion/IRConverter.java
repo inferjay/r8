@@ -175,10 +175,10 @@ public class IRConverter {
     }
   }
 
-  public DexApplication convertToDex() {
+  public DexApplication convertToDex(ExecutorService executor) throws ExecutionException {
     removeLambdaDeserializationMethods();
 
-    convertClassesToDex(application.classes());
+    convertClassesToDex(application.classes(), executor);
 
     // Build a new application with jumbo string info,
     Builder builder = new Builder(application);
@@ -190,11 +190,16 @@ public class IRConverter {
     return builder.build();
   }
 
-  private void convertClassesToDex(Iterable<DexProgramClass> classes) {
+  private void convertClassesToDex(Iterable<DexProgramClass> classes,
+      ExecutorService executor) throws ExecutionException {
+    List<Future<?>> futures = new ArrayList<>();
     for (DexProgramClass clazz : classes) {
-      convertMethodsToDex(clazz.directMethods());
-      convertMethodsToDex(clazz.virtualMethods());
+      futures.add(executor.submit(() -> {
+        convertMethodsToDex(clazz.directMethods());
+        convertMethodsToDex(clazz.virtualMethods());
+      }));
     }
+    ThreadUtils.awaitFutures(futures);
   }
 
   private void convertMethodsToDex(DexEncodedMethod[] methods) {
