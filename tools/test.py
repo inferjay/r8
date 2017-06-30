@@ -10,6 +10,7 @@
 import os
 import gradle
 import optparse
+import subprocess
 import sys
 import utils
 import uuid
@@ -68,7 +69,19 @@ def archive_failures():
   url = 'http://storage.googleapis.com/%s/%s/index.html' % (BUCKET, u_dir)
   print 'Test results available at: %s' % url
 
+def run_bot_debugging():
+  subprocess.check_call(['cat', '/proc/meminfo'])
+  subprocess.check_call(['ps', 'aux'])
+  print 'ulimit -s'
+  subprocess.check_call('ulimit -s', shell=True)
+
 def Main():
+  user = os.environ.get('USER', 'foobar')
+  bot_name = os.environ.get('BUILDBOT_BUILDERNAME')
+  if user == 'chrome-bot' and bot_name == 'linux-jctf':
+    print 'Running temporarily disabled for %s' % user
+    run_bot_debugging()
+    return 0
   (options, args) = ParseOptions()
   gradle_args = ['cleanTest', 'test']
   if len(args) > 1:
