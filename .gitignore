@@ -46,6 +46,8 @@ third_party/android_cts_baseline
 third_party/android_cts_baseline.tar.gz
 third_party/framework
 third_party/framework.tar.gz
+third_party/goyt
+third_party/goyt.tar.gz
 src/test/jack/ub-jack
 gradle-app.setting
 gradlew

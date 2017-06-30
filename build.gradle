@@ -169,6 +169,7 @@ def x20Dependencies = [
         "proguardsettings.tar.gz",
         "proguard/proguard_internal_159423826.tar.gz",
         "framework.tar.gz",
+        "goyt.tar.gz",
     ],
 ]
 
