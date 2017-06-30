@@ -525,7 +525,7 @@ public class JarClassFileReader {
         }
         parameterAnnotationSets = new DexAnnotationSetRefList(sets);
       }
-      if (parameterNames != null) {
+      if (parameterNames != null && parent.application.options.allowParameterName) {
         assert parameterFlags != null;
         if (parameterNames.size() != parameterCount) {
           parent.application.options.warningInvalidParameterAnnotations =

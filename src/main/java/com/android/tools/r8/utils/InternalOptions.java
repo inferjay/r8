@@ -78,6 +78,7 @@ public class InternalOptions {
   public final OutlineOptions outline = new OutlineOptions();
   public boolean debugKeepRules = false;
   public final AttributeRemovalOptions attributeRemoval = new AttributeRemovalOptions();
+  public boolean allowParameterName = false;
 
   public boolean debug = false;
   public final TestingOptions testing = new TestingOptions();
