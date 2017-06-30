@@ -930,8 +930,6 @@ public class CodeRewriter {
     if (elementSize == 1) {
       short[] result = new short[(size + 1) / 2];
       for (int i = 0; i < size; i += 2) {
-        assert values[i].getIntValue() <= Constants.S8BIT_MAX
-            && values[i].getIntValue() >= Constants.S8BIT_MIN;
         short value = (short) (values[i].getIntValue() & 0xFF);
         if (i + 1 < size) {
           value |= (short) ((values[i + 1].getIntValue() & 0xFF) << 8);
