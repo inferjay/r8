@@ -1957,7 +1957,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       // Pin the argument register. We use getFreeConsecutiveRegisters to make sure that we update
       // the max register number.
       register = getFreeConsecutiveRegisters(argumentLiveInterval.requiredRegisters());
-      argumentLiveInterval.setRegister(register);
+      assignRegister(argumentLiveInterval, register);
       current = current.getNextConsecutive();
     }
     assert register == numberOfArgumentRegisters + NUMBER_OF_SENTINEL_REGISTERS - 1;
