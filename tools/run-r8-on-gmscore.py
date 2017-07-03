@@ -4,7 +4,6 @@
 # BSD-style license that can be found in the LICENSE file.
 
 import sys
-
 import run_on_app
 
 if __name__ == '__main__':
