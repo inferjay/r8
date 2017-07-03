@@ -87,6 +87,7 @@ def Main():
 
     if args.tool == 'goyt':
       tool_file = GOYT_EXE
+      tool_args = ['--num-threads=4'] + tool_args
     elif args.tool == 'dx':
       tool_file = DX_JAR
     else:
