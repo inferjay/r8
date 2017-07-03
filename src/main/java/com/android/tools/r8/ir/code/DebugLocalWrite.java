@@ -6,13 +6,13 @@ package com.android.tools.r8.ir.code;
 /**
  * Instruction introducing an SSA value with attached local information.
  *
- * All instructions may have attached local information (defined as the local information of their
- * outgoing value). This instruction is needed to mark a transition of an existing value (with a
- * possible local attached) to a new value that has a local (possibly the same one). If all ingoing
- * values end up having the same local this can be safely removed.
+ * <p>All instructions may have attached local information (defined as the local information of
+ * their outgoing value). This instruction is needed to mark a transition of an existing value (with
+ * a possible local attached) to a new value that has a local (possibly the same one). If all
+ * ingoing values end up having the same local this can be safely removed.
  *
- * For valid debug info, this instruction should have at least one user, namely a DebugLocalRead
- * denoting the end of its range, and thus it should be live.
+ * <p>For valid debug info, this instruction should have at least one debug user, denoting the end
+ * of its range, and thus it should be live.
  */
 public class DebugLocalWrite extends Move {
 

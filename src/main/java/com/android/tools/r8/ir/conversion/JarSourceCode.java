@@ -433,13 +433,13 @@ public class JarSourceCode implements SourceCode {
       preInstructionState = state.toString();
     }
 
-    build(insn, builder);
-
     // Process local-variable end scopes if this instruction is not a control-flow instruction.
     // For control-flow instructions, processing takes place before closing their respective blocks.
     if (!isControlFlowInstruction(insn)) {
       processLocalVariableEnd(insn, builder);
     }
+
+    build(insn, builder);
 
     if (Log.ENABLED && !(insn instanceof LineNumberNode)) {
       int offset = getOffset(insn);

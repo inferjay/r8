@@ -53,12 +53,14 @@ public class DeadCodeRemover {
     }
   }
 
-  // Add all blocks from where the in-values to the instruction originates.
+  // Add all blocks from where the in/debug-values to the instruction originates.
   private static void updateWorklist(Queue<BasicBlock> worklist, Instruction instruction) {
     for (Value inValue : instruction.inValues()) {
       updateWorklist(worklist, inValue);
     }
-
+    for (Value debugValue : instruction.getDebugValues()) {
+      updateWorklist(worklist, debugValue);
+    }
     Value previousLocalValue = instruction.getPreviousLocalValue();
     if (previousLocalValue != null) {
       updateWorklist(worklist, previousLocalValue);
