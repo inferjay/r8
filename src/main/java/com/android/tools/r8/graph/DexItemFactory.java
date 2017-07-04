@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 
 public class DexItemFactory {
 
-  private final Map<DexString, DexString> strings = new HashMap<>();
+  private final Map<String, DexString> strings = new HashMap<>();
   private final Map<DexType, DexType> types = new HashMap<>();
   private final Map<DexField, DexField> fields = new HashMap<>();
   private final Map<DexProto, DexProto> protos = new HashMap<>();
@@ -265,20 +265,19 @@ public class DexItemFactory {
     return previous == null ? item : previous;
   }
 
+  synchronized private DexString canonicalizeString(String key) {
+    assert key != null;
+    return strings.computeIfAbsent(key, k -> new DexString(k));
+  }
+
   public DexString createString(int size, byte[] content) {
     assert !sorted;
-    DexString string = new DexString(size, content);
-    return canonicalize(strings, string);
+    return canonicalizeString(new DexString(size, content).toString());
   }
 
   public DexString createString(String source) {
     assert !sorted;
-    DexString string = new DexString(source);
-    return canonicalize(strings, string);
-  }
-
-  public DexString lookupString(String source) {
-    return strings.get(new DexString(source));
+    return canonicalizeString(source);
   }
 
   public DexType createType(DexString descriptor) {
@@ -289,14 +288,6 @@ public class DexItemFactory {
 
   public DexType createType(String descriptor) {
     return createType(createString(descriptor));
-  }
-
-  public DexType lookupType(String descriptor) {
-    DexString string = lookupString(descriptor);
-    if (string != null) {
-      return types.get(new DexType(string));
-    }
-    return null;
   }
 
   public DexField createField(DexType clazz, DexType type, DexString name) {
