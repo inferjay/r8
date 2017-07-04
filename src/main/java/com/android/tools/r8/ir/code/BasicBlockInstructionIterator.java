@@ -106,6 +106,9 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
       Value value = current.inValues().get(i);
       value.removeUser(current);
     }
+    for (Value value : current.getDebugValues()) {
+      value.removeDebugUser(current);
+    }
     Value previousLocalValue = current.getPreviousLocalValue();
     if (previousLocalValue != null) {
       previousLocalValue.removeDebugUser(current);
@@ -135,10 +138,27 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
       assert newInstruction.outValue() != null;
       current.outValue().replaceUsers(newInstruction.outValue());
     }
+    for (Value value : current.getDebugValues()) {
+      replaceInstructionInList(current, newInstruction, value.getDebugLocalStarts());
+      replaceInstructionInList(current, newInstruction, value.getDebugLocalEnds());
+      value.removeDebugUser(current);
+      newInstruction.addDebugValue(value);
+    }
     newInstruction.setBlock(block);
     listIterator.remove();
     listIterator.add(newInstruction);
     current.clearBlock();
+  }
+
+  private static void replaceInstructionInList(
+      Instruction instruction,
+      Instruction newInstruction,
+      List<Instruction> instructions) {
+    for (int i = 0; i < instructions.size(); i++) {
+      if (instructions.get(i) == instruction) {
+        instructions.set(i, newInstruction);
+      }
+    }
   }
 
   private BasicBlock peekPrevious(ListIterator<BasicBlock> blocksIterator) {

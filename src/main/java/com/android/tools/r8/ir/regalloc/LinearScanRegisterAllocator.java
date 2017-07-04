@@ -289,11 +289,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       Iterator<Instruction> instructionIterator = block.getInstructions().iterator();
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
-        // Remove any local-read instructions now that live ranges are computed.
-        if (instruction.isDebugLocalRead()) {
-          instructionIterator.remove();
-          continue;
-        }
         if (!instruction.isDebugPosition()) {
           continue;
         }
@@ -1674,10 +1669,16 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
             live.add(use);
           }
         }
-        Value use = instruction.getPreviousLocalValue();
-        if (use != null) {
-          assert use.needsRegister();
-          live.add(use);
+        if (options.debug) {
+          for (Value use : instruction.getDebugValues()) {
+            assert use.needsRegister();
+            live.add(use);
+          }
+          Value use = instruction.getPreviousLocalValue();
+          if (use != null) {
+            assert use.needsRegister();
+            live.add(use);
+          }
         }
       }
       for (Phi phi : block.getPhis()) {
@@ -1794,15 +1795,27 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
                 new LiveIntervalsUse(instruction.getNumber(), instruction.maxInValueRegister()));
           }
         }
-        Value use = instruction.getPreviousLocalValue();
-        if (use != null) {
-          assert use.needsRegister();
-          if (!live.contains(use)) {
-            live.add(use);
-            addLiveRange(use, block, instruction.getNumber());
+        if (options.debug) {
+          int number = instruction.getNumber();
+          for (Value use : instruction.getDebugValues()) {
+            assert use.needsRegister();
+            if (!live.contains(use)) {
+              live.add(use);
+              addLiveRange(use, block, number);
+            }
+            LiveIntervals useIntervals = use.getLiveIntervals();
+            useIntervals.addUse(new LiveIntervalsUse(number, Constants.U16BIT_MAX));
           }
-          LiveIntervals useIntervals = use.getLiveIntervals();
-          useIntervals.addUse(new LiveIntervalsUse(instruction.getNumber(), Constants.U16BIT_MAX));
+          Value use = instruction.getPreviousLocalValue();
+          if (use != null) {
+            assert use.needsRegister();
+            if (!live.contains(use)) {
+              live.add(use);
+              addLiveRange(use, block, number);
+            }
+            LiveIntervals useIntervals = use.getLiveIntervals();
+            useIntervals.addUse(new LiveIntervalsUse(number, Constants.U16BIT_MAX));
+          }
         }
       }
     }

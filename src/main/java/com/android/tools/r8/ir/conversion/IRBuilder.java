@@ -34,7 +34,6 @@ import com.android.tools.r8.ir.code.ConstClass;
 import com.android.tools.r8.ir.code.ConstNumber;
 import com.android.tools.r8.ir.code.ConstString;
 import com.android.tools.r8.ir.code.ConstType;
-import com.android.tools.r8.ir.code.DebugLocalRead;
 import com.android.tools.r8.ir.code.DebugLocalUninitialized;
 import com.android.tools.r8.ir.code.DebugLocalWrite;
 import com.android.tools.r8.ir.code.DebugPosition;
@@ -82,11 +81,11 @@ import com.android.tools.r8.utils.InternalOptions;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceSortedMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -265,6 +264,11 @@ public class IRBuilder {
   boolean throwingInstructionInCurrentBlock = false;
 
   private final InternalOptions options;
+
+  // Pending local changes.
+  private List<Value> debugLocalStarts = new ArrayList<>();
+  private List<Value> debugLocalReads = new ArrayList<>();
+  private List<Value> debugLocalEnds = new ArrayList<>();
 
   public IRBuilder(DexEncodedMethod method, SourceCode source, InternalOptions options) {
     this(method, source, new ValueNumberGenerator(), options);
@@ -517,20 +521,10 @@ public class IRBuilder {
       // We cannot shortcut if the local is defined by a phi as it could end up being trivial.
       addDebugLocalWrite(moveType, register, in);
     } else {
-      DebugLocalRead read = addDebugLocalRead(register, local);
-      if (read != null) {
-        read.addDebugLocalStart();
+      Value value = getLocalValue(register, local);
+      if (value != null) {
+        debugLocalStarts.add(value);
       }
-    }
-  }
-
-  public void addDebugLocalEnd(int register, DebugLocalInfo local) {
-    if (!options.debug) {
-      return;
-    }
-    DebugLocalRead read = addDebugLocalRead(register, local);
-    if (read != null) {
-      read.addDebugLocalEnd();
     }
   }
 
@@ -541,10 +535,7 @@ public class IRBuilder {
     addInstruction(write);
   }
 
-  public DebugLocalRead addDebugLocalRead(int register, DebugLocalInfo local) {
-    if (!options.debug) {
-      return null;
-    }
+  private Value getLocalValue(int register, DebugLocalInfo local) {
     assert local != null;
     assert local == getCurrentLocal(register);
     MoveType moveType = MoveType.fromDexType(local.type);
@@ -555,10 +546,27 @@ public class IRBuilder {
       return null;
     }
     assert in.getLocalInfo() == local;
-    DebugLocalRead readLocal = new DebugLocalRead(in);
-    assert !readLocal.instructionTypeCanThrow();
-    addInstruction(readLocal);
-    return readLocal;
+    return in;
+  }
+
+  public void addDebugLocalRead(int register, DebugLocalInfo local) {
+    if (!options.debug) {
+      return;
+    }
+    Value value = getLocalValue(register, local);
+    if (value != null) {
+      debugLocalReads.add(value);
+    }
+  }
+
+  public void addDebugLocalEnd(int register, DebugLocalInfo local) {
+    if (!options.debug) {
+      return;
+    }
+    Value value = getLocalValue(register, local);
+    if (value != null) {
+      debugLocalEnds.add(value);
+    }
   }
 
   public void addAdd(NumericType type, int dest, int left, int right) {
@@ -1549,6 +1557,7 @@ public class IRBuilder {
 
   // Private instruction helpers.
   private void addInstruction(Instruction ir) {
+    attachLocalChanges(ir);
     if (currentDebugPosition != null && !ir.isMoveException()) {
       flushCurrentDebugPosition();
     }
@@ -1572,6 +1581,29 @@ public class IRBuilder {
       assert ir.isMoveException();
       flushCurrentDebugPosition();
     }
+  }
+
+  private void attachLocalChanges(Instruction ir) {
+    if (!options.debug) {
+      return;
+    }
+    if (debugLocalStarts.isEmpty() && debugLocalReads.isEmpty() && debugLocalEnds.isEmpty()) {
+      return;
+    }
+    for (Value debugLocalStart : debugLocalStarts) {
+      ir.addDebugValue(debugLocalStart);
+      debugLocalStart.addDebugLocalStart(ir);
+    }
+    for (Value debugLocalRead : debugLocalReads) {
+      ir.addDebugValue(debugLocalRead);
+    }
+    for (Value debugLocalEnd : debugLocalEnds) {
+      ir.addDebugValue(debugLocalEnd);
+      debugLocalEnd.addDebugLocalEnd(ir);
+    }
+    debugLocalStarts.clear();
+    debugLocalReads.clear();
+    debugLocalEnds.clear();
   }
 
   // Package (ie, SourceCode accessed) helpers.
@@ -1680,8 +1712,7 @@ public class IRBuilder {
 
   private void closeCurrentBlockWithFallThrough(BasicBlock nextBlock) {
     assert currentBlock != null;
-    flushCurrentDebugPosition();
-    currentBlock.add(new Goto());
+    addInstruction(new Goto());
     if (currentBlock.hasCatchSuccessor(nextBlock)) {
       needGotoToCatchBlocks.add(new BasicBlock.Pair(currentBlock, nextBlock));
     } else {
@@ -1731,6 +1762,12 @@ public class IRBuilder {
         }
         Goto gotoExit = new Goto();
         gotoExit.setBlock(block);
+        if (options.debug) {
+          for (Value value : ret.getDebugValues()) {
+            gotoExit.addDebugValue(value);
+            value.removeDebugUser(ret);
+          }
+        }
         instructions.set(instructions.size() - 1, gotoExit);
         block.link(normalExitBlock);
         gotoExit.setTarget(normalExitBlock);
@@ -1934,6 +1971,7 @@ public class IRBuilder {
     // Stack-trace support requires position information in both debug and release mode.
     flushCurrentDebugPosition();
     currentDebugPosition = new DebugPosition(line, file);
+    attachLocalChanges(currentDebugPosition);
   }
 
   private void flushCurrentDebugPosition() {

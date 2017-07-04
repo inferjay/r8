@@ -205,7 +205,8 @@ public class IRCode {
     }
     if (value.debugUsers() != null) {
       for (Instruction debugUser : value.debugUsers()) {
-        assert debugUser.getPreviousLocalValue() == value;
+        assert debugUser.getPreviousLocalValue() == value
+            || debugUser.getDebugValues().contains(value);
       }
     }
     return true;

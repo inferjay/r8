@@ -541,6 +541,9 @@ public class BasicBlock {
           for (Value value : instruction.inValues) {
             value.removeUser(instruction);
           }
+          for (Value value : instruction.getDebugValues()) {
+            value.removeDebugUser(instruction);
+          }
           Value previousLocalValue = instruction.getPreviousLocalValue();
           if (previousLocalValue != null) {
             previousLocalValue.removeDebugUser(instruction);

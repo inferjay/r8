@@ -40,8 +40,8 @@ public class Value {
     final DebugLocalInfo local;
     Value previousLocalValue;
     Set<Instruction> debugUsers = new HashSet<>();
-    List<DebugLocalRead> localStarts = new ArrayList<>();
-    List<DebugLocalRead> localEnds = new ArrayList<>();
+    List<Instruction> localStarts = new ArrayList<>();
+    List<Instruction> localEnds = new ArrayList<>();
 
     DebugData(DebugInfo info) {
       this(info.local, info.previousLocalValue);
@@ -115,20 +115,20 @@ public class Value {
     }
   }
 
-  public List<DebugLocalRead> getDebugLocalStarts() {
+  public List<Instruction> getDebugLocalStarts() {
     return debugData.localStarts;
   }
 
-  public List<DebugLocalRead> getDebugLocalEnds() {
+  public List<Instruction> getDebugLocalEnds() {
     return debugData.localEnds;
   }
 
-  public void addDebugLocalStart(DebugLocalRead start) {
+  public void addDebugLocalStart(Instruction start) {
     assert start != null;
     debugData.localStarts.add(start);
   }
 
-  public void addDebugLocalEnd(DebugLocalRead end) {
+  public void addDebugLocalEnd(Instruction end) {
     assert end != null;
     debugData.localEnds.add(end);
   }
@@ -253,7 +253,6 @@ public class Value {
     if (isUninitializedLocal()) {
       return;
     }
-    assert !debugData.debugUsers.contains(user);
     debugData.debugUsers.add(user);
   }
 
@@ -307,6 +306,13 @@ public class Value {
     }
     if (debugData != null) {
       for (Instruction user : debugUsers()) {
+        user.getDebugValues().replaceAll(v -> {
+          if (v == this) {
+            newValue.addDebugUser(user);
+            return newValue;
+          }
+          return v;
+        });
         if (user.getPreviousLocalValue() == this) {
           newValue.addDebugUser(user);
           user.replacePreviousLocalValue(newValue);
@@ -387,8 +393,11 @@ public class Value {
           builder.append(constNumber.getRawValue());
         }
       }
+      if (isConstant && hasLocalInfo) {
+        builder.append(", ");
+      }
       if (hasLocalInfo) {
-        builder.append(", ").append(getLocalInfo());
+        builder.append(getLocalInfo());
       }
       builder.append(")");
     }

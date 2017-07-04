@@ -203,14 +203,7 @@ public class Phi extends Value {
     }
     if (debugUsers() != null) {
       for (Instruction user : debugUsers()) {
-        if (this == user.getPreviousLocalValue()) {
-          if (same.getDebugInfo() == null) {
-            user.replacePreviousLocalValue(null);
-          } else {
-            user.replacePreviousLocalValue(same);
-            same.addDebugUser(user);
-          }
-        }
+        user.replaceDebugPhi(this, same);
       }
     }
     // If IR construction is taking place, update the definition users.
