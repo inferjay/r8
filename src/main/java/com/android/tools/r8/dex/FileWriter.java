@@ -671,13 +671,16 @@ public class FileWriter {
 
   private void writeMethodHandle(DexMethodHandle methodHandle) {
     checkThatInvokeCustomIsAllowed();
-    MethodHandleType methodHandleDexType = methodHandle.type;
-    switch (methodHandleDexType) {
+    MethodHandleType methodHandleDexType;
+    switch (methodHandle.type) {
       case INVOKE_CONSTRUCTOR:
         throw new CompilationError("Constructor method handle type is not yet supported.");
       case INVOKE_INTERFACE:
       case INVOKE_SUPER:
         methodHandleDexType = MethodHandleType.INVOKE_INSTANCE;
+        break;
+      default:
+        methodHandleDexType = methodHandle.type;
         break;
     }
     assert dest.isAligned(4);
