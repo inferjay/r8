@@ -169,19 +169,19 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     insertArgumentMoves();
     BasicBlock[] blocks = computeLivenessInformation();
     // First attempt to allocate register allowing argument reuse. This will fail if spilling
-    // is required or if we end up using more than 15 registers.
+    // is required or if we end up using more than 16 registers.
     boolean noSpilling =
         performAllocationWithoutMoveInsertion(ArgumentReuseMode.ALLOW_ARGUMENT_REUSE);
-    if (!noSpilling || registersUsed() > MAX_SMALL_REGISTER) {
+    if (!noSpilling || (highestUsedRegister() > MAX_SMALL_REGISTER)) {
       // Redo allocation disallowing argument reuse. This always succeeds.
       clearRegisterAssignments();
       performAllocation(ArgumentReuseMode.DISALLOW_ARGUMENT_REUSE);
     } else {
       // Insert spill and phi moves after allocating with argument reuse. If the moves causes
-      // the method to use more than 15 registers we redo allocation disallowing argument
+      // the method to use more than 16 registers we redo allocation disallowing argument
       // reuse. This very rarely happens in practice (12 methods on GMSCore v4 hits that case).
       insertMoves();
-      if (registersUsed() > MAX_SMALL_REGISTER) {
+      if (highestUsedRegister() > MAX_SMALL_REGISTER) {
         // Redo allocation disallowing argument reuse. This always succeeds.
         clearRegisterAssignments();
         removeSpillAndPhiMoves();
@@ -404,6 +404,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         getRegisterForValue(value, instructionNumber) + value.requiredRegisters() - 1);
   }
 
+  public int highestUsedRegister() {
+    return registersUsed() - 1;
+  }
+
   @Override
   public int registersUsed() {
     int numberOfRegister = maxRegisterNumber + 1 - NUMBER_OF_SENTINEL_REGISTERS;
@@ -472,7 +476,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       assert intervals.getRegisterLimit() == Constants.U16BIT_MAX;
       boolean canUseArgumentRegister = true;
       for (LiveIntervals child : intervals.getSplitChildren()) {
-        if (child.getRegisterLimit() < registersUsed()) {
+        if (child.getRegisterLimit() < highestUsedRegister()) {
           canUseArgumentRegister = false;
           break;
         }
