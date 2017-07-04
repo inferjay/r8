@@ -107,6 +107,7 @@ public class PeepholeOptimizer {
       Instruction instruction = from.previous();
       movedThrowingInstruction = movedThrowingInstruction || instruction.instructionTypeCanThrow();
       newBlock.getInstructions().addFirst(instruction);
+      instruction.setBlock(newBlock);
     }
     if (movedThrowingInstruction && first.hasCatchHandlers()) {
       newBlock.transferCatchHandlers(first);
