@@ -29,7 +29,59 @@ Collected into tools/linux/art
 
 art-7.0.0
 ---------
-Build from branch android-7.0.0_r21.
+Build from branch android-7.0.0_r21 with the following patch:
+
+diff --git a/runtime/thread.cc b/runtime/thread.cc
+index 16f30cded..acdd995e9 100644
+--- a/runtime/thread.cc
++++ b/runtime/thread.cc
+@@ -554,6 +554,12 @@ void Thread::InstallImplicitProtection() {
+   // AddressSanitizer does not like the part of this functions that reads every stack page.
+   // Looks a lot like an out-of-bounds access.
+ 
++  //
++  // Accesses too far below the current machine register corresponding to the stack pointer (e.g.,
++  // ESP on x86[-32], SP on ARM) might cause a SIGSEGV (at least on x86 with newer kernels). We
++  // thus have to move the stack pointer. We do this portably by using a recursive function with a
++  // large stack frame size.
++
+   // (Defensively) first remove the protection on the protected region as will want to read
+   // and write it. Ignore errors.
+   UnprotectStack();
+@@ -561,12 +567,26 @@ void Thread::InstallImplicitProtection() {
+   VLOG(threads) << "Need to map in stack for thread at " << std::hex <<
+       static_cast<void*>(pregion);
+ 
+-  // Read every page from the high address to the low.
+-  volatile uint8_t dont_optimize_this;
+-  UNUSED(dont_optimize_this);
+-  for (uint8_t* p = stack_top; p >= pregion; p -= kPageSize) {
+-    dont_optimize_this = *p;
+-  }
++  struct RecurseDownStack {
++    // This function has an intentionally large stack size.
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wframe-larger-than="
++    NO_INLINE
++    static void Touch(uintptr_t target) {
++      volatile size_t zero = 0;
++      // Use a large local volatile array to ensure a large frame size. Do not use anything close
++      // to a full page for ASAN. It would be nice to ensure the frame size is at most a page, but
++      // there is no pragma support for this.
++      volatile char space[kPageSize - 256];
++      char sink ATTRIBUTE_UNUSED = space[zero];
++      if (reinterpret_cast<uintptr_t>(space) >= target + kPageSize) {
++        Touch(target);
++      }
++      zero *= 2;  // Try to avoid tail recursion.
++    }
++#pragma GCC diagnostic pop
++  };
++  RecurseDownStack::Touch(reinterpret_cast<uintptr_t>(pregion));
+ 
+   VLOG(threads) << "(again) installing stack protected region at " << std::hex <<
+       static_cast<void*>(pregion) << " to " <<
+
 
   mkdir 7.0.0_r21
   cd 7.0.0_r21
@@ -37,6 +89,9 @@ Build from branch android-7.0.0_r21.
   repo sync
   source build/envsetup.sh
   lunch aosp_angler-userdebug
+  cd art
+  <apply patch>
+  cd ..
   m -j24
   m -j24 build-art
   m -j24 test-art-host
