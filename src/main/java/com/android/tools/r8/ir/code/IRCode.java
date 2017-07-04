@@ -137,6 +137,7 @@ public class IRCode {
   public boolean isConsistentGraph() {
     assert consistentPredecessorSuccessors();
     assert consistentCatchHandlers();
+    assert consistentBlockInstructions();
     assert normalExitBlock == null || normalExitBlock.exit().isReturn();
     return true;
   }
@@ -257,6 +258,15 @@ public class IRCode {
         assert lastIndex == lastSuccessorIndex  // All successors are catch successors.
             || lastIndex == lastSuccessorIndex - 1; // All but one successors are catch successors.
         assert lastIndex == lastSuccessorIndex || !block.exit().isThrow();
+      }
+    }
+    return true;
+  }
+
+  private boolean consistentBlockInstructions() {
+    for (BasicBlock block : blocks) {
+      for (Instruction instruction : block.getInstructions()) {
+        assert instruction.getBlock() == block;
       }
     }
     return true;
