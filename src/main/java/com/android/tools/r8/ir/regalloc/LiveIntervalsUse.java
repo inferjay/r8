@@ -6,12 +6,18 @@ package com.android.tools.r8.ir.regalloc;
 import static com.android.tools.r8.dex.Constants.U16BIT_MAX;
 
 public class LiveIntervalsUse implements Comparable<LiveIntervalsUse> {
-  private int position;
-  private int limit;
+  private final int position;
+  private final int limit;
+  private final boolean debugUse;
 
   public LiveIntervalsUse(int position, int limit) {
+    this(position, limit, false);
+  }
+
+  public LiveIntervalsUse(int position, int limit, boolean debugUse) {
     this.position = position;
     this.limit = limit;
+    this.debugUse = debugUse;
   }
 
   public int getPosition() {
@@ -46,5 +52,9 @@ public class LiveIntervalsUse implements Comparable<LiveIntervalsUse> {
 
   public boolean hasConstraint() {
     return limit < U16BIT_MAX;
+  }
+
+  public boolean isDebugUse() {
+    return debugUse;
   }
 }
