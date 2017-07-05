@@ -3,16 +3,14 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Closer;
-
 import com.android.tools.r8.dex.DexFileReader;
 import com.android.tools.r8.dex.Segment;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OutputMode;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closer;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,12 +41,7 @@ public class DexSegments {
         }
         validate();
         return new Command(
-            getAppBuilder().build(),
-            getOutputPath(),
-            getOutputMode(),
-            getMode(),
-            getMinApiLevel(),
-            isOverwriteOutputs());
+            getAppBuilder().build(), getOutputPath(), getOutputMode(), getMode(), getMinApiLevel());
       }
     }
 
@@ -91,9 +84,8 @@ public class DexSegments {
         Path outputPath,
         OutputMode outputMode,
         CompilationMode mode,
-        int minApiLevel,
-        boolean isOverwrite) {
-      super(inputApp, outputPath, outputMode, mode, minApiLevel, isOverwrite);
+        int minApiLevel) {
+      super(inputApp, outputPath, outputMode, mode, minApiLevel);
     }
 
     private Command(boolean printHelp) {

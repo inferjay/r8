@@ -22,7 +22,6 @@ abstract class BaseCommand {
   private final OutputMode outputMode;
   private final CompilationMode mode;
   private final int minApiLevel;
-  private final boolean overwriteOutputs;
 
   BaseCommand(boolean printHelp, boolean printVersion) {
     this.printHelp = printHelp;
@@ -33,11 +32,14 @@ abstract class BaseCommand {
     this.outputMode = OutputMode.Indexed;
     this.mode = null;
     this.minApiLevel = 0;
-    this.overwriteOutputs = true;
   }
 
-  BaseCommand(AndroidApp app, Path outputPath,
-      OutputMode outputMode, CompilationMode mode, int minApiLevel, boolean overwriteOutputs) {
+  BaseCommand(
+      AndroidApp app,
+      Path outputPath,
+      OutputMode outputMode,
+      CompilationMode mode,
+      int minApiLevel) {
     assert app != null;
     assert mode != null;
     assert minApiLevel > 0;
@@ -46,7 +48,6 @@ abstract class BaseCommand {
     this.outputMode = outputMode;
     this.mode = mode;
     this.minApiLevel = minApiLevel;
-    this.overwriteOutputs = overwriteOutputs;
     // Print options are not set.
     printHelp = false;
     printVersion = false;
@@ -84,10 +85,6 @@ abstract class BaseCommand {
     return outputMode;
   }
 
-  public boolean isOverwriteOutputs() {
-    return overwriteOutputs;
-  }
-
   abstract static class Builder<C extends BaseCommand, B extends Builder<C, B>> {
 
     private boolean printHelp = false;
@@ -97,7 +94,6 @@ abstract class BaseCommand {
     private OutputMode outputMode = OutputMode.Indexed;
     private CompilationMode mode;
     private int minApiLevel = Constants.DEFAULT_ANDROID_API;
-    private boolean overwriteOutputs = true;
 
     protected Builder(CompilationMode mode) {
       this(AndroidApp.builder(), mode);
@@ -257,16 +253,8 @@ abstract class BaseCommand {
       return self();
     }
 
-    protected boolean isOverwriteOutputs() {
-      return overwriteOutputs;
-    }
-
-    protected void setOverwriteOutputs(boolean overwriteOutputs) {
-      this.overwriteOutputs = overwriteOutputs;
-    }
-
     protected void validate() throws CompilationException {
-      FileUtils.validateOutputFile(outputPath, overwriteOutputs);
+      FileUtils.validateOutputFile(outputPath);
     }
   }
 }

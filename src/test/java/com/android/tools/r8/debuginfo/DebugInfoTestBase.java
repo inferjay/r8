@@ -50,7 +50,7 @@ public class DebugInfoTestBase {
 
   protected String runOnArt(AndroidApp app, String main) throws IOException {
     Path out = temp.getRoot().toPath().resolve("out.zip");
-    app.writeToZip(out, OutputMode.Indexed, true);
+    app.writeToZip(out, OutputMode.Indexed);
     return ToolHelper.runArtNoVerificationErrors(ImmutableList.of(out.toString()), main, null);
   }
 

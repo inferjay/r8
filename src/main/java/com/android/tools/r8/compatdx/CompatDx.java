@@ -484,7 +484,7 @@ public class CompatDx {
       }
       writeZipWithClasses(inputs, result, output);
     } else {
-      result.write(output, true);
+      result.write(output);
     }
   }
 
