@@ -46,13 +46,15 @@ public class Disassemble {
           return new DisassembleCommand(isPrintHelp(), isPrintVersion());
         }
 
+        validate();
         return new DisassembleCommand(
             getAppBuilder().build(),
             getOutputPath(),
             getOutputMode(),
             getMode(),
             getMinApiLevel(),
-            useSmali);
+            useSmali,
+            isOverwriteOutputs());
       }
     }
 
@@ -108,8 +110,9 @@ public class Disassemble {
         OutputMode outputMode,
         CompilationMode mode,
         int minApiLevel,
-        boolean useSmali) {
-      super(inputApp, outputPath, outputMode, mode, minApiLevel);
+        boolean useSmali,
+        boolean isOverwrite) {
+      super(inputApp, outputPath, outputMode, mode, minApiLevel, isOverwrite);
       //assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";
       this.useSmali = useSmali;
     }

@@ -98,9 +98,15 @@ public class R8CommandTest {
 
   @Test
   public void existingOutputZip() throws Throwable {
-    thrown.expect(CompilationException.class);
     Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
     R8Command.builder().setOutputPath(existingZip).build();
+  }
+
+  @Test
+  public void existingOutputZipNoOverwrite() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
+    ToolHelper.setOverwrite(R8Command.builder().setOutputPath(existingZip), false).build();
   }
 
   @Test
@@ -119,7 +125,6 @@ public class R8CommandTest {
 
   @Test
   public void existingOutputZipParse() throws Throwable {
-    thrown.expect(CompilationException.class);
     Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
     parse("--output", existingZip.toString());
   }

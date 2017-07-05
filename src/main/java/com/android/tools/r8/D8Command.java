@@ -101,8 +101,10 @@ public class D8Command extends BaseCommand {
       if (isPrintHelp() || isPrintVersion()) {
         return new D8Command(isPrintHelp(), isPrintVersion());
       }
+
+      validate();
       return new D8Command(getAppBuilder().build(),
-          getOutputPath(), getOutputMode(), getMode(), getMinApiLevel());
+          getOutputPath(), getOutputMode(), getMode(), getMinApiLevel(), isOverwriteOutputs());
     }
   }
 
@@ -180,8 +182,8 @@ public class D8Command extends BaseCommand {
   }
 
   private D8Command(AndroidApp inputApp, Path outputPath,
-      OutputMode outputMode, CompilationMode mode, int minApiLevel) {
-    super(inputApp, outputPath, outputMode, mode, minApiLevel);
+      OutputMode outputMode, CompilationMode mode, int minApiLevel, boolean overwriteOutputs) {
+    super(inputApp, outputPath, outputMode, mode, minApiLevel, overwriteOutputs);
   }
 
   private D8Command(boolean printHelp, boolean printVersion) {
@@ -194,7 +196,7 @@ public class D8Command extends BaseCommand {
     assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
-    internal.overwriteOutputs = true;
+    internal.overwriteOutputs = isOverwriteOutputs();
     // Assert and fixup defaults.
     assert !internal.skipMinification;
     internal.skipMinification = true;

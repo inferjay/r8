@@ -41,12 +41,14 @@ public class DexSegments {
         if (isPrintHelp()) {
           return new Command(isPrintHelp());
         }
+        validate();
         return new Command(
             getAppBuilder().build(),
             getOutputPath(),
             getOutputMode(),
             getMode(),
-            getMinApiLevel());
+            getMinApiLevel(),
+            isOverwriteOutputs());
       }
     }
 
@@ -89,8 +91,9 @@ public class DexSegments {
         Path outputPath,
         OutputMode outputMode,
         CompilationMode mode,
-        int minApiLevel) {
-      super(inputApp, outputPath, outputMode, mode, minApiLevel);
+        int minApiLevel,
+        boolean isOverwrite) {
+      super(inputApp, outputPath, outputMode, mode, minApiLevel, isOverwrite);
     }
 
     private Command(boolean printHelp) {
