@@ -72,6 +72,16 @@ public class RunJdwpTests {
     return dexVm == DexVm.ART_DEFAULT;
   }
 
+  static final Map<String, TestPredicate> FLAKY_TESTS =
+      ImmutableMap.<String, TestPredicate>builder()
+          // Build bot is failing with ART segmentation faults on the following tests. b/63317743
+          .put("StackFrame.GetValues002Test", RunJdwpTests::isAndroidMOrAbove)
+          .put("ObjectReference.ReferringObjectsTest", RunJdwpTests::isAndroidMOrAbove)
+          .put("VirtualMachine.InstanceCountsTest", RunJdwpTests::isAndroidMOrAbove)
+          .put("ReferenceType.InstancesTest", RunJdwpTests::isAndroidMOrAbove)
+          .put("EventModifiers.InstanceOnlyModifierTest", RunJdwpTests::isAndroidMOrAbove)
+          .build();
+
   static final Map<String, TestPredicate> FAILING_TESTS =
       ImmutableMap.<String, TestPredicate>builder()
           .put("ArrayReference.SetValues003Test", RunJdwpTests::isAndroidNOrAbove)
@@ -175,6 +185,8 @@ public class RunJdwpTests {
     if (!RUN_ALL_TESTS) {
       Assume.assumeTrue("Skipping non-smoke test " + test, SMOKE_TESTS.contains(test));
     }
+    Assume.assumeTrue("Skipping flaky test " + test,
+        !FLAKY_TESTS.containsKey(test) || FLAKY_TESTS.get(test).test(getDexVm(), tool));
     if (tool != Tool.JAVAC) {
       // Can we run the test on the current ART runtime ?
       Assume.assumeTrue("Skipping test " + test + " because ART is not supported",
