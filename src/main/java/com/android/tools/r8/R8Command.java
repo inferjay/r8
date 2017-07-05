@@ -136,6 +136,7 @@ public class R8Command extends BaseCommand {
         return new R8Command(isPrintHelp(), isPrintVersion());
       }
 
+      validate();
       DexItemFactory factory = new DexItemFactory();
       ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
       if (this.mainDexRules.isEmpty()) {
@@ -178,7 +179,8 @@ public class R8Command extends BaseCommand {
           getMinApiLevel(),
           useTreeShaking,
           useMinification,
-          ignoreMissingClasses);
+          ignoreMissingClasses,
+          isOverwriteOutputs());
     }
   }
 
@@ -321,8 +323,9 @@ public class R8Command extends BaseCommand {
       int minApiLevel,
       boolean useTreeShaking,
       boolean useMinification,
-      boolean ignoreMissingClasses) {
-    super(inputApp, outputPath, outputMode, mode, minApiLevel);
+      boolean ignoreMissingClasses,
+      boolean overwriteOutputs) {
+    super(inputApp, outputPath, outputMode, mode, minApiLevel, overwriteOutputs);
     assert proguardConfiguration != null;
     assert mainDexKeepRules != null;
     assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";

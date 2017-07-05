@@ -58,7 +58,7 @@ public class D8CommandTest {
   @Test
   public void defaultOutIsCwd() throws IOException, InterruptedException {
     Path working = temp.getRoot().toPath();
-    Path input = Paths.get(EXAMPLES_BUILD_DIR, "arithmetic.jar").toAbsolutePath();
+    Path input = Paths.get(EXAMPLES_BUILD_DIR + "/arithmetic.jar").toAbsolutePath();
     Path output = working.resolve("classes.dex");
     assertFalse(Files.exists(output));
     assertEquals(0, ToolHelper.forkD8(working, input.toString()).exitCode);
@@ -91,8 +91,14 @@ public class D8CommandTest {
   }
 
   @Test
-  public void existingOutputZip() throws Throwable {
+  public void existingOutputZipNoOverwrite() throws Throwable {
     thrown.expect(CompilationException.class);
+    Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
+    ToolHelper.setOverwrite(D8Command.builder().setOutputPath(existingZip), false).build();
+  }
+
+  @Test
+  public void existingOutputZip() throws Throwable {
     Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
     D8Command.builder().setOutputPath(existingZip).build();
   }
@@ -113,7 +119,6 @@ public class D8CommandTest {
 
   @Test
   public void existingOutputZipParse() throws Throwable {
-    thrown.expect(CompilationException.class);
     Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
     parse("--output", existingZip.toString());
   }

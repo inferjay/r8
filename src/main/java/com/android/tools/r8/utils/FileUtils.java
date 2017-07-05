@@ -73,10 +73,10 @@ public class FileUtils {
     Files.write(file, Arrays.asList(lines));
   }
 
-  public static Path validateOutputFile(Path path) throws CompilationException {
+  public static Path validateOutputFile(Path path, boolean allowOverwrite) throws CompilationException {
     if (path != null) {
       if (isZipFile(path)) {
-        if (Files.exists(path)) {
+        if ((!allowOverwrite) && Files.exists(path)) {
           throw new CompilationException("Cannot write to existing output file: " + path);
         }
       } else if (!(Files.exists(path) && Files.isDirectory(path))) {
