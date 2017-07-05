@@ -3,7 +3,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
-# Run ProGuard and the DX tool on GmsCore V10.
+# Run ProGuard and the DX or CompatDX (= D8) tool on GmsCore V10.
 
 from __future__ import print_function
 from os import makedirs
@@ -20,13 +20,14 @@ import proguard
 import utils
 
 BLAZE_BUILD_DIR = join(gmscore_data.V10_BASE,
-    'blaze-out/intel-linux-android-4.8-libcxx-x86-opt/bin/java/com/google/'
-    'android/gmscore/integ')
+    'blaze-out', 'intel-linux-android-4.8-libcxx-x86-opt', 'bin', 'java',
+    'com', 'google', 'android', 'gmscore', 'integ')
 PROGUARDED_OUTPUT = join(BLAZE_BUILD_DIR,
     'GmsCore_prod_alldpi_release_all_locales_proguard.jar')
 GMSCORE_SEEDS_FILE = join(BLAZE_BUILD_DIR,
     'GmsCore_prod_alldpi_release_all_locales_proguard.seeds')
-DX_EXECUTABLE = join(utils.REPO_ROOT, 'tools/linux/dx/bin/dx')
+DX_JAR = join(utils.REPO_ROOT, 'tools', 'linux', 'dx', 'framework', 'dx.jar')
+COMPATDX_JAR = join(utils.REPO_ROOT, 'build', 'libs', 'compatdx.jar')
 
 def parse_arguments():
   parser = argparse.ArgumentParser(
@@ -39,6 +40,10 @@ def parse_arguments():
       help = 'Prints the line \'<BENCHMARKNAME>(RunTimeRaw): <elapsed>' +
              ' ms\' at the end where <elapsed> is the elapsed time in' +
              ' milliseconds.')
+  parser.add_argument('--compatdx',
+      help = 'Use CompatDx (D8) instead of DX.',
+      default = False,
+      action = 'store_true')
   return parser.parse_args()
 
 def Main():
@@ -70,8 +75,15 @@ def Main():
   proguard.run(args)
 
   # run dex on the result
-  check_call([DX_EXECUTABLE, '-JXmx5256M', '--multi-dex', '--output=' + outdir,
-      '--dex', PROGUARDED_OUTPUT])
+  if options.compatdx:
+    jar = COMPATDX_JAR
+  else:
+    jar = DX_JAR
+
+  cmd = ['java', '-jar', jar, '--min-sdk-version=26', '--multi-dex',
+      '--output=' + outdir, '--dex', PROGUARDED_OUTPUT];
+  utils.PrintCmd(cmd);
+  check_call(cmd)
 
   if options.print_runtimeraw:
     print('{}(RunTimeRaw): {} ms'
