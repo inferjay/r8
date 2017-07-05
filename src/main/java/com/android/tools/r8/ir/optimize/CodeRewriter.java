@@ -83,10 +83,12 @@ public class CodeRewriter {
 
   private final AppInfo appInfo;
   private final DexItemFactory dexItemFactory;
+  private final Set<DexType> libraryClassesWithOptimizationInfo;
 
-  public CodeRewriter(AppInfo appInfo) {
+  public CodeRewriter(AppInfo appInfo, Set<DexType> libraryClassesWithOptimizationInfo) {
     this.appInfo = appInfo;
     this.dexItemFactory = appInfo.dexItemFactory;
+    this.libraryClassesWithOptimizationInfo = libraryClassesWithOptimizationInfo;
   }
 
   /**
@@ -690,6 +692,12 @@ public class CodeRewriter {
         InvokeMethod invoke = current.asInvokeMethod();
         if (invoke.outValue() != null) {
           DexEncodedMethod target = invoke.computeSingleTarget(appInfo.withSubtyping());
+          // We have a set of library classes with optimization information - consider those
+          // as well.
+          if ((target == null) &&
+              libraryClassesWithOptimizationInfo.contains(invoke.getInvokedMethod().getHolder())) {
+            target = appInfo.definitionFor(invoke.getInvokedMethod());
+          }
           if (target != null) {
             DexMethod invokedMethod = target.method;
             // Check if the invoked method is known to return one of its arguments.

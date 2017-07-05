@@ -38,9 +38,11 @@ import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,35 +71,82 @@ public class IRConverter {
 
   private DexString highestSortingString;
 
-  public IRConverter(
+  private IRConverter(
+      Timing timing,
       DexApplication application,
       AppInfo appInfo,
+      GraphLense graphLense,
       InternalOptions options,
       CfgPrinter printer,
-      boolean enableDesugaring) {
-    this.timing = new Timing("Testing");
+      boolean enableDesugaring,
+      boolean enableWholeProgramOptimizations) {
+    assert application != null;
+    assert appInfo != null;
+    assert options != null;
+    this.timing = timing != null ? timing : new Timing("internal");
     this.application = application;
     this.appInfo = appInfo;
+    this.graphLense = graphLense != null ? graphLense : GraphLense.getIdentityLense();
     this.options = options;
     this.printer = printer;
-    this.graphLense = GraphLense.getIdentityLense();
-    this.inliner = null;
-    this.outliner = null;
-    this.codeRewriter = new CodeRewriter(appInfo);
-    this.memberValuePropagation = null;
+    Set<DexType> libraryClassesWithOptimizationInfo = markLibraryMethodsReturningReceiver();
+    this.codeRewriter = new CodeRewriter(appInfo, libraryClassesWithOptimizationInfo);
     this.lambdaRewriter = enableDesugaring ? new LambdaRewriter(this) : null;
     this.interfaceMethodRewriter =
         (enableDesugaring && enableInterfaceMethodDesugaring())
             ? new InterfaceMethodRewriter(this) : null;
-    lensCodeRewriter = null;
-    markLibraryMethodsReturningReceiver();
+    if (enableWholeProgramOptimizations) {
+      assert appInfo.withSubtyping() != null;
+      this.inliner = new Inliner(appInfo.withSubtyping(), graphLense, options);
+      this.outliner = new Outliner(appInfo, options);
+      this.memberValuePropagation = new MemberValuePropagation(appInfo);
+      this.lensCodeRewriter = new LensCodeRewriter(graphLense, appInfo.withSubtyping());
+    } else {
+      this.inliner = null;
+      this.outliner = null;
+      this.memberValuePropagation = null;
+      this.lensCodeRewriter = null;
+    }
   }
 
+  /**
+   * Create an IR converter for processing methods with full program optimization disabled.
+   */
   public IRConverter(
-      DexApplication application, AppInfo appInfo, InternalOptions options, CfgPrinter printer) {
-    this(application, appInfo, options, printer, true);
+      DexApplication application,
+      AppInfo appInfo,
+      InternalOptions options) {
+    this(null, application, appInfo, null, options, null, true, false);
   }
 
+  /**
+   * Create an IR converter for processing methods without full program optimization enabled.
+   *
+   * The argument <code>enableDesugaring</code> if desugaing is enabled.
+   */
+  public IRConverter(
+      DexApplication application,
+      AppInfo appInfo,
+      InternalOptions options,
+      boolean enableDesugaring) {
+    this(null, application, appInfo, null, options, null, enableDesugaring, false);
+  }
+
+  /**
+   * Create an IR converter for processing methods with full program optimization disabled.
+   */
+  public IRConverter(
+      Timing timing,
+      DexApplication application,
+      AppInfo appInfo,
+      InternalOptions options,
+      CfgPrinter printer) {
+    this(timing, application, appInfo, null, options, printer, true, false);
+  }
+
+  /**
+   * Create an IR converter for processing methods with full program optimization enabled.
+   */
   public IRConverter(
       Timing timing,
       DexApplication application,
@@ -105,21 +154,7 @@ public class IRConverter {
       InternalOptions options,
       CfgPrinter printer,
       GraphLense graphLense) {
-    this.timing = timing;
-    this.application = application;
-    this.appInfo = appInfo;
-    this.options = options;
-    this.printer = printer;
-    this.graphLense = graphLense;
-    this.codeRewriter = new CodeRewriter(appInfo);
-    this.outliner = new Outliner(appInfo, options);
-    this.memberValuePropagation = new MemberValuePropagation(appInfo);
-    this.inliner = new Inliner(appInfo, graphLense, options);
-    this.lambdaRewriter = new LambdaRewriter(this);
-    this.interfaceMethodRewriter = enableInterfaceMethodDesugaring()
-        ? new InterfaceMethodRewriter(this) : null;
-    lensCodeRewriter = new LensCodeRewriter(graphLense, appInfo);
-    markLibraryMethodsReturningReceiver();
+    this(timing, application, appInfo, graphLense, options, printer, true, true);
   }
 
   private boolean enableInterfaceMethodDesugaring() {
@@ -142,10 +177,11 @@ public class IRConverter {
     throw new Unreachable();
   }
 
-  private void markLibraryMethodsReturningReceiver() {
+  private Set<DexType> markLibraryMethodsReturningReceiver() {
     DexItemFactory dexItemFactory = appInfo.dexItemFactory;
-    dexItemFactory.stringBuilderMethods.forEeachAppendMethod(this::markReturnsReceiver);
-    dexItemFactory.stringBufferMethods.forEeachAppendMethod(this::markReturnsReceiver);
+    dexItemFactory.stringBuilderMethods.forEachAppendMethod(this::markReturnsReceiver);
+    dexItemFactory.stringBufferMethods.forEachAppendMethod(this::markReturnsReceiver);
+    return ImmutableSet.of(dexItemFactory.stringBuilderType, dexItemFactory.stringBufferType);
   }
 
   private void markReturnsReceiver(DexMethod method) {

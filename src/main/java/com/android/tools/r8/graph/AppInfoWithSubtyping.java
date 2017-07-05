@@ -138,16 +138,15 @@ public class AppInfoWithSubtyping extends AppInfo {
    */
   public DexEncodedMethod lookupSingleVirtualTarget(DexMethod method) {
     assert method != null;
+    DexClass holder = definitionFor(method.holder);
+    if ((holder == null) || holder.isLibraryClass()) {
+      return null;
+    }
     if (method.isSingleVirtualMethodCached()) {
       return method.getSingleVirtualMethodCache();
     }
     DexEncodedMethod result = null;
     // First add the target for receiver type method.type.
-    DexClass root = definitionFor(method.holder);
-    if (root == null) {
-      // type specified in method does not have a materialized class.
-      return null;
-    }
     DexEncodedMethod topMethod = lookupVirtualTarget(method.holder, method);
     // The top method might be absent if this is an abstract class.
     if (topMethod != null) {
@@ -203,6 +202,10 @@ public class AppInfoWithSubtyping extends AppInfo {
 
   public DexEncodedMethod lookupSingleInterfaceTarget(DexMethod method) {
     assert method != null;
+    DexClass holder = definitionFor(method.holder);
+    if ((holder == null) || holder.isLibraryClass()) {
+      return null;
+    }
     DexEncodedMethod result = null;
     Set<DexType> set = subtypes(method.holder);
     if (set != null) {

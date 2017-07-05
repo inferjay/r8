@@ -100,6 +100,7 @@ public class DexItemFactory {
   public DexString thisName = createString("this");
 
   private DexString charArrayDescriptor = createString("[C");
+  private DexType charArrayType = createType(charArrayDescriptor);
   public DexString throwableArrayDescriptor = createString("[Ljava/lang/Throwable;");
 
   public DexType booleanType = createType(booleanDescriptor);
@@ -128,10 +129,11 @@ public class DexItemFactory {
   public DexType annotationType = createType(annotationDescriptor);
   public DexType throwableType = createType(throwableDescriptor);
 
-  public StringBuildingMethods stringBuilderMethods =
-      new StringBuildingMethods(createString("Ljava/lang/StringBuilder;"));
-  public StringBuildingMethods stringBufferMethods =
-      new StringBuildingMethods(createString("Ljava/lang/StringBuffer;"));
+  public DexType stringBuilderType = createType(createString("Ljava/lang/StringBuilder;"));
+  public DexType stringBufferType = createType(createString("Ljava/lang/StringBuffer;"));
+
+  public StringBuildingMethods stringBuilderMethods = new StringBuildingMethods(stringBuilderType);
+  public StringBuildingMethods stringBufferMethods = new StringBuildingMethods(stringBufferType);
   public ObjectsMethods objectsMethods = new ObjectsMethods();
   public ObjectMethods objectMethods = new ObjectMethods();
   public LongMethods longMethods = new LongMethods();
@@ -213,34 +215,42 @@ public class DexItemFactory {
     public DexMethod appendStringBuffer;
     public DexMethod toString;
 
-    private StringBuildingMethods(DexString receiver) {
-      DexString sbuf = createString("Ljava/lang/StringBuffer;");
-      DexString charSequence = createString("Ljava/lang/CharSequence;");
+    private StringBuildingMethods(DexType receiver) {
+      DexType sbufType = createType(createString("Ljava/lang/StringBuffer;"));
+      DexType charSequenceType = createType(createString("Ljava/lang/CharSequence;"));
       DexString append = createString("append");
       DexString toStringMethodName = createString("toString");
 
-      appendBoolean = createMethod(receiver, append, receiver, new DexString[]{booleanDescriptor});
-      appendChar = createMethod(receiver, append, receiver, new DexString[]{charDescriptor});
-      appendCharArray = createMethod(receiver, append, receiver, new DexString[]{
-          charArrayDescriptor});
-      appendSubCharArray = createMethod(receiver, append, receiver,
-          new DexString[]{charArrayDescriptor, intDescriptor, intDescriptor});
-      appendCharSequence = createMethod(receiver, append, receiver,
-          new DexString[]{charSequence});
-      appendSubCharSequence = createMethod(receiver, append, receiver,
-          new DexString[]{charSequence, intDescriptor, intDescriptor});
-      appendInt = createMethod(receiver, append, receiver, new DexString[]{intDescriptor});
-      appendDouble = createMethod(receiver, append, receiver, new DexString[]{doubleDescriptor});
-      appendFloat = createMethod(receiver, append, receiver, new DexString[]{floatDescriptor});
-      appendLong = createMethod(receiver, append, receiver, new DexString[]{longDescriptor});
-      appendObject = createMethod(receiver, append, receiver, new DexString[]{objectDescriptor});
-      appendString = createMethod(receiver, append, receiver, new DexString[]{stringDescriptor});
-      appendStringBuffer = createMethod(receiver, append, receiver, new DexString[]{sbuf});
-      toString = createMethod(receiver, toStringMethodName, stringDescriptor,
-          DexString.EMPTY_ARRAY);
+
+      appendBoolean =
+          createMethod(receiver, createProto(receiver, new DexType[]{booleanType}), append);
+      appendChar = createMethod(receiver, createProto(receiver, new DexType[]{charType}), append);
+      appendCharArray =
+          createMethod(receiver, createProto(receiver, new DexType[]{charArrayType}), append);
+      appendSubCharArray =
+          createMethod(receiver,
+              createProto(receiver, new DexType[]{charArrayType, intType, intType}), append);
+      appendCharSequence =
+          createMethod(receiver, createProto(receiver, new DexType[]{charSequenceType}), append);
+      appendSubCharSequence =
+          createMethod(receiver,
+              createProto(receiver, new DexType[]{charSequenceType, intType, intType}), append);
+      appendInt = createMethod(receiver, createProto(receiver, new DexType[]{intType}), append);
+      appendDouble =
+          createMethod(receiver, createProto(receiver, new DexType[]{doubleType}), append);
+      appendFloat = createMethod(receiver, createProto(receiver, new DexType[]{floatType}), append);
+      appendLong = createMethod(receiver, createProto(receiver, new DexType[]{longType}), append);
+      appendObject =
+          createMethod(receiver, createProto(receiver, new DexType[]{objectType}), append);
+      appendString =
+          createMethod(receiver, createProto(receiver, new DexType[]{stringType}), append);
+      appendStringBuffer =
+          createMethod(receiver, createProto(receiver, new DexType[]{sbufType}), append);
+      toString =
+          createMethod(receiver, createProto(stringType, DexType.EMPTY_ARRAY), toStringMethodName);
     }
 
-    public void forEeachAppendMethod(Consumer<DexMethod> consumer) {
+    public void forEachAppendMethod(Consumer<DexMethod> consumer) {
       consumer.accept(appendBoolean);
       consumer.accept(appendChar);
       consumer.accept(appendCharArray);

@@ -343,7 +343,7 @@ public class SmaliTestBase {
 
     public String run() {
       AppInfo appInfo = new AppInfo(application);
-      IRConverter converter = new IRConverter(application, appInfo, options, null);
+      IRConverter converter = new IRConverter(application, appInfo, options);
       converter.replaceCodeForTesting(method, code);
       return runArt(application, options);
     }

@@ -176,7 +176,7 @@ public class FileWriter {
       return this;
     }
     // At least one method needs a jumbo string.
-    IRConverter converter = new IRConverter(application, appInfo, options, null, false);
+    IRConverter converter = new IRConverter(application, appInfo, options, false);
     for (DexProgramClass clazz : classes) {
       rewriteCodeWithJumboStrings(converter, clazz.directMethods());
       rewriteCodeWithJumboStrings(converter, clazz.virtualMethods());
