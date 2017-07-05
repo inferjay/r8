@@ -97,11 +97,12 @@ public abstract class Instruction {
 
   public abstract void buildDex(DexBuilder builder);
 
-  public void replacePhi(Phi phi, Value value) {
+  public void replaceValue(Value oldValue, Value newValue) {
     for (int i = 0; i < inValues.size(); i++) {
-      if (phi == inValues.get(i)) {
-        inValues.set(i, value);
-        value.addUser(this);
+      if (oldValue == inValues.get(i)) {
+        inValues.set(i, newValue);
+        newValue.addUser(this);
+        oldValue.removeUser(this);
       }
     }
   }

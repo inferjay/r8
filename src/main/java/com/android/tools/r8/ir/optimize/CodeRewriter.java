@@ -63,6 +63,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,6 +74,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CodeRewriter {
 
@@ -80,6 +82,8 @@ public class CodeRewriter {
   private static final int CAN_THROW = 1;
   private static final int CANNOT_THROW = 2;
   private static final int MAX_FILL_ARRAY_SIZE = 8 * Constants.KILOBYTE;
+  // This constant was determined by experimentation.
+  private static final int STOP_SHARED_CONSTANT_THRESHOLD = 50;
 
   private final AppInfo appInfo;
   private final DexItemFactory dexItemFactory;
@@ -868,6 +872,7 @@ public class CodeRewriter {
     // Currently, we are only shortening the live range of constants in the entry block.
     // TODO(ager): Generalize this to shorten live ranges for more instructions? Currently
     // doing so seems to make things worse.
+    Map<BasicBlock, List<Instruction>> addConstantInBlock = new HashMap<>();
     DominatorTree dominatorTree = new DominatorTree(code);
     BasicBlock block = code.blocks.get(0);
     InstructionListIterator it = block.listIterator();
@@ -896,15 +901,55 @@ public class CodeRewriter {
         // Move the const instruction as close to its uses as possible.
         it.detach();
         if (dominator != block) {
-          insertConstantInBlock(instruction, dominator);
+          // Post-pone constant insertion in order to use a global heuristics.
+          List<Instruction> csts = addConstantInBlock.get(dominator);
+          if (csts == null) {
+            csts = new ArrayList<>();
+            addConstantInBlock.put(dominator, csts);
+          }
+          csts.add(instruction);
         } else {
           toInsertInThisBlock.add(instruction);
         }
       }
     }
+
+    // Heuristic to decide if constant instructions are shared in dominator block of usages or move
+    // to the usages.
+    for (Map.Entry<BasicBlock, List<Instruction>> entry : addConstantInBlock.entrySet()) {
+      if (entry.getValue().size() > STOP_SHARED_CONSTANT_THRESHOLD) {
+        // Too much constants in the same block, do not longer shared them except if they are used
+        // by phi instructions.
+        for (Instruction instruction : entry.getValue()) {
+          if (instruction.outValue().numberOfPhiUsers() != 0) {
+            // Add constant into the dominator block of usages.
+            insertConstantInBlock(instruction, entry.getKey());
+          } else {
+            assert instruction.outValue().numberOfUsers() != 0;
+            ConstNumber constNumber = instruction.asConstNumber();
+            Value constantValue = instruction.outValue();
+            for (Instruction user : constantValue.uniqueUsers()) {
+              ConstNumber newCstNum = ConstNumber.copyOf(code, constNumber);
+              InstructionListIterator iterator = user.getBlock().listIterator();
+              iterator.nextUntil((x) -> x == user);
+              iterator.previous();
+              iterator.add(newCstNum);
+              user.replaceValue(constantValue, newCstNum.outValue());
+            }
+          }
+        }
+      } else {
+        // Add constant into the dominator block of usages.
+        for (Instruction inst : entry.getValue()) {
+          insertConstantInBlock(inst, entry.getKey());
+        }
+      }
+    }
+
     for (Instruction toInsert : toInsertInThisBlock) {
       insertConstantInBlock(toInsert, block);
     }
+    assert code.isConsistentSSA();
   }
 
   private void insertConstantInBlock(Instruction instruction, BasicBlock block) {
