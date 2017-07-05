@@ -48,6 +48,11 @@ public abstract class CompilationTestBase {
         compiler, mode, referenceApk, pgMap, pgConf, Arrays.asList(inputs));
   }
 
+  public AndroidApp runAndCheckVerification(D8Command command, String referenceApk)
+      throws IOException, ExecutionException {
+    return checkVerification(ToolHelper.runD8(command), referenceApk);
+  }
+
   public AndroidApp runAndCheckVerification(
       CompilerUnderTest compiler,
       CompilationMode mode,
@@ -83,6 +88,11 @@ public abstract class CompilationTestBase {
                   .setMinApiLevel(Constants.ANDROID_L_API)
                   .build());
     }
+    return checkVerification(outputApp, referenceApk);
+  }
+
+  public AndroidApp checkVerification(AndroidApp outputApp, String referenceApk)
+      throws IOException, ExecutionException {
     Path out = temp.getRoot().toPath().resolve("all.zip");
     Path oatFile = temp.getRoot().toPath().resolve("all.oat");
     outputApp.writeToZip(out, OutputMode.Indexed);
