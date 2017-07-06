@@ -73,17 +73,11 @@ public class FileUtils {
     Files.write(file, Arrays.asList(lines));
   }
 
-  public static Path validateOutputFile(Path path, boolean allowOverwrite) throws CompilationException {
+  public static Path validateOutputFile(Path path) throws CompilationException {
     if (path != null) {
-      if (isZipFile(path)) {
-        if ((!allowOverwrite) && Files.exists(path)) {
-          throw new CompilationException("Cannot write to existing output file: " + path);
-        }
-      } else if (!(Files.exists(path) && Files.isDirectory(path))) {
+      if (!isZipFile(path) && !(Files.exists(path) && Files.isDirectory(path))) {
         throw new CompilationException(
-            "Invalid output: "
-                + path
-                + "\nOutput must be a non-existing zip archive or an existing directory");
+            "Invalid output: " + path + "\nOutput must be a zip archive or an existing directory");
       }
     }
     return path;

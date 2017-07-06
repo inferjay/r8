@@ -385,7 +385,7 @@ public class R8 {
   static void writeOutputs(R8Command command, InternalOptions options, AndroidApp outputApp)
       throws IOException {
     if (command.getOutputPath() != null) {
-      outputApp.write(command.getOutputPath(), options.outputMode, options.overwriteOutputs);
+      outputApp.write(command.getOutputPath(), options.outputMode);
     }
 
     if (options.printMapping && !options.skipMinification) {
@@ -394,7 +394,6 @@ public class R8 {
         OutputStream mapOut = openPathWithDefault(
             closer,
             options.printMappingFile,
-            options.overwriteOutputs,
             System.out);
         outputApp.writeProguardMap(closer, mapOut);
       }
@@ -402,15 +401,14 @@ public class R8 {
     if (options.printSeeds) {
       assert outputApp.hasProguardSeeds();
       try (Closer closer = Closer.create()) {
-        OutputStream seedsOut =
-            openPathWithDefault(closer, options.seedsFile, options.overwriteOutputs, System.out);
+        OutputStream seedsOut = openPathWithDefault(closer, options.seedsFile, System.out);
         outputApp.writeProguardSeeds(closer, seedsOut);
       }
     }
     if (options.printMainDexList && outputApp.hasMainDexList()) {
       try (Closer closer = Closer.create()) {
         OutputStream mainDexOut =
-            openPathWithDefault(closer, options.printMainDexListFile, true, System.out);
+            openPathWithDefault(closer, options.printMainDexListFile, System.out);
         outputApp.writeMainDexList(closer, mainDexOut);
       }
     }
@@ -418,18 +416,14 @@ public class R8 {
 
   private static OutputStream openPathWithDefault(Closer closer,
       Path file,
-      boolean allowOverwrite,
       PrintStream defaultOutput) throws IOException {
     OutputStream mapOut;
     if (file == null) {
       mapOut = defaultOutput;
     } else {
-      if (!allowOverwrite) {
-        mapOut = Files.newOutputStream(file, StandardOpenOption.CREATE_NEW);
-      } else {
-        mapOut = Files.newOutputStream(file,
-            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-      }
+      mapOut =
+          Files.newOutputStream(
+              file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
       closer.register(mapOut);
     }
     return mapOut;

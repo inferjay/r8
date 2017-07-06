@@ -38,17 +38,17 @@ public class DexVersionTests {
     D8Command.Builder arithmeticBuilder = D8Command.builder().addProgramFiles(ARITHMETIC_JAR);
     D8Command.Builder arrayAccessBuilder = D8Command.builder().addProgramFiles(ARRAYACCESS_JAR);
     D8Output output = D8.run(arrayAccessBuilder.build());
-    output.write(defaultApiFolder1.getRoot().toPath(), true);
+    output.write(defaultApiFolder1.getRoot().toPath());
     output = D8.run(arrayAccessBuilder.setMinApiLevel(Constants.ANDROID_O_API).build());
-    output.write(androidOApiFolder1.getRoot().toPath(), true);
+    output.write(androidOApiFolder1.getRoot().toPath());
     output = D8.run(arrayAccessBuilder.setMinApiLevel(Constants.ANDROID_N_API).build());
-    output.write(androidNApiFolder1.getRoot().toPath(), true);
+    output.write(androidNApiFolder1.getRoot().toPath());
     output = D8.run(arithmeticBuilder.build());
-    output.write(defaultApiFolder2.getRoot().toPath(), true);
+    output.write(defaultApiFolder2.getRoot().toPath());
     output = D8.run(arithmeticBuilder.setMinApiLevel(Constants.ANDROID_O_API).build());
-    output.write(androidOApiFolder2.getRoot().toPath(), true);
+    output.write(androidOApiFolder2.getRoot().toPath());
     output = D8.run(arithmeticBuilder.setMinApiLevel(Constants.ANDROID_N_API).build());
-    output.write(androidNApiFolder2.getRoot().toPath(), true);
+    output.write(androidNApiFolder2.getRoot().toPath());
   }
 
   private Path default1() {

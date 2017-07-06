@@ -206,7 +206,7 @@ public class TestBase {
    */
   protected String runOnArt(AndroidApp app, Class mainClass) throws IOException {
     Path out = File.createTempFile("junit", ".zip", temp.getRoot()).toPath();
-    app.writeToZip(out, OutputMode.Indexed, true);
+    app.writeToZip(out, OutputMode.Indexed);
     return ToolHelper.runArtNoVerificationErrors(
         ImmutableList.of(out.toString()), mainClass.getCanonicalName(), null);
   }
@@ -216,7 +216,7 @@ public class TestBase {
    */
   protected String runOnArt(AndroidApp app, Class mainClass, String... args) throws IOException {
     Path out = File.createTempFile("junit", ".zip", temp.getRoot()).toPath();
-    app.writeToZip(out, OutputMode.Indexed, true);
+    app.writeToZip(out, OutputMode.Indexed);
     return ToolHelper.runArtNoVerificationErrors(
         ImmutableList.of(out.toString()), mainClass.getCanonicalName(),
         builder -> {

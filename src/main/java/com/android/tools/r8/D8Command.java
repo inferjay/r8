@@ -103,8 +103,8 @@ public class D8Command extends BaseCommand {
       }
 
       validate();
-      return new D8Command(getAppBuilder().build(),
-          getOutputPath(), getOutputMode(), getMode(), getMinApiLevel(), isOverwriteOutputs());
+      return new D8Command(
+          getAppBuilder().build(), getOutputPath(), getOutputMode(), getMode(), getMinApiLevel());
     }
   }
 
@@ -115,7 +115,7 @@ public class D8Command extends BaseCommand {
       "  --debug             # compile with debugging information (default enabled).",
       "  --release           # compile without debugging information.",
       "  --output <file>     # output result in <outfile>.",
-      "                      # <file> must be an existing directory or non-existent zip file.",
+      "                      # <file> must be an existing directory or a zip file.",
       "  --lib <file>        # Add <file> as a library resource.",
       "  --classpath <file>  # Add <file> as a classpath resource.",
       "  --min-sdk-version   # minimum Android API level compatibility",
@@ -181,9 +181,13 @@ public class D8Command extends BaseCommand {
     return builder.setOutputPath(outputPath);
   }
 
-  private D8Command(AndroidApp inputApp, Path outputPath,
-      OutputMode outputMode, CompilationMode mode, int minApiLevel, boolean overwriteOutputs) {
-    super(inputApp, outputPath, outputMode, mode, minApiLevel, overwriteOutputs);
+  private D8Command(
+      AndroidApp inputApp,
+      Path outputPath,
+      OutputMode outputMode,
+      CompilationMode mode,
+      int minApiLevel) {
+    super(inputApp, outputPath, outputMode, mode, minApiLevel);
   }
 
   private D8Command(boolean printHelp, boolean printVersion) {
@@ -196,7 +200,6 @@ public class D8Command extends BaseCommand {
     assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
-    internal.overwriteOutputs = isOverwriteOutputs();
     // Assert and fixup defaults.
     assert !internal.skipMinification;
     internal.skipMinification = true;

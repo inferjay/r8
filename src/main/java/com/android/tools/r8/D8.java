@@ -65,7 +65,7 @@ public final class D8 {
     assert result != null;
     D8Output output = new D8Output(result.androidApp, command.getOutputMode());
     if (command.getOutputPath() != null) {
-      output.write(command.getOutputPath(), options.overwriteOutputs);
+      output.write(command.getOutputPath());
     }
     return output;
   }
@@ -87,7 +87,7 @@ public final class D8 {
     assert result != null;
     D8Output output = new D8Output(result.androidApp, command.getOutputMode());
     if (command.getOutputPath() != null) {
-      output.write(command.getOutputPath(), options.overwriteOutputs);
+      output.write(command.getOutputPath());
     }
     return output;
   }

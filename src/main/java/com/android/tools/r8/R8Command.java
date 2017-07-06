@@ -179,8 +179,7 @@ public class R8Command extends BaseCommand {
           getMinApiLevel(),
           useTreeShaking,
           useMinification,
-          ignoreMissingClasses,
-          isOverwriteOutputs());
+          ignoreMissingClasses);
     }
   }
 
@@ -197,7 +196,7 @@ public class R8Command extends BaseCommand {
       "  --debug                 # Compile with debugging information (default enabled).",
       "  --release               # Compile without debugging information.",
       "  --output <file>         # Output result in <file>.",
-      "                          # <file> must be an existing directory or non-existent zip file.",
+      "                          # <file> must be an existing directory or a zip file.",
       "  --lib <file>            # Add <file> as a library resource.",
       "  --min-sdk-version       # Minimum Android API level compatibility.",
       "  --pg-conf <file>        # Proguard configuration <file> (implies tree shaking/minification).",
@@ -323,9 +322,8 @@ public class R8Command extends BaseCommand {
       int minApiLevel,
       boolean useTreeShaking,
       boolean useMinification,
-      boolean ignoreMissingClasses,
-      boolean overwriteOutputs) {
-    super(inputApp, outputPath, outputMode, mode, minApiLevel, overwriteOutputs);
+      boolean ignoreMissingClasses) {
+    super(inputApp, outputPath, outputMode, mode, minApiLevel);
     assert proguardConfiguration != null;
     assert mainDexKeepRules != null;
     assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";
@@ -367,7 +365,6 @@ public class R8Command extends BaseCommand {
     internal.useTreeShaking = useTreeShaking();
     assert !internal.ignoreMissingClasses;
     internal.ignoreMissingClasses = ignoreMissingClasses;
-    internal.overwriteOutputs = true;
 
     // TODO(zerny): Consider which other proguard options should be given flags.
     assert internal.packagePrefix.length() == 0;

@@ -725,10 +725,4 @@ public class ToolHelper {
   public static AndroidApp getApp(BaseCommand command) {
     return command.getInputApp();
   }
-
-  public static <T extends BaseCommand, U extends BaseCommand.Builder<T, U>>
-      U setOverwrite(U commandBuilder, boolean overwrite) {
-    commandBuilder.setOverwriteOutputs(overwrite);
-    return commandBuilder;
-  }
 }

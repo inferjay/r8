@@ -105,7 +105,7 @@ public class CompatDxTests {
     AndroidApp generated = MainDexListTests.generateApplication(
         ImmutableList.of("A", "B"), Constants.ANDROID_L_API, Constants.U16BIT_MAX / 2 + 1);
     Path applicationJar = temp.newFile("application.jar").toPath();
-    generated.write(applicationJar, OutputMode.Indexed, true);
+    generated.write(applicationJar, OutputMode.Indexed);
     thrown.expect(CompilationError.class);
     runDexer(applicationJar.toString());
   }

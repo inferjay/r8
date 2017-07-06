@@ -13,10 +13,13 @@ import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.ToolHelper.ProcessResult;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -91,10 +94,40 @@ public class D8CommandTest {
   }
 
   @Test
-  public void existingOutputZipNoOverwrite() throws Throwable {
-    thrown.expect(CompilationException.class);
-    Path existingZip = temp.newFile("an-existing-archive.zip").toPath();
-    ToolHelper.setOverwrite(D8Command.builder().setOutputPath(existingZip), false).build();
+  public void existingOutputDirWithDexFiles() throws Throwable {
+    Path existingDir = temp.newFolder().toPath();
+    List<Path> classesFiles = ImmutableList.of(
+        existingDir.resolve("classes.dex"),
+        existingDir.resolve("classes2.dex"),
+        existingDir.resolve("Classes3.dex"), // ignore case.
+        existingDir.resolve("classes10.dex"),
+        existingDir.resolve("classes999.dex"));
+    List<Path> otherFiles = ImmutableList.of(
+        existingDir.resolve("classes0.dex"),
+        existingDir.resolve("classes1.dex"),
+        existingDir.resolve("classes010.dex"),
+        existingDir.resolve("classesN.dex"),
+        existingDir.resolve("other.dex"));
+    for (Path file : classesFiles) {
+      Files.createFile(file);
+      assertTrue(Files.exists(file));
+    }
+    for (Path file : otherFiles) {
+      Files.createFile(file);
+      assertTrue(Files.exists(file));
+    }
+    Path input = Paths.get(EXAMPLES_BUILD_DIR, "arithmetic.jar");
+    ProcessResult result =
+        ToolHelper.forkD8(Paths.get("."), input.toString(), "--output", existingDir.toString());
+    assertEquals(0, result.exitCode);
+    assertTrue(Files.exists(classesFiles.get(0)));
+    for (int i = 1; i < classesFiles.size(); i++) {
+      Path file = classesFiles.get(i);
+      assertFalse("Expected stale file to be gone: " + file, Files.exists(file));
+    }
+    for (Path file : otherFiles) {
+      assertTrue("Expected non-classes file to remain: " + file, Files.exists(file));
+    }
   }
 
   @Test

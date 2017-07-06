@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
@@ -255,17 +256,10 @@ public class AndroidApp {
    * Write the dex program resources and proguard resource to @code{output}.
    */
   public void write(Path output, OutputMode outputMode) throws IOException {
-    write(output, outputMode, false);
-  }
-
-  /**
-   * Write the dex program resources and proguard resource to @code{output}.
-   */
-  public void write(Path output, OutputMode outputMode, boolean overwrite) throws IOException {
     if (isArchive(output)) {
-      writeToZip(output, outputMode, overwrite);
+      writeToZip(output, outputMode);
     } else {
-      writeToDirectory(output, outputMode, overwrite);
+      writeToDirectory(output, outputMode);
     }
   }
 
@@ -273,15 +267,14 @@ public class AndroidApp {
    * Write the dex program resources and proguard resource to @code{directory}.
    */
   public void writeToDirectory(Path directory, OutputMode outputMode) throws IOException {
-    writeToDirectory(directory, outputMode, false);
-  }
-
-  /**
-   * Write the dex program resources and proguard resource to @code{directory}.
-   */
-  public void writeToDirectory(
-      Path directory, OutputMode outputMode, boolean overwrite) throws IOException {
-    CopyOption[] options = copyOptions(overwrite);
+    if (outputMode == OutputMode.Indexed) {
+      for (Path path : Files.list(directory).collect(Collectors.toList())) {
+        if (isClassesDexFile(path)) {
+          Files.delete(path);
+        }
+      }
+    }
+    CopyOption[] options = new CopyOption[] {StandardCopyOption.REPLACE_EXISTING};
     try (Closer closer = Closer.create()) {
       List<Resource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
@@ -289,6 +282,31 @@ public class AndroidApp {
         Files.copy(dexProgramSources.get(i).getStream(closer), fileName, options);
       }
     }
+  }
+
+  private static boolean isClassesDexFile(Path file) {
+    String name = file.getFileName().toString().toLowerCase();
+    if (!name.startsWith("classes") || !name.endsWith(".dex")) {
+      return false;
+    }
+    String numeral = name.substring("classes".length(), name.length() - ".dex".length());
+    if (numeral.isEmpty()) {
+      return true;
+    }
+    char c0 = numeral.charAt(0);
+    if (numeral.length() == 1) {
+      return '2' <= c0 && c0 <= '9';
+    }
+    if (c0 < '1' || '9' < c0) {
+      return false;
+    }
+    for (int i = 1; i < numeral.length(); i++) {
+      char c = numeral.charAt(i);
+      if (c < '0' || '9' < c) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public List<byte[]> writeToMemory() throws IOException {
@@ -309,15 +327,8 @@ public class AndroidApp {
    * Write the dex program resources to @code{archive} and the proguard resource as its sibling.
    */
   public void writeToZip(Path archive, OutputMode outputMode) throws IOException {
-    writeToZip(archive, outputMode, false);
-  }
-
-  /**
-   * Write the dex program resources to @code{archive} and the proguard resource as its sibling.
-   */
-  public void writeToZip(
-      Path archive, OutputMode outputMode, boolean overwrite) throws IOException {
-    OpenOption[] options = openOptions(overwrite);
+    OpenOption[] options =
+        new OpenOption[] {StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING};
     try (Closer closer = Closer.create()) {
       try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(archive, options))) {
         List<Resource> dexProgramSources = getDexProgramResources();
@@ -349,19 +360,6 @@ public class AndroidApp {
     InputStream input = getMainDexList(closer);
     assert input != null;
     out.write(ByteStreams.toByteArray(input));
-  }
-
-  private OpenOption[] openOptions(boolean overwrite) {
-    return new OpenOption[]{
-        overwrite ? StandardOpenOption.CREATE : StandardOpenOption.CREATE_NEW,
-        StandardOpenOption.TRUNCATE_EXISTING
-    };
-  }
-
-  private CopyOption[] copyOptions(boolean overwrite) {
-    return overwrite
-        ? new CopyOption[]{StandardCopyOption.REPLACE_EXISTING}
-        : new CopyOption[]{};
   }
 
   /**

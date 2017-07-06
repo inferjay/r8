@@ -96,17 +96,17 @@ public class MainDexListTests extends TestBase {
     // another. Keep the number of methods low enough for single dex application.
     AndroidApp generated = generateApplication(
         MANY_CLASSES, Constants.DEFAULT_ANDROID_API, MANY_CLASSES_SINGLE_DEX_METHODS_PER_CLASS);
-    generated.write(getManyClassesSingleDexAppPath(), OutputMode.Indexed, false);
+    generated.write(getManyClassesSingleDexAppPath(), OutputMode.Indexed);
 
     // Generates an application with many classes, every even in one package and every odd in
     // another. Add enough methods so the application cannot fit into one dex file.
     generated = generateApplication(
         MANY_CLASSES, Constants.ANDROID_L_API, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
-    generated.write(getManyClassesMultiDexAppPath(), OutputMode.Indexed, false);
+    generated.write(getManyClassesMultiDexAppPath(), OutputMode.Indexed);
 
     // Generates an application with two classes, each with the maximum possible number of methods.
     generated = generateApplication(TWO_LARGE_CLASSES, Constants.ANDROID_N_API, MAX_METHOD_COUNT);
-    generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed, false);
+    generated.write(getTwoLargeClassesAppPath(), OutputMode.Indexed);
   }
 
   private static Path getTwoLargeClassesAppPath() {
