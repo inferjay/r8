@@ -8,10 +8,9 @@ Device names:
   angler: Nexus 6P
   mako: Nexus 4
 
-
 art (default)
--------------
-Build from AOSP branch master. To update to a new AOSP master
+---------
+Build from branch master with art
 
   mkdir master
   cd master
@@ -26,20 +25,6 @@ Build from AOSP branch master. To update to a new AOSP master
 Collected into tools/linux/art
 
   scripts/update-host-art.sh --android-checkout ~/android/master --art-dir art
-
-The precise info for the AOSP master used is in aosp_master_manifest.xml, which is
-produced using this command:
-
-  repo manifest -o aosp_master_manifest.xml -r
-
-To reproduce that AOSP state, use the following commands:
-
-  mkdir master
-  cd master
-  mkdir -p .repo/manifests
-  cp <r8-checkout>/aosp_master_manifest.xml .repo/manifests
-  repo init -u https://android.googlesource.com/platform/manifest -m aosp_master_manifest.xml
-  <continue with repo sync as above>
 
 
 art-7.0.0
@@ -115,7 +100,6 @@ Collected into tools/linux/art-7.0.0.
 
   scripts/update-host-art.sh --android-checkout ~/android/7.0.0_r21 --art-dir art-7.0.0
 
-
 art-6.0.1
 ---------
 Build from branch android-6.0.1_r66 with the following patch:
@@ -189,7 +173,6 @@ index 6e8f89cb4..788d717ca 100644
 Collected into tools/linux/art-6.0.1.
 
   scripts/update-host-art.sh --android-checkout ~/android/6.0.1_r66 --art-dir art-6.0.1
-
 
 art-5.1.1
 ---------
