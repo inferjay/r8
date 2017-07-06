@@ -824,8 +824,14 @@ test {
 // 2. run the following commands in the Android checkout directory:
 //
 //    source build/envsetup.sh
-//    lunch aosp_angler-userdebug
-//    make -j30 test-art-host
+//    lunch aosp_angler-userdebug # or lunch aosp_angler-eng
+//    m desugar
+//    m -j30 test-art-host
+//    DESUGAR=false ANDROID_COMPILE_WITH_JACK=false art/test.py --host -t 001-HelloWorld
+//
+//    Without running the test.py command the classes.jar file used by desugar in
+//    $HOME/android/master/out/host/common/obj/JAVA_LIBRARIES/core-oj-hostdex_intermediates/
+//    seems to be missing - there is probably also a make target to build it more directly
 //
 // 3. In the R8 project root directory, make sure we have a clean state before starting:
 //    tools/gradle.py downloadDeps
@@ -833,10 +839,12 @@ test {
 //    rm -rf tests/art
 //
 // 4. Now build in the R8 checkout (-P hack to not generate dirs when not running this target)
-//    Make sure you have smali on your path, there is a build binary in the out directory of
-//    the android checkout:
+//    Make sure you have smali on your path, please use the build binary in the
+//    out/host/linux-x86/bin directory of the android checkout. Currently this is version pre 2.2.1,
+//    if that is updated the call to smali in "task "${smaliToDexTask}"(type: Exec)" below might
+//    need to change as smali got a completely new command line interface in version 2.2.1.
 //
-//    tools/gradle.py -Pandroid_source buildArtTests
+//    PATH=$HOME/android/master/out/host/linux-x86/bin:$PATH tools/gradle.py -Pandroid_source buildArtTests
 //
 // 4a. If any failures are produced in step 4, figure out what went wrong and add an entry in
 //     skippedTests with an explanation. Rerun from step 3.
@@ -845,13 +853,16 @@ test {
 //    tools/gradle.py clean
 //    tools/test.py
 //
-// 5a. If any more tests fail, either fix the issue or add them to the toBeTriaged list (note that
-//     you need to change "_" to "-" from stdout). Rerun from step 3 if anything was added to
-//     toBeTriaged.
+// 5a. If any more tests fail, either fix the issue or add them to the failuresToTriage list (note
+//     that you need to change "_" to "-" from stdout). Rerun from step 5 if anything was added to
+//     failuresToTriage.
 //
-// 6. To upload a new version to Google Cloud Storage
+// 6. To upload a new version to Google Cloud Storage:
 //    cd tests
 //    upload_to_google_storage.py -a --bucket r8-deps art
+//
+// 7. Update the manifest file describing the Android repo used:
+//    repo manifest -o <r8-checkout-root>/tools/linux/aosp_master_manifest.xml -r
 
 enum DexTool {
     JACK,
@@ -1019,7 +1030,7 @@ def buildArtTest(androidCheckoutDir, artTestBuildDir, dir, dexTool) {
     def dexMergerExecutable = Utils.dexMergerExecutable()
     def dexToolName = dexTool == DexTool.DX ? "dx" : "jack"
 
-    def name = dir.getName();
+    def name = dir.getName()
     def buildTask = "build_art_test_${dexToolName}_${name}"
     def sanitizeTask = "sanitize_art_test_${dexToolName}_${name}"
     def copyCheckTask = "copy_check_art_test_${dexToolName}_${name}"
@@ -1041,6 +1052,7 @@ def buildArtTest(androidCheckoutDir, artTestBuildDir, dir, dexTool) {
             args "${name}"
             environment DX: "${dxExecutable.absolutePath}"
             environment DXMERGER: "${dexMergerExecutable.absolutePath}"
+            environment ANDROID_BUILD_TOP: "${androidCheckoutDir}"
             outputs.file outputJar
         }
     } else {
@@ -1074,7 +1086,11 @@ def buildArtTest(androidCheckoutDir, artTestBuildDir, dir, dexTool) {
     task "${smaliToDexTask}"(type: Exec) {
         workingDir "${testDir}/smali"
         executable "/bin/bash"
-        args "-c", "smali -o out.dex *.smali"
+        // This is the command line options for smali prior to 2.2.1, where smali got a new
+        // command line interface.
+        args "-c", "smali a *.smali"
+        // This is the command line options for smali 2.2.1 and later.
+        // args "-c", "smali -o out.dex *.smali"
     }
 
     task "${copyCheckTask}"(type: Copy, dependsOn: sanitizeTask) {

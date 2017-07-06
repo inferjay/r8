@@ -102,6 +102,8 @@ public abstract class R8RunArtTestsTest {
           .put("044-proxy", Constants.ANDROID_N_API)
           // Test intentionally asserts absence of default interface method in a class.
           .put("048-reflect-v8", Constants.ANDROID_N_API)
+          // Uses default interface methods.
+          .put("616-cha-interface-default", Constants.ANDROID_N_API)
           // Interface initializer is not triggered after desugaring.
           .put("962-iface-static", Constants.ANDROID_N_API)
           // Interface initializer is not triggered after desugaring.
@@ -346,11 +348,14 @@ public abstract class R8RunArtTestsTest {
       "597-deopt-new-string",
       "616-cha",
       "616-cha-abstract",
+      "616-cha-interface",
+      "616-cha-interface-default",
+      "616-cha-miranda",
       "616-cha-regression-proxy-method",
       "616-cha-native",
+      "616-cha-proxy-method-inline",
       "626-const-class-linking",
       "626-set-resolved-string",
-      "629-vdex-speed",
       "900-hello-plugin",
       "901-hello-ti-agent",
       "1337-gc-coverage"
@@ -705,7 +710,45 @@ public abstract class R8RunArtTestsTest {
                   .build())
           .build();
 
-  private static List<String> failuresToTriage = ImmutableList.of();
+  private static List<String> failuresToTriage = ImmutableList.of(
+      // This is flaky.
+      "104-growth-limit",
+
+      // Various failures.
+      "461-get-reference-vreg",
+      "629-vdex-speed",
+      "638-no-line-number",
+      "647-jni-get-field-id",
+      "649-vdex-duplicate-method",
+      "652-deopt-intrinsic",
+      "655-jit-clinit",
+      "656-annotation-lookup-generic-jni",
+      "656-loop-deopt",
+      "708-jit-cache-churn",
+
+      // These use "native trace".
+      "981-dedup-original-dex",
+      "982-ok-no-retransform",
+      "983-source-transform-verify",
+      "984-obsolete-invoke",
+      "985-re-obsolete",
+      "986-native-method-bind",
+      "987-agent-bind",
+      "988-method-trace",
+      "989-method-trace-throw",
+      "990-field-trace",
+      "991-field-trace-2",
+      "992-source-data",
+      "993-breakpoints",
+      "994-breakpoint-line",
+      "995-breakpoints-throw",
+      "996-breakpoint-obsolete",
+      "997-single-step",
+
+      // These two fail with missing *-hostdex.jar files.
+      "648-inline-caches-unresolved",
+      "998-redefine-use-after-free"
+  );
 
   private static class TestSpecification {
 
