@@ -184,14 +184,12 @@ public class DexCode extends Code {
     }
     int instructionNumber = 0;
     for (Instruction insn : instructions) {
-      StringUtils.appendLeftPadded(builder, Integer.toString(instructionNumber++), 5);
-      builder.append(": ")
-          .append(insn.toString(naming))
-          .append('\n');
       while (debugInfo != null && debugInfo.address == insn.getOffset()) {
         builder.append("      ").append(debugInfo).append("\n");
         debugInfo = debugInfoIterator.hasNext() ? debugInfoIterator.next() : null;
       }
+      StringUtils.appendLeftPadded(builder, Integer.toString(instructionNumber++), 5);
+      builder.append(": ").append(insn.toString(naming)).append('\n');
     }
     if (debugInfoIterator.hasNext()) {
       throw new Unreachable("Could not print all debug information.");

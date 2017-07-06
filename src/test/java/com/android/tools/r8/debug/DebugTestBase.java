@@ -73,7 +73,7 @@ public abstract class DebugTestBase {
     ART
   }
 
-  // Set to true to run tests with java
+  // Set to JAVA to run tests with java
   private static final RuntimeKind RUNTIME_KIND = RuntimeKind.ART;
 
   // Set to true to enable verbose logs
@@ -278,6 +278,13 @@ public abstract class DebugTestBase {
 
   protected final JUnit3Wrapper.Command checkLocal(String localName, Value expectedValue) {
     return inspect(t -> t.checkLocal(localName, expectedValue));
+  }
+
+  protected final JUnit3Wrapper.Command checkNoLocal(String localName) {
+    return inspect(t -> {
+      List<String> localNames = t.getLocalNames();
+      Assert.assertFalse("Unexpected local: " + localName, localNames.contains(localName));
+    });
   }
 
   protected final JUnit3Wrapper.Command checkNoLocal() {

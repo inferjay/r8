@@ -111,8 +111,10 @@ public class DebugInfoInspector {
 
   private int checkLines(int line, Consumer<DexDebugEntry> check) {
     int found = 0;
-    for (DexDebugEntry entry : entries) {
-      if (entry.line == line) {
+    for (int i = 0; i < entries.size(); i++) {
+      DexDebugEntry entry = entries.get(i);
+      // Matches each entry at 'line' that is not a zero-line increment.
+      if (entry.line == line && (i == 0 || entries.get(i - 1).line != line)) {
         found++;
         check.accept(entry);
       }

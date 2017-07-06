@@ -161,12 +161,7 @@ public class DebugLocalTests extends JasminTestBase {
     info.checkStartLine(1);
     info.checkLineHasExactLocals(1, "this", "Test");
     info.checkLineHasExactLocals(2, "this", "Test", "x", "int");
-    // TODO(zerny): Reintroduce this check once we compute exact local changes. b/63243012
-    // Without the exact local changes between the last debug position and the return we fail to
-    // end the local scope of 'x'.
-    if (false) {
-      info.checkLineHasExactLocals(3, "this", "Test");
-    }
+    info.checkLineHasExactLocals(3, "this", "Test");
 
     String artResult = runOnArt(d8App, clazz.name);
     assertEquals(expected, artResult);

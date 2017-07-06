@@ -3,14 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.optimize;
 
-import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexDebugEntry;
 import com.android.tools.r8.graph.DexDebugEventBuilder;
 import com.android.tools.r8.graph.DexDebugInfo;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
-import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.naming.ClassNameMapper;
@@ -19,7 +17,6 @@ import com.android.tools.r8.naming.MemberNaming;
 import com.android.tools.r8.naming.MemberNaming.Range;
 import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.utils.InternalOptions;
-import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import java.util.List;
@@ -65,8 +62,8 @@ public class DebugStripper {
     }
   }
 
-  private NumberedDebugInfo processDebugInfo(DexMethod method, DexDebugInfo info,
-      MemberNaming naming, int startLine) {
+  private NumberedDebugInfo processDebugInfo(
+      DexEncodedMethod method, DexDebugInfo info, MemberNaming naming, int startLine) {
     if (info == null || naming == null) {
       return new NumberedDebugInfo(0, null);
     }
@@ -75,13 +72,8 @@ public class DebugStripper {
     // that pertains to a different method body.
     Range currentRange = naming.topLevelRange;
     DexDebugEventBuilder builder = new DexDebugEventBuilder(method, dexItemFactory);
-    // Always start with a no-op bytecode to make sure that the start-line is manifested by
-    // the Dalvik VM and the event based processing in R8. This also avoids empty bytecode
-    // sequences.
-    int entryCount = 1;
-    DexString file = null;
-    ImmutableMap<Integer, DebugLocalInfo> locals = null;
-    builder.setPosition(0, startLine, file, locals);
+    // Below we insert the start-line at pc-0 except if another entry already defines pc-0.
+    int entryCount = 0;
     for (DexDebugEntry entry : info.computeEntries()) {
       boolean addEntry = false;
       // We are in a range, check whether we have left it.
@@ -98,12 +90,20 @@ public class DebugStripper {
         }
       }
       if (addEntry) {
+        if (entryCount == 0 && entry.address > 0) {
+          ++entryCount;
+          builder.setPosition(0, startLine);
+        }
         int line = options.skipDebugLineNumberOpt
             ? entry.line
             : startLine + ranges.indexOf(currentRange) + 1;
-        builder.setPosition(entry.address, line, file, locals);
+        builder.setPosition(entry.address, line);
         ++entryCount;
       }
+    }
+    if (entryCount == 0) {
+      ++entryCount;
+      builder.setPosition(0, startLine);
     }
     return new NumberedDebugInfo(entryCount, builder.build());
   }
@@ -133,8 +133,8 @@ public class DebugStripper {
       }
     }
 
-    NumberedDebugInfo numberedInfo = processDebugInfo(
-        encodedMethod.method, originalInfo, naming, startLine);
+    NumberedDebugInfo numberedInfo =
+        processDebugInfo(encodedMethod, originalInfo, naming, startLine);
     DexDebugInfo newInfo = numberedInfo.info;
     if (!options.skipDebugLineNumberOpt) {
       // Fix up the line information.

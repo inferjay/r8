@@ -285,7 +285,7 @@ public class LocalsTest extends DebugTestBase {
         run());
   }
 
-  @Test(expected = Throwable.class)
+  @Test
   public void testInvokeRangeLong() throws Throwable {
     final int initialValueOfX = 21;
     final long expectedValueOfL = (long) initialValueOfX * 2;

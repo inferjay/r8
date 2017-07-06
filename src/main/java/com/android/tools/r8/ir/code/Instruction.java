@@ -713,6 +713,7 @@ public abstract class Instruction {
 
   public boolean isDebugInstruction() {
     return isDebugPosition()
+        || isDebugLocalsChange()
         || isDebugLocalWrite()
         || isDebugLocalUninitialized();
   }
@@ -722,6 +723,14 @@ public abstract class Instruction {
   }
 
   public DebugPosition asDebugPosition() {
+    return null;
+  }
+
+  public boolean isDebugLocalsChange() {
+    return false;
+  }
+
+  public DebugLocalsChange asDebugLocalsChange() {
     return null;
   }
 

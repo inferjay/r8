@@ -4,45 +4,56 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.graph.DexString;
+import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.StringUtils;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 
-public class DebugPosition extends Instruction {
+public class DebugLocalsChange extends Instruction {
 
-  public final int line;
-  public final DexString file;
+  private final Int2ReferenceMap<DebugLocalInfo> ending;
+  private final Int2ReferenceMap<DebugLocalInfo> starting;
 
-  public DebugPosition(int line, DexString file) {
+  public DebugLocalsChange(
+      Int2ReferenceMap<DebugLocalInfo> ending, Int2ReferenceMap<DebugLocalInfo> starting) {
     super(null);
-    this.line = line;
-    this.file = file;
+    this.ending = ending;
+    this.starting = starting;
+  }
+
+  public Int2ReferenceMap<DebugLocalInfo> getEnding() {
+    return ending;
+  }
+
+  public Int2ReferenceMap<DebugLocalInfo> getStarting() {
+    return starting;
   }
 
   @Override
-  public boolean isDebugPosition() {
+  public boolean isDebugLocalsChange() {
     return true;
   }
 
   @Override
-  public DebugPosition asDebugPosition() {
+  public DebugLocalsChange asDebugLocalsChange() {
     return this;
   }
 
   @Override
   public void buildDex(DexBuilder builder) {
-    builder.addDebugPosition(this);
+    builder.addNop(this);
   }
 
   @Override
   public boolean identicalNonValueParts(Instruction other) {
-    assert other.isDebugPosition();
+    assert other.isDebugLocalsChange();
     return false;
   }
 
   @Override
   public int compareNonValueParts(Instruction other) {
-    assert other.isDebugPosition();
+    assert other.isDebugLocalsChange();
     return 0;
   }
 
@@ -64,10 +75,10 @@ public class DebugPosition extends Instruction {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder(super.toString());
-    if (file != null) {
-      builder.append(file).append(":");
-    }
-    builder.append(line);
+    builder.append("ending: ");
+    StringUtils.append(builder, ending.int2ReferenceEntrySet());
+    builder.append(", starting: ");
+    StringUtils.append(builder, starting.int2ReferenceEntrySet());
     return builder.toString();
   }
 }

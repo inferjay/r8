@@ -9,7 +9,7 @@ import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.code.Add;
 import com.android.tools.r8.ir.code.And;
 import com.android.tools.r8.ir.code.BasicBlock;
-import com.android.tools.r8.ir.code.DebugPosition;
+import com.android.tools.r8.ir.code.DebugLocalsChange;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionListIterator;
@@ -32,8 +32,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Multisets;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -268,10 +272,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     ranges.sort(LocalRange::compareTo);
 
     // For each debug position compute the set of live locals.
-    // The previously known locals is used to share locals when unchanged.
     boolean localsChanged = false;
-    ImmutableMap<Integer, DebugLocalInfo> previousLocals = ImmutableMap.of();
-    Map<Integer, DebugLocalInfo> currentLocals = new HashMap<>();
+    Int2ReferenceMap<DebugLocalInfo> currentLocals = new Int2ReferenceOpenHashMap<>();
 
     LinkedList<LocalRange> openRanges = new LinkedList<>();
     Iterator<LocalRange> rangeIterator = ranges.iterator();
@@ -282,52 +284,87 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       currentLocals.put(nextStartingRange.register, nextStartingRange.local);
       openRanges.add(nextStartingRange);
       nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
-      localsChanged = true;
     }
 
     for (BasicBlock block : blocks) {
-      Iterator<Instruction> instructionIterator = block.getInstructions().iterator();
+      boolean blockEntry = true;
+      ListIterator<Instruction> instructionIterator = block.listIterator();
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
-        if (!instruction.isDebugPosition()) {
-          continue;
-        }
         int index = instruction.getNumber();
         ListIterator<LocalRange> it = openRanges.listIterator(0);
+        Int2ReferenceMap<DebugLocalInfo> ending = new Int2ReferenceOpenHashMap<>();
+        Int2ReferenceMap<DebugLocalInfo> starting = new Int2ReferenceOpenHashMap<>();
         while (it.hasNext()) {
           LocalRange openRange = it.next();
           if (openRange.end <= index) {
             it.remove();
             assert currentLocals.get(openRange.register) == openRange.local;
-            currentLocals.put(openRange.register, null);
+            currentLocals.remove(openRange.register);
             localsChanged = true;
+            ending.put(openRange.register, openRange.local);
           }
         }
         while (nextStartingRange != null && nextStartingRange.start <= index) {
           // If the full range is between the two debug positions ignore it.
           if (nextStartingRange.end > index) {
             openRanges.add(nextStartingRange);
-            assert currentLocals.get(nextStartingRange.register) == null;
+            assert !currentLocals.containsKey(nextStartingRange.register);
             currentLocals.put(nextStartingRange.register, nextStartingRange.local);
+            starting.put(nextStartingRange.register, nextStartingRange.local);
             localsChanged = true;
           }
           nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
         }
-        DebugPosition position = instruction.asDebugPosition();
-        if (localsChanged) {
-          ImmutableMap.Builder<Integer, DebugLocalInfo> locals = ImmutableMap.builder();
-          for (Map.Entry<Integer, DebugLocalInfo> entry : currentLocals.entrySet()) {
-            if (entry.getValue() != null) {
-              locals.put(entry);
+        if (blockEntry) {
+          blockEntry = false;
+          block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
+        } else if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
+          DebugLocalsChange change = createLocalsChange(ending, starting);
+          if (change != null) {
+            if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
+              instructionIterator.previous();
+              instructionIterator.add(new DebugLocalsChange(ending, starting));
+              instructionIterator.next();
+            } else {
+              instructionIterator.add(new DebugLocalsChange(ending, starting));
             }
           }
-          localsChanged = false;
-          previousLocals = locals.build();
         }
-        assert verifyLocalsEqual(previousLocals, currentLocals);
-        position.setLocals(previousLocals);
+        localsChanged = false;
       }
     }
+  }
+
+  private DebugLocalsChange createLocalsChange(
+      Int2ReferenceMap<DebugLocalInfo> ending, Int2ReferenceMap<DebugLocalInfo> starting) {
+    if (ending.isEmpty() || starting.isEmpty()) {
+      return new DebugLocalsChange(ending, starting);
+    }
+    IntSet unneeded = new IntArraySet(Math.min(ending.size(), starting.size()));
+    for (Int2ReferenceMap.Entry<DebugLocalInfo> entry : ending.int2ReferenceEntrySet()) {
+      if (starting.get(entry.getIntKey()) == entry.getValue()) {
+        unneeded.add(entry.getIntKey());
+      }
+    }
+    if (unneeded.size() == ending.size() && unneeded.size() == starting.size()) {
+      return null;
+    }
+    IntIterator iterator = unneeded.iterator();
+    while (iterator.hasNext()) {
+      int key = iterator.nextInt();
+      ending.remove(key);
+      starting.remove(key);
+    }
+    return new DebugLocalsChange(ending, starting);
+  }
+
+  private boolean shouldEmitChangesAtInstruction(Instruction instruction) {
+    BasicBlock block = instruction.getBlock();
+    // We emit local changes on all non-exit instructions or, since we have only a singe return
+    // block, any exits directly targeting that.
+    return instruction != block.exit()
+        || (instruction.isGoto() && instruction.asGoto().getTarget() == code.getNormalExitBlock());
   }
 
   private boolean verifyLocalsEqual(
