@@ -196,7 +196,7 @@ public class Phi extends Value {
     }
     // Replace this phi with the unique value in all users.
     for (Instruction user : uniqueUsers()) {
-      user.replacePhi(this, same);
+      user.replaceValue(this, same);
     }
     for (Phi user : uniquePhiUsers()) {
       user.replaceTrivialPhi(this, same);
