@@ -90,7 +90,7 @@ public abstract class R8RunArtTestsTest {
   private static final String HAMCREST_JAR =
       "third_party/gradle/gradle/lib/plugins/hamcrest-core-1.3.jar";
 
-  // Test that required to set min-sdk-version to a specific value.
+  // Test that required to set min-api to a specific value.
   private static Map<String, Integer> needMinSdkVersion =
       new ImmutableMap.Builder<String, Integer>()
           // Android O

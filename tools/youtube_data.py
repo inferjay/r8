@@ -30,18 +30,18 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V12_10_PREFIX,
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'deploy' : {
       'inputs': ['%s_deploy.jar' % V12_10_PREFIX],
       'pgconf': ['%s_proguard.config' % V12_10_PREFIX,
                  '%s/proguardsettings/YouTubeRelease_proguard.config' % THIRD_PARTY],
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V12_10_PREFIX],
       'pgmap': '%s_proguard.map' % V12_10_PREFIX,
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   '12.17': {
@@ -50,18 +50,18 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V12_17_PREFIX,
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'deploy' : {
       'inputs': ['%s_deploy.jar' % V12_17_PREFIX],
       'pgconf': ['%s_proguard.config' % V12_17_PREFIX,
                  '%s/proguardsettings/YouTubeRelease_proguard.config' % THIRD_PARTY],
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V12_17_PREFIX],
       'pgmap': '%s_proguard.map' % V12_17_PREFIX,
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   '12.22': {
@@ -70,7 +70,7 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V12_22_PREFIX,
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'deploy' : {
       'inputs': ['%s_deploy.jar' % V12_22_PREFIX],
@@ -85,7 +85,7 @@ VERSIONS = {
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V12_22_PREFIX],
       'pgmap': '%s_proguard.map' % V12_22_PREFIX,
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
 }

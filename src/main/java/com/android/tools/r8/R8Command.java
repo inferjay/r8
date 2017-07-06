@@ -193,12 +193,12 @@ public class R8Command extends BaseCommand {
       "Usage: r8 [options] <input-files>",
       " where <input-files> are any combination of dex, class, zip, jar, or apk files",
       " and options are:",
-      "  --debug                 # Compile with debugging information (default enabled).",
-      "  --release               # Compile without debugging information.",
+      "  --release               # Compile without debugging information (default).",
+      "  --debug                 # Compile with debugging information.",
       "  --output <file>         # Output result in <file>.",
       "                          # <file> must be an existing directory or a zip file.",
       "  --lib <file>            # Add <file> as a library resource.",
-      "  --min-sdk-version       # Minimum Android API level compatibility.",
+      "  --min-api               # Minimum Android API level compatibility.",
       "  --pg-conf <file>        # Proguard configuration <file> (implies tree shaking/minification).",
       "  --pg-map <file>         # Proguard map <file>.",
       "  --no-tree-shaking       # Force disable tree shaking of unreachable classes.",
@@ -265,7 +265,7 @@ public class R8Command extends BaseCommand {
         builder.setOutputPath(Paths.get(outputPath));
       } else if (arg.equals("--lib")) {
         builder.addLibraryFiles(Paths.get(args[++i]));
-      } else if (arg.equals("--min-sdk-version")) {
+      } else if (arg.equals("--min-api")) {
         builder.setMinApiLevel(Integer.valueOf(args[++i]));
       } else if (arg.equals("--no-tree-shaking")) {
         builder.setTreeShaking(false);

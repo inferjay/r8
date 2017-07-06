@@ -92,7 +92,7 @@ def Main():
       tool_file = DX_JAR
     else:
       tool_file = D8_JAR
-      tool_args = ['--output', temp_dir, '--min-sdk-version', MIN_SDK_VERSION]
+      tool_args = ['--output', temp_dir, '--min-api', MIN_SDK_VERSION]
       if args.tool == 'd8-release':
         tool_args.append('--release')
 

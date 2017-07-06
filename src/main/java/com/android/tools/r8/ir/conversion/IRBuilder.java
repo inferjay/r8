@@ -912,7 +912,7 @@ public class IRBuilder {
     if (type == Invoke.Type.POLYMORPHIC && !options.canUseInvokePolymorphic()) {
       throw new CompilationError(
           "MethodHandle.invoke and MethodHandle.invokeExact is unsupported before "
-              + "Android O (--min-sdk-version " + Constants.ANDROID_O_API + ")");
+              + "Android O (--min-api " + Constants.ANDROID_O_API + ")");
     }
     add(Invoke.create(type, item, callSiteProto, null, arguments));
   }

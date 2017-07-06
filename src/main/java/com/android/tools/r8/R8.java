@@ -198,7 +198,7 @@ public class R8 {
       if (options.minApiLevel >= Constants.ANDROID_O_API
           && !options.mainDexKeepRules.isEmpty()) {
         throw new CompilationError("Automatic main dex list is not supported when compiling for"
-            + " android O and later (--min-sdk-version " + Constants.ANDROID_O_API + ")");
+            + " android O and later (--min-api " + Constants.ANDROID_O_API + ")");
       }
       DexApplication application =
           new ApplicationReader(inputApp, options, timing).read(executorService);

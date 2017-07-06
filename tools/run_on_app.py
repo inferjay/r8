@@ -5,15 +5,15 @@
 
 import optparse
 import os
-import r8
-import d8
 import sys
-import utils
 import time
 
-import gmscore_data
-import youtube_data
+import d8
 import gmail_data
+import gmscore_data
+import r8
+import utils
+import youtube_data
 
 TYPES = ['dex', 'deploy', 'proguarded']
 APPS = ['gmscore', 'youtube', 'gmail']
@@ -125,8 +125,8 @@ def main():
     inputs = values['inputs']
 
   args.extend(['--output', outdir])
-  if 'min-sdk-version' in values:
-    args.extend(['--min-sdk-version', values['min-sdk-version']])
+  if 'min-api' in values:
+    args.extend(['--min-api', values['min-api']])
 
   if options.compiler == 'r8':
     if 'pgmap' in values:

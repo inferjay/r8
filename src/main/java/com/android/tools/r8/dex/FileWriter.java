@@ -294,7 +294,7 @@ public class FileWriter {
       if (method.accessFlags.isStatic()) {
         if (!options.canUseDefaultAndStaticInterfaceMethods()) {
           throw new CompilationError("Static interface methods are only supported "
-              + "starting with Android N (--min-sdk-version " + Constants.ANDROID_N_API + "): "
+              + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
               + method.method.toSourceString());
         }
 
@@ -306,7 +306,7 @@ public class FileWriter {
         if (!method.accessFlags.isAbstract() && !method.accessFlags.isPrivate() &&
             !options.canUseDefaultAndStaticInterfaceMethods()) {
           throw new CompilationError("Default interface methods are only supported "
-              + "starting with Android N (--min-sdk-version " + Constants.ANDROID_N_API + "): "
+              + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
               + method.method.toSourceString());
         }
       }
@@ -316,7 +316,7 @@ public class FileWriter {
           continue;
         }
         throw new CompilationError("Private interface methods are only supported "
-            + "starting with Android N (--min-sdk-version " + Constants.ANDROID_N_API + "): "
+            + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
             + method.method.toSourceString());
       }
 
@@ -1331,7 +1331,7 @@ public class FileWriter {
 
   private void checkThatInvokeCustomIsAllowed() {
     if (!options.canUseInvokeCustom()) {
-      throw new CompilationError("Invoke-custom is unsupported before Android O (--min-sdk-version "
+      throw new CompilationError("Invoke-custom is unsupported before Android O (--min-api "
           + Constants.ANDROID_O_API + ")");
     }
   }

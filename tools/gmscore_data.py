@@ -33,7 +33,7 @@ VERSIONS = {
       'pgmap' : os.path.join(V4_BASE, 'proguard.map'),
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   'v5': {
@@ -42,7 +42,7 @@ VERSIONS = {
       'pgmap' : os.path.join(V5_BASE, 'proguard.map'),
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   'v6': {
@@ -51,7 +51,7 @@ VERSIONS = {
       'pgmap' : os.path.join(V6_BASE, 'proguard.map'),
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   'v7': {
@@ -60,7 +60,7 @@ VERSIONS = {
       'pgmap' : os.path.join(V7_BASE, 'proguard.map'),
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   'v8': {
@@ -69,7 +69,7 @@ VERSIONS = {
       'pgmap' : os.path.join(V8_BASE, 'proguard.map'),
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
   'v9': {
@@ -78,17 +78,17 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V9_PREFIX,
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'deploy' : {
       'pgconf': ['%s_proguard.config' % V9_PREFIX],
       'inputs': ['%s_deploy.jar' % V9_PREFIX],
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V9_PREFIX],
       'pgmap': '%s_proguard.map' % V9_PREFIX,
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
      }
   },
   'v10': {
@@ -97,17 +97,17 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V10_PREFIX,
       'libraries' : [ANDROID_JAR],
       'r8-flags': '--ignore-missing-classes',
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'deploy' : {
       'inputs': ['%s_deploy.jar' % V10_PREFIX],
       'pgconf': ['%s_proguard.config' % V10_PREFIX],
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
     'proguarded' : {
       'inputs': ['%s_proguard.jar' % V10_PREFIX],
       'pgmap': '%s_proguard.map' % V10_PREFIX,
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     }
   },
 }
