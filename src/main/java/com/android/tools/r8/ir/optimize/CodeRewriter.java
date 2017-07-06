@@ -63,7 +63,6 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,7 +73,6 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CodeRewriter {
 
@@ -938,8 +936,7 @@ public class CodeRewriter {
             Value constantValue = instruction.outValue();
             for (Instruction user : constantValue.uniqueUsers()) {
               ConstNumber newCstNum = ConstNumber.copyOf(code, constNumber);
-              InstructionListIterator iterator = user.getBlock().listIterator();
-              iterator.nextUntil((x) -> x == user);
+              InstructionListIterator iterator = user.getBlock().listIterator(user);
               iterator.previous();
               iterator.add(newCstNum);
               user.replaceValue(constantValue, newCstNum.outValue());

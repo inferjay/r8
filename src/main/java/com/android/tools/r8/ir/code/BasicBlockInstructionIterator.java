@@ -25,6 +25,11 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
     this.listIterator = block.getInstructions().listIterator(index);
   }
 
+  protected BasicBlockInstructionIterator(BasicBlock block, Instruction instruction) {
+    this(block);
+    nextUntil((x) -> x == instruction);
+  }
+
   @Override
   public boolean hasNext() {
     return listIterator.hasNext();

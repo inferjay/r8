@@ -1006,6 +1006,17 @@ public class BasicBlock {
   }
 
   /**
+   * Creates an instruction list iterator starting at <code>instruction</code>.
+   *
+   * The cursor will be positioned after <code>instruction</code>. Calling <code>next</code> on
+   * the returned iterator will return the instruction after <code>instruction</code>. Calling
+   * <code>previous</code> will return <code>instruction</code>.
+   */
+  public InstructionListIterator listIterator(Instruction instruction) {
+    return new BasicBlockInstructionIterator(this, instruction);
+  }
+
+  /**
    * Creates a new empty block as a successor for this block.
    *
    * The new block will have all the normal successors of the original block.

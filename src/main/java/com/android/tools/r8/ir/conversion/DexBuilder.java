@@ -348,8 +348,7 @@ public class DexBuilder {
   public void addDebugPosition(DebugPosition position) {
     BasicBlock block = position.getBlock();
     int blockIndex = ir.blocks.indexOf(block);
-    Iterator<com.android.tools.r8.ir.code.Instruction> iterator =
-        block.listIterator(1 + block.getInstructions().indexOf(position));
+    Iterator<com.android.tools.r8.ir.code.Instruction> iterator = block.listIterator(position);
 
     com.android.tools.r8.ir.code.Instruction next = null;
     while (next == null) {
