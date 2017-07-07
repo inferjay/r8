@@ -20,6 +20,9 @@ V9_PREFIX = os.path.join(V9_BASE, 'GmsCore_prod_alldpi_release_all_locales')
 
 V10_BASE = os.path.join(BASE, 'gmscore_v10')
 V10_PREFIX = os.path.join(V10_BASE, 'GmsCore_prod_alldpi_release_all_locales')
+
+LATEST_BASE = os.path.join(BASE, 'latest')
+LATEST_PREFIX = os.path.join(LATEST_BASE, 'GmsCore_prod_alldpi_release_all_locales')
 ANDROID_L_API = '21'
 
 # NOTE: we always use android.jar for SDK v25, later we might want to revise it
@@ -109,5 +112,12 @@ VERSIONS = {
       'pgmap': '%s_proguard.map' % V10_PREFIX,
       'min-sdk-version' : ANDROID_L_API,
     }
+  },
+  'latest': {
+    'deploy' : {
+      'inputs': ['%s_deploy.jar' % LATEST_PREFIX],
+      'pgconf': ['%s_proguard.config' % LATEST_PREFIX],
+      'min-sdk-version' : ANDROID_L_API,
+    },
   },
 }
