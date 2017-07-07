@@ -59,7 +59,6 @@ public class OptimizationFeedbackDelayed implements OptimizationFeedback {
       assert method.cannotInline();
       method.markProcessed(state);
     } else {
-      assert method.cannotInline();
       inliningConstraints.put(method, state);
     }
   }
