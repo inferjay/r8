@@ -117,7 +117,7 @@ VERSIONS = {
     'deploy' : {
       'inputs': ['%s_deploy.jar' % LATEST_PREFIX],
       'pgconf': ['%s_proguard.config' % LATEST_PREFIX],
-      'min-sdk-version' : ANDROID_L_API,
+      'min-api' : ANDROID_L_API,
     },
   },
 }
