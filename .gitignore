@@ -2,8 +2,10 @@ build/
 .idea/
 .gradle/
 android-data*/
-tests/art.tar.gz
-tests/art
+tests/2016-12-19/art.tar.gz
+tests/2016-12-19/art
+tests/2017-07-07/art.tar.gz
+tests/2017-07-07/art
 tmp/
 tools/*.pyc
 tools/*/art

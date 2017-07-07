@@ -10,7 +10,7 @@ from sys import exit
 from shutil import rmtree
 
 OUTPUT_DIR = "build/generated/test/java/com/android/tools/r8/art"
-TEST_DIR = "tests/art"
+TEST_DIR = "tests/2017-07-07/art"
 TOOLCHAINS = ["dx", "jack", "none"]
 TOOLS = ["r8", "d8"]
 TEMPLATE = Template(
