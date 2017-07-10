@@ -573,10 +573,32 @@ public abstract class R8RunArtTestsTest {
           // Fails: get_vreg_jni.cc:46] Check failed: value == 42u (value=314630384, 42u=42)
           // The R8/D8 code does not produce values in the same registers as the tests expects in
           // Main.testPairVReg where Main.doNativeCall is called (v1 vs v0).
-          .put("454-get-vreg", TestCondition.any())
+          .put(
+              "454-get-vreg",
+              TestCondition.match(
+                  TestCondition.runtimes(DexVm.ART_4_4_4, DexVm.ART_5_1_1,
+                      DexVm.ART_6_0_1, DexVm.ART_7_0_0)))
+          .put(
+              "454-get-vreg",
+              TestCondition.match(
+                  TestCondition.tools(DexTool.NONE),
+                  TestCondition.D8_COMPILER,
+                  TestCondition.runtimes(DexVm.ART_DEFAULT)))
+          .put("454-get-vreg", TestCondition.match(TestCondition.R8_COMPILER))
           // Fails: regs_jni.cc:42] Check failed: GetVReg(m, 0, kIntVReg, &value)
           // The R8/D8 code does not put values in the same registers as the tests expects.
-          .put("457-regs", TestCondition.any())
+          .put(
+              "457-regs",
+              TestCondition.match(
+                  TestCondition.runtimes(DexVm.ART_4_4_4, DexVm.ART_5_1_1,
+                      DexVm.ART_6_0_1, DexVm.ART_7_0_0)))
+          .put(
+              "457-regs",
+              TestCondition.match(
+                  TestCondition.tools(DexTool.NONE),
+                  TestCondition.D8_COMPILER,
+                  TestCondition.runtimes(DexVm.ART_DEFAULT)))
+          .put("457-regs", TestCondition.match(TestCondition.R8_COMPILER))
           // Class not found.
           .put("529-checker-unresolved", TestCondition.any())
           // Fails: env_long_ref.cc:44] Check failed: GetVReg(m, 1, kReferenceVReg, &value)
