@@ -116,7 +116,9 @@ VERSIONS = {
   'latest': {
     'deploy' : {
       'inputs': ['%s_deploy.jar' % LATEST_PREFIX],
-      'pgconf': ['%s_proguard.config' % LATEST_PREFIX],
+      'pgconf': [
+          '%s_proguard.config' % LATEST_PREFIX,
+          '%s/proguardsettings/GmsCore_proguard.config' % THIRD_PARTY],
       'min-api' : ANDROID_L_API,
     },
   },
