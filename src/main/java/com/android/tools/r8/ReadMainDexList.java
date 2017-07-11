@@ -6,7 +6,11 @@ package com.android.tools.r8;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.ProguardMapReader;
 import com.android.tools.r8.utils.FileUtils;
+import com.google.common.collect.Iterators;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -20,8 +24,12 @@ public class ReadMainDexList {
     return name.endsWith(DOT_CLASS) ? name.substring(0, name.length() - DOT_CLASS.length()) : name;
   }
 
-  private String addDotClass(String name) {
-    return name + DOT_CLASS;
+  private String toClassFilePath(String name) {
+    return name.replace('.', '/') + DOT_CLASS;
+  }
+
+  private String toKeepRule(String className) {
+    return "-keep class " + className + " {}";
   }
 
   private String deobfuscateClassName(String name, ClassNameMapper mapper) {
@@ -32,21 +40,31 @@ public class ReadMainDexList {
   }
 
   private void run(String[] args) throws Exception {
-    if (args.length != 1 && args.length != 2) {
-      System.out.println("Usage: command <main_dex_list> [<proguard_map>]");
+    if (args.length < 1 || args.length > 3) {
+      System.out.println("Usage: command [-k] <main_dex_list> [<proguard_map>]");
       System.exit(0);
     }
 
-    final ClassNameMapper mapper =
-        args.length == 2 ? ProguardMapReader.mapperFromFile(Paths.get(args[1])) : null;
+    Iterator<String> arguments = Iterators.forArray(args);
+    Function<String, String> outputGenerator;
+    String arg = arguments.next();
+    if (arg.equals("-k")) {
+      outputGenerator = this::toKeepRule;
+      arg = arguments.next();
+    } else {
+      outputGenerator = this::toClassFilePath;
+    }
+    Path mainDexList = Paths.get(arg);
 
-    FileUtils.readTextFile(Paths.get(args[0]))
+    final ClassNameMapper mapper =
+        arguments.hasNext() ? ProguardMapReader.mapperFromFile(Paths.get(arguments.next())) : null;
+
+    FileUtils.readTextFile(mainDexList)
         .stream()
         .map(this::stripDotClass)
         .map(name -> name.replace('/', '.'))
         .map(name -> deobfuscateClassName(name, mapper))
-        .map(name -> name.replace('.', '/'))
-        .map(this::addDotClass)
+        .map(outputGenerator)
         .sorted()
         .collect(Collectors.toList())
         .forEach(System.out::println);
