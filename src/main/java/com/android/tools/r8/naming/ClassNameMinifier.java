@@ -22,16 +22,6 @@ import java.util.Set;
 
 public class ClassNameMinifier {
 
-  /**
-   * We ban classes from these prefixes from minification. This is needed as some classes
-   * in the android sdk are given a @hide annotation, which will remove them from the
-   * sdk we tree-shake and minify against. Thus, the class will not be available and hence
-   * we won't find out that it is a library class.
-   * To save space, we by default minify classes we do not have an implementation for.
-   */
-  private static final Set<String> BANNED_CLASS_PREFIXES = ImmutableSet
-      .of("Ljava", "Landroid", "Ldalvik");
-
   private final AppInfoWithLiveness appInfo;
   private final RootSet rootSet;
   private final String packagePrefix;
@@ -65,17 +55,13 @@ public class ClassNameMinifier {
         renaming.put(clazz.type, state.nextTypeName());
       }
     }
-    renameTypesInProtosOf(appInfo.staticInvokes);
-    renameTypesInProtosOf(appInfo.superInvokes);
-    renameTypesInProtosOf(appInfo.directInvokes);
-    renameTypesInProtosOf(appInfo.virtualInvokes);
     appInfo.dexItemFactory.forAllTypes(this::renameArrayTypeIfNeeded);
 
     return Collections.unmodifiableMap(renaming);
   }
 
   private String getPackageNameFor(DexClass clazz) {
-    if (packagePrefix == null || rootSet.keepPackageName.contains(clazz)) {
+    if ((packagePrefix == null) || rootSet.keepPackageName.contains(clazz)) {
       return clazz.type.getPackageDescriptor();
     } else {
       return packagePrefix;
@@ -84,38 +70,6 @@ public class ClassNameMinifier {
 
   private NamingState getStateFor(String packageName) {
     return states.computeIfAbsent(packageName, NamingState::new);
-  }
-
-  private void renameTypesInProtosOf(Iterable<DexMethod> methods) {
-    for (DexMethod method : methods) {
-      renameTypeWithoutClassDefinition(method.proto.returnType);
-      for (DexType type : method.proto.parameters.values) {
-        renameTypeWithoutClassDefinition(type);
-      }
-    }
-  }
-
-  private void renameTypeWithoutClassDefinition(DexType type) {
-    if (type.isArrayType()) {
-      type = type.toBaseType(appInfo.dexItemFactory);
-    }
-    if (type.isClassType() && !renaming.containsKey(type)) {
-      DexClass clazz = appInfo.definitionFor(type);
-      if (clazz == null || !clazz.isLibraryClass()) {
-        if (!classIsBannedFromRenaming(type)) {
-          String packageName = packagePrefix == null ? type.getPackageDescriptor() : packagePrefix;
-          NamingState state = getStateFor(packageName);
-          renaming.put(type, state.nextTypeName());
-        }
-      }
-    }
-  }
-
-  private boolean classIsBannedFromRenaming(DexType type) {
-    String desc = type.toDescriptorString();
-    int index = desc.indexOf('/');
-    String prefix = desc.substring(0, index);
-    return index != -1 && BANNED_CLASS_PREFIXES.contains(prefix);
   }
 
   private void renameArrayTypeIfNeeded(DexType type) {
