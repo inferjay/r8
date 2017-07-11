@@ -24,6 +24,8 @@ public class ProguardConfiguration {
     private boolean ignoreWarnings = false;
     private boolean obfuscating = true;
     private boolean shrinking = true;
+    private boolean printUsage = false;
+    private Path printUsageFile;
     private boolean printMapping;
     private Path printMappingOutput;
     private boolean verbose = false;
@@ -67,6 +69,14 @@ public class ProguardConfiguration {
 
     public void setShrinking(boolean shrinking) {
       this.shrinking = shrinking;
+    }
+
+    public void setPrintUsage(boolean printUsage) {
+      this.printUsage = printUsage;
+    }
+
+    public void setPrintUsageFile(Path printUsageFile) {
+      this.printUsageFile = printUsageFile;
     }
 
     public void setPrintMapping(boolean printMapping) {
@@ -123,6 +133,8 @@ public class ProguardConfiguration {
           ignoreWarnings,
           obfuscating,
           shrinking,
+          printUsage,
+          printUsageFile,
           printMapping,
           printMappingOutput,
           verbose,
@@ -145,6 +157,8 @@ public class ProguardConfiguration {
   private final boolean ignoreWarnings;
   private final boolean obfuscating;
   private final boolean shrinking;
+  private final boolean printUsage;
+  private final Path printUsageFile;
   private final boolean printMapping;
   private final Path printMappingOutput;
   private final boolean verbose;
@@ -166,6 +180,8 @@ public class ProguardConfiguration {
       boolean ignoreWarnings,
       boolean obfuscating,
       boolean shrinking,
+      boolean printUsage,
+      Path printUsageFile,
       boolean printMapping,
       Path printMappingOutput,
       boolean verbose,
@@ -185,6 +201,8 @@ public class ProguardConfiguration {
     this.ignoreWarnings = ignoreWarnings;
     this.obfuscating = obfuscating;
     this.shrinking = shrinking;
+    this.printUsage = printUsage;
+    this.printUsageFile = printUsageFile;
     this.printMapping = printMapping;
     this.printMappingOutput = printMappingOutput;
     this.verbose = verbose;
@@ -249,6 +267,14 @@ public class ProguardConfiguration {
     return shrinking;
   }
 
+  public boolean isPrintUsage() {
+    return printUsage;
+  }
+
+  public Path getPrintUsageFile() {
+    return printUsageFile;
+  }
+
   public boolean isVerbose() {
     return verbose;
   }
@@ -293,6 +319,8 @@ public class ProguardConfiguration {
           false                 /* ignoreWarnings */,
           false                 /* obfuscating */,
           false                 /* shrinking */,
+          false                 /* printUsage */,
+          null                  /* printUsageFile */,
           false                 /* printMapping */,
           null                  /* outputMapping */,
           false                 /* verbose */,
