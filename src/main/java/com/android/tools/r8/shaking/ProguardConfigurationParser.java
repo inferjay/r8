@@ -55,8 +55,7 @@ public class ProguardConfigurationParser {
           "alwaysinline", "identifiernamestring", "whyarenotsimple");
 
   private static final List<String> warnedSingleArgOptions = ImmutableList
-      .of("printusage",
-          "renamesourcefileattribute",
+      .of("renamesourcefileattribute",
           "dontnote",
           "printconfiguration",
           // TODO -outjars (http://b/37137994) and -adaptresourcefilecontents (http://b/37139570)
@@ -154,6 +153,14 @@ public class ProguardConfigurationParser {
         configurationBuilder.setObfuscating(false);
       } else if (acceptString("dontshrink")) {
         configurationBuilder.setShrinking(false);
+      } else if (acceptString("printusage")) {
+        configurationBuilder.setPrintUsage(true);
+        skipWhitespace();
+        if (isOptionalArgumentGiven()) {
+          configurationBuilder.setPrintUsageFile(parseFileName());
+        }
+        // TODO(b/36799826): once fully implemented, no longer necessary to warn.
+        System.out.println("WARNING: Ignoring option: -printusage");
       } else if (acceptString("verbose")) {
         configurationBuilder.setVerbose(true);
       } else if (acceptString("ignorewarnings")) {
@@ -177,7 +184,7 @@ public class ProguardConfigurationParser {
       } else if (acceptString("printmapping")) {
         configurationBuilder.setPrintMapping(true);
         skipWhitespace();
-        if (!eof() && peekChar() != '-') {
+        if (isOptionalArgumentGiven()) {
           configurationBuilder.setPrintMappingOutput(parseFileName());
         }
       } else if (acceptString("assumenosideeffects")) {
@@ -199,7 +206,7 @@ public class ProguardConfigurationParser {
       } else if (acceptString("printseeds")) {
         configurationBuilder.setPrintSeed(true);
         skipWhitespace();
-        if (!eof() && peekChar() != '-') {
+        if (isOptionalArgumentGiven()) {
           configurationBuilder.setSeedFile(parseFileName());
         }
       } else if (acceptString("obfuscationdictionary")) {
@@ -271,7 +278,7 @@ public class ProguardConfigurationParser {
           Log.debug(ProguardConfigurationParser.class, "Skipping '-%s` option", name);
         }
         skipWhitespace();
-        if (!eof() && peekChar() != '-') {
+        if (isOptionalArgumentGiven()) {
           skipSingleArgument();
         }
         return true;
@@ -794,6 +801,10 @@ public class ProguardConfigurationParser {
       return peekChar() == c;
     }
 
+    private boolean isOptionalArgumentGiven() {
+      return !eof() && !hasNextChar('-');
+    }
+
     private boolean acceptChar(char c) {
       if (hasNextChar(c)) {
         position++;
@@ -937,7 +948,6 @@ public class ProguardConfigurationParser {
         assert expected.charAt(i) == contents.charAt(position + i);
       }
     }
-
 
     private void checkNotNegatedPattern() throws ProguardRuleParserException {
       skipWhitespace();

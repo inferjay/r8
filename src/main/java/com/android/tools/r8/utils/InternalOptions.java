@@ -59,6 +59,8 @@ public class InternalOptions {
   public OutputMode outputMode = OutputMode.Indexed;
 
   public boolean useTreeShaking = true;
+  public boolean printUsage = false;
+  public Path printUsageFile = null;
 
   public boolean printCfg = false;
   public String printCfgFile;

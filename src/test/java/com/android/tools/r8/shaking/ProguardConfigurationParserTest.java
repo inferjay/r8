@@ -18,9 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class ProguardConfigurationParserTest extends TestBase {
 
@@ -47,7 +45,7 @@ public class ProguardConfigurationParserTest extends TestBase {
   private static final String LIBRARY_JARS =
       VALID_PROGUARD_DIR + "library-jars.flags";
   private static final String LIBRARY_JARS_WIN =
-          VALID_PROGUARD_DIR + "library-jars-win.flags";
+      VALID_PROGUARD_DIR + "library-jars-win.flags";
   private static final String SEEDS =
       VALID_PROGUARD_DIR + "seeds.flags";
   private static final String SEEDS_2 =
@@ -58,6 +56,8 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "keepdirectories.flags";
   private static final String DONT_OBFUSCATE =
       VALID_PROGUARD_DIR + "dontobfuscate.flags";
+  private static final String DONT_SHRINK =
+      VALID_PROGUARD_DIR + "dontshrink.flags";
   private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASSES =
       VALID_PROGUARD_DIR + "dontskipnonpubliclibraryclasses.flags";
   private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASS_MEMBERS =
@@ -70,11 +70,12 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "skipnonpubliclibraryclasses.flags";
   private static final String PARSE_AND_SKIP_SINGLE_ARGUMENT =
       VALID_PROGUARD_DIR + "parse-and-skip-single-argument.flags";
+  private static final String PRINT_USAGE =
+      VALID_PROGUARD_DIR + "printusage.flags";
+  private static final String PRINT_USAGE_TO_FILE =
+      VALID_PROGUARD_DIR + "printusage-to-file.flags";
   private static final String TARGET =
       VALID_PROGUARD_DIR + "target.flags";
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void parse() throws IOException, ProguardRuleParserException {
@@ -327,6 +328,14 @@ public class ProguardConfigurationParserTest extends TestBase {
   }
 
   @Test
+  public void parseDontshrink() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(DONT_SHRINK));
+    ProguardConfiguration config = parser.getConfig();
+    assertFalse(config.isShrinking());
+  }
+
+  @Test
   public void parseDontSkipNonPublicLibraryClasses()
       throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
@@ -355,18 +364,38 @@ public class ProguardConfigurationParserTest extends TestBase {
   }
 
   @Test
-  public void parseSkipNonPublicLibraryClasses()
-      throws IOException, ProguardRuleParserException {
-    thrown.expect(ProguardRuleParserException.class);
-    thrown.expectMessage("Unsupported option: -skipnonpubliclibraryclasses");
-    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
-    parser.parse(Paths.get(SKIP_NON_PUBLIC_LIBRARY_CLASSES));
+  public void parseSkipNonPublicLibraryClasses() throws IOException {
+    try {
+      ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+      parser.parse(Paths.get(SKIP_NON_PUBLIC_LIBRARY_CLASSES));
+      fail();
+    } catch (ProguardRuleParserException e) {
+      assertTrue(e.getMessage().contains("Unsupported option: -skipnonpubliclibraryclasses"));
+    }
   }
 
   @Test
   public void parseAndskipSingleArgument() throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(PARSE_AND_SKIP_SINGLE_ARGUMENT));
+  }
+
+  @Test
+  public void parsePrintUsage() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PRINT_USAGE));
+    ProguardConfiguration config = parser.getConfig();
+    assertTrue(config.isPrintUsage());
+    assertNull(config.getPrintUsageFile());
+  }
+
+  @Test
+  public void parsePrintUsageToFile() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PRINT_USAGE_TO_FILE));
+    ProguardConfiguration config = parser.getConfig();
+    assertTrue(config.isPrintUsage());
+    assertNotNull(config.getPrintUsageFile());
   }
 
   @Test
@@ -378,15 +407,18 @@ public class ProguardConfigurationParserTest extends TestBase {
 
   @Test
   public void parseInvalidKeepClassOption() throws IOException, ProguardRuleParserException {
-    thrown.expect(ProguardRuleParserException.class);
-    thrown.expectMessage("Unknown option at ");
-    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
-    Path proguardConfig = writeTextToTempFile(
-        "-keepclassx public class * {  ",
-        "  native <methods>;           ",
-        "}                             "
-    );
-    parser.parse(proguardConfig);
+    try {
+      ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+      Path proguardConfig = writeTextToTempFile(
+          "-keepclassx public class * {  ",
+          "  native <methods>;           ",
+          "}                             "
+      );
+      parser.parse(proguardConfig);
+      fail();
+    } catch (ProguardRuleParserException e) {
+      assertTrue(e.getMessage().contains("Unknown option at "));
+    }
   }
 
   @Test

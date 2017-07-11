@@ -363,6 +363,9 @@ public class R8Command extends BaseCommand {
     internal.skipMinification = !useMinification();
     assert internal.useTreeShaking;
     internal.useTreeShaking = useTreeShaking();
+    assert !internal.printUsage;
+    internal.printUsage = proguardConfiguration.isPrintUsage();
+    internal.printUsageFile = proguardConfiguration.getPrintUsageFile();
     assert !internal.ignoreMissingClasses;
     internal.ignoreMissingClasses = ignoreMissingClasses;
 
