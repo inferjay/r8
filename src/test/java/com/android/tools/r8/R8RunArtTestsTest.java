@@ -96,6 +96,7 @@ public abstract class R8RunArtTestsTest {
   private static Map<String, Integer> needMinSdkVersion =
       new ImmutableMap.Builder<String, Integer>()
           // Android O
+          .put("952-invoke-custom", Constants.ANDROID_O_API)
           .put("953-invoke-polymorphic-compiler", Constants.ANDROID_O_API)
           .put("957-methodhandle-transforms", Constants.ANDROID_O_API)
           .put("958-methodhandle-stackframe", Constants.ANDROID_O_API)
@@ -218,37 +219,25 @@ public abstract class R8RunArtTestsTest {
       "073-mismatched-field"
   );
 
-  // Tests that make use of Java 8 features.
-  private static List<String> usesJava8 = ImmutableList.of(
-      "914-hello-obsolescence",
-      "915-obsolete-2",
-      "916-obsolete-jit",
-      "919-obsolete-fields",
-      "926-multi-obsolescence",
-      "936-search-onload",
-      "940-recursive-obsolete",
-      "941-recurive-obsolete-jit",
-      "942-private-recursive",
-      "943-private-recursive-jit",
-      "946-obsolete-throw",
-      "951-threaded-obsolete",
-      "952-invoke-custom"
-  );
-
   // Tests that make use of agents/native code. Our test setup does handle flags/linking of these.
   private static List<String> usesNativeAgentCode = ImmutableList.of(
       "497-inlining-and-class-loader",
       "626-const-class-linking",
       "642-fp-callees",
       "909-attach-agent",
+      "914-hello-obsolescence",
+      "915-obsolete-2",
+      "916-obsolete-jit",
       "917-fields-transformation",
       "918-fields",
+      "919-obsolete-fields",
       "920-objects",
       "921-hello-failure",
       "922-properties",
       "923-monitors",
       "924-threads",
       "925-threadgroups",
+      "926-multi-obsolescence",
       "927-timers",
       "928-jni-table",
       "929-search",
@@ -262,12 +251,18 @@ public abstract class R8RunArtTestsTest {
       "937-hello-retransform-package",
       "938-load-transform-bcp",
       "939-hello-transformation-bcp",
+      "940-recursive-obsolete",
+      "941-recurive-obsolete-jit",
+      "942-private-recursive",
+      "943-private-recursive-jit",
       "944-transform-classloaders",
       "945-obsolete-native",
+      "946-obsolete-throw",
       "947-reflect-method",
       "948-change-annotations",
       "949-in-memory-transform",
       "950-redefine-intrinsic",
+      "951-threaded-obsolete",
       "980-redefine-object"
   );
 
@@ -630,6 +625,9 @@ public abstract class R8RunArtTestsTest {
           // is in dex code which D8 does not convert. Therefore the error is a verification error
           // at runtime and that is expected.
           .put("142-classloader2", TestCondition.match(TestCondition.D8_COMPILER))
+          // Invoke-custom is supported by D8 and R8, but it can only run on our newest version
+          // of art.
+          .put("952-invoke-custom", beforeAndroidO)
           // Invoke-polymorphic is supported by D8 and R8, but it can only run on our newest version
           // of art.
           .put("953-invoke-polymorphic-compiler", beforeAndroidO)
@@ -732,6 +730,17 @@ public abstract class R8RunArtTestsTest {
               new ImmutableList.Builder<String>()
                   .add("lang/Runtime/exitI/Runtime_exit_A02.class")
                   .build())
+          .build();
+
+  // Tests to skip on some conditions
+  private static final Multimap<String, TestCondition> testToSkip =
+      new ImmutableListMultimap.Builder<String, TestCondition>()
+          // Old runtimes used the legacy test directory which does not contain input for tools
+          // NONE and DX.
+          .put("952-invoke-custom", TestCondition.match(
+              TestCondition.tools(DexTool.NONE, DexTool.DX),
+              TestCondition.runtimes(
+                  DexVm.ART_4_4_4, DexVm.ART_5_1_1, DexVm.ART_6_0_1, DexVm.ART_7_0_0)))
           .build();
 
   private static List<String> failuresToTriage = ImmutableList.of(
@@ -896,7 +905,6 @@ public abstract class R8RunArtTestsTest {
     skipArt.addAll(customRun);
 
     Set<String> skipTest = Sets.newHashSet(skipAltogether);
-    skipTest.addAll(usesJava8);
     skipTest.addAll(usesNativeAgentCode);
     skipTest.addAll(failuresToTriage);
 
@@ -914,6 +922,10 @@ public abstract class R8RunArtTestsTest {
       if (dexTool == DexTool.NONE) {
         skipTest.addAll(noInputJar);
       }
+
+      // Collect the test that we should skip in this configuration
+      skipTest.addAll(collectTestsMatchingConditions(
+          dexTool, compilerUnderTest, dexVm, compilationMode, testToSkip));
 
       // Collect the test that we should skip in this configuration.
       skipArt.addAll(
