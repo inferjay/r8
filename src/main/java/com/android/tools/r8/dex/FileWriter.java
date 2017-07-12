@@ -215,18 +215,16 @@ public class FileWriter {
         this::writeStringData);
     writeItems(mixedSectionOffsets.getAnnotations(), layout::setAnnotationsOffset,
         this::writeAnnotation);
-    writeItems(mixedSectionOffsets.getAnnotationSets(), layout::setAnnotationSetsOffset,
-        this::writeAnnotationSet, 4);
-    writeItems(mixedSectionOffsets.getAnnotationSetRefLists(),
-        layout::setAnnotationSetRefListsOffset, this::writeAnnotationSetRefList, 4);
-    // Write the annotation directories.
-    writeItems(mixedSectionOffsets.getAnnotationDirectories(),
-        layout::setAnnotationDirectoriesOffset, this::writeAnnotationDirectory, 4);
-    // Write the rest.
     writeItems(mixedSectionOffsets.getClassesWithData(), layout::setClassDataOffset,
         this::writeClassData);
     writeItems(mixedSectionOffsets.getEncodedArrays(), layout::setEncodedArrarysOffset,
         this::writeEncodedArray);
+    writeItems(mixedSectionOffsets.getAnnotationSets(), layout::setAnnotationSetsOffset,
+        this::writeAnnotationSet, 4);
+    writeItems(mixedSectionOffsets.getAnnotationSetRefLists(),
+        layout::setAnnotationSetRefListsOffset, this::writeAnnotationSetRefList, 4);
+    writeItems(mixedSectionOffsets.getAnnotationDirectories(),
+        layout::setAnnotationDirectoriesOffset, this::writeAnnotationDirectory, 4);
 
     // Add the map at the end
     layout.setMapOffset(dest.align(4));
@@ -760,6 +758,10 @@ public class FileWriter {
         mixedSectionOffsets.getStringData().size());
     size += writeMapItem(Constants.TYPE_ANNOTATION_ITEM, layout.getAnnotationsOffset(),
         mixedSectionOffsets.getAnnotations().size());
+    size += writeMapItem(Constants.TYPE_CLASS_DATA_ITEM, layout.getClassDataOffset(),
+        mixedSectionOffsets.getClassesWithData().size());
+    size += writeMapItem(Constants.TYPE_ENCODED_ARRAY_ITEM, layout.getEncodedArrarysOffset(),
+        mixedSectionOffsets.getEncodedArrays().size());
     size += writeMapItem(Constants.TYPE_ANNOTATION_SET_ITEM, layout.getAnnotationSetsOffset(),
         mixedSectionOffsets.getAnnotationSets().size());
     size += writeMapItem(Constants.TYPE_ANNOTATION_SET_REF_LIST,
@@ -768,10 +770,6 @@ public class FileWriter {
     size += writeMapItem(Constants.TYPE_ANNOTATIONS_DIRECTORY_ITEM,
         layout.getAnnotationDirectoriesOffset(),
         mixedSectionOffsets.getAnnotationDirectories().size());
-    size += writeMapItem(Constants.TYPE_CLASS_DATA_ITEM, layout.getClassDataOffset(),
-        mixedSectionOffsets.getClassesWithData().size());
-    size += writeMapItem(Constants.TYPE_ENCODED_ARRAY_ITEM, layout.getEncodedArrarysOffset(),
-        mixedSectionOffsets.getEncodedArrays().size());
     size += writeMapItem(Constants.TYPE_MAP_LIST, layout.getMapOffset(), 1);
     dest.moveTo(startOfMap);
     dest.putInt(size);
