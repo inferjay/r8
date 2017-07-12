@@ -18,10 +18,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -341,7 +341,7 @@ public abstract class DebugTestBase {
      */
     private DebuggeeState debuggeeState = null;
 
-    private final Queue<Command> commandsQueue;
+    private final Deque<Command> commandsQueue;
 
     // Active event requests.
     private final Map<Integer, EventHandler> events = new TreeMap<>();
@@ -472,6 +472,9 @@ public abstract class DebugTestBase {
               artCommandBuilder.appendArtOption("--debuggable");
               artCommandBuilder.appendArtOption("-Xcompiler-option");
               artCommandBuilder.appendArtOption("--compiler-filter=interpret-only");
+            }
+            if (DEBUG_TESTS) {
+              artCommandBuilder.appendArtOption("-verbose:jdwp");
             }
             setProperty("jpda.settings.debuggeeJavaPath", artCommandBuilder.build());
           }
@@ -1031,8 +1034,8 @@ public abstract class DebugTestBase {
             stepRequestID = replyPacket.getNextValueAsInt();
             testBase.assertAllDataRead(replyPacket);
           }
-          testBase.events.put(stepRequestID, new StepEventHandler(stepRequestID, stepFilter,
-              stepUntil));
+          testBase.events
+              .put(stepRequestID, new StepEventHandler(this, stepRequestID, stepFilter, stepUntil));
 
           // Resume all threads.
           testBase.resume();
@@ -1092,13 +1095,17 @@ public abstract class DebugTestBase {
 
     private static class StepEventHandler extends DefaultEventHandler {
 
+      private final JUnit3Wrapper.Command.StepCommand stepCommand;
       private final int stepRequestID;
       private final StepFilter stepFilter;
       private final Function<DebuggeeState, Boolean> stepUntil;
 
-      private StepEventHandler(int stepRequestID,
+      private StepEventHandler(
+          JUnit3Wrapper.Command.StepCommand stepCommand,
+          int stepRequestID,
           StepFilter stepFilter,
           Function<DebuggeeState, Boolean> stepUntil) {
+        this.stepCommand = stepCommand;
         this.stepRequestID = stepRequestID;
         this.stepFilter = stepFilter;
         this.stepUntil = stepUntil;
@@ -1106,19 +1113,23 @@ public abstract class DebugTestBase {
 
       @Override
       public void handle(JUnit3Wrapper testBase) {
+        // Clear step event.
+        testBase.getMirror().clearEvent(EventKind.SINGLE_STEP, stepRequestID);
+        testBase.events.remove(Integer.valueOf(stepRequestID));
+
+        // Do we need to step again ?
+        boolean repeatStep = false;
         if (stepFilter
             .skipLocation(testBase.getMirror(), testBase.getDebuggeeState().getLocation())) {
-          // Keep the step active and resume so that we do another step.
-          testBase.resume();
+          repeatStep = true;
         } else if (stepUntil.apply(testBase.getDebuggeeState()) == Boolean.FALSE) {
-          // We must not stop yet.
-          testBase.resume();
-        } else {
-          // When hit, the single step must be cleared.
-          testBase.getMirror().clearEvent(EventKind.SINGLE_STEP, stepRequestID);
-          testBase.events.remove(Integer.valueOf(stepRequestID));
-          super.handle(testBase);
+          repeatStep = true;
         }
+        if (repeatStep) {
+          // In order to repeat the step now, we need to add it at the beginning of the queue.
+          testBase.commandsQueue.addFirst(stepCommand);
+        }
+        super.handle(testBase);
       }
     }
 
