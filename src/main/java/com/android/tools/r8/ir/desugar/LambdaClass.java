@@ -23,7 +23,7 @@ import com.android.tools.r8.graph.DexProto;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexTypeList;
-import com.android.tools.r8.graph.DexValue;
+import com.android.tools.r8.graph.DexValue.DexValueNull;
 import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.synthetic.SynthesizedCode;
 import java.util.List;
@@ -219,7 +219,7 @@ final class LambdaClass {
         new DexAccessFlags(Constants.ACC_PUBLIC | Constants.ACC_FINAL
             | Constants.ACC_SYNTHETIC | Constants.ACC_STATIC),
         DexAnnotationSet.empty(),
-        DexValue.NULL);
+        DexValueNull.NULL);
     return fields;
   }
 

@@ -20,6 +20,7 @@ import com.android.tools.r8.graph.DexValue.DexValueEnum;
 import com.android.tools.r8.graph.DexValue.DexValueFloat;
 import com.android.tools.r8.graph.DexValue.DexValueInt;
 import com.android.tools.r8.graph.DexValue.DexValueLong;
+import com.android.tools.r8.graph.DexValue.DexValueNull;
 import com.android.tools.r8.graph.DexValue.DexValueShort;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.DexValue.DexValueType;
@@ -699,7 +700,7 @@ public class JarClassFileReader {
 
     private DexValue getDexValue(Object value) {
       if (value == null) {
-        return DexValue.NULL;
+        return DexValueNull.NULL;
       }
       if (value instanceof Byte) {
         return DexValueByte.create((Byte) value);

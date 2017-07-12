@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.DexValue.DexValueAnnotation;
 import com.android.tools.r8.graph.DexValue.DexValueArray;
 import com.android.tools.r8.graph.DexValue.DexValueInt;
 import com.android.tools.r8.graph.DexValue.DexValueMethod;
+import com.android.tools.r8.graph.DexValue.DexValueNull;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.DexValue.DexValueType;
 import java.util.ArrayList;
@@ -111,7 +112,7 @@ public class DexAnnotation extends DexItem {
                 new DexAnnotationElement(
                     factory.createString("name"),
                     (clazz == null)
-                        ? DexValue.NULL
+                        ? DexValueNull.NULL
                         : new DexValueString(factory.createString(clazz)))
             }));
   }
