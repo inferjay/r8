@@ -12,9 +12,12 @@ import com.android.tools.r8.code.Const;
 import com.android.tools.r8.code.ConstString;
 import com.android.tools.r8.code.ConstStringJumbo;
 import com.android.tools.r8.code.Instruction;
+import com.android.tools.r8.code.InvokeDirect;
 import com.android.tools.r8.code.InvokeStatic;
+import com.android.tools.r8.code.InvokeSuper;
 import com.android.tools.r8.code.NewInstance;
 import com.android.tools.r8.code.Throw;
+import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.ir.code.IRCode;
@@ -30,6 +33,7 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.naming.MemberNaming.Signature;
+import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
 
 public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
@@ -238,7 +242,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
    * templates might incur a size overhead.
    */
   private DexCode generateCodeFromTemplate(
-      int numberOfRegisters, int outRegisters, Instruction[] instructions) {
+      int numberOfRegisters, int outRegisters, Instruction... instructions) {
     int offset = 0;
     for (Instruction instruction : instructions) {
       assert !(instruction instanceof ConstString);
@@ -276,21 +280,33 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
         .createMethod(itemFactory.createType("Landroid/util/Log;"), proto,
             itemFactory.createString("e"));
     DexType exceptionType = itemFactory.createType("Ljava/lang/RuntimeException;");
-    DexType[] exceptionArgs = {exceptionType, itemFactory.stringType};
-    DexMethod initMethod = itemFactory
-        .createMethod(exceptionType, itemFactory.createProto(itemFactory.voidType, exceptionArgs),
+    DexMethod exceptionInitMethod = itemFactory
+        .createMethod(exceptionType, itemFactory.createProto(itemFactory.voidType,
+            itemFactory.stringType),
             itemFactory.constructorMethodName);
-    // These methods might not get registered for jumbo string processing, therefore we always
-    // use the jumbo string encoding for the const string instruction.
-    Instruction insn[] = {
-        new ConstStringJumbo(0, tag),
-        new ConstStringJumbo(1, message),
-        new InvokeStatic(2, logMethod, 0, 1, 0, 0, 0),
-        new NewInstance(0, exceptionType),
-        new InvokeStatic(2, initMethod, 0, 1, 0, 0, 0),
-        new Throw(0)
-    };
-    DexCode code = generateCodeFromTemplate(2, 2, insn);
+    DexCode code;
+    if (accessFlags.isConstructor() && !accessFlags.isStatic()) {
+      // The Java VM Spec requires that a constructor calls an initializer from the super class
+      // or another constructor from the current class. For simplicity we do the latter by just
+      // calling outself. This is ok, as the constructor always throws before the recursive call.
+      code = generateCodeFromTemplate(3, 2, new ConstStringJumbo(0, tag),
+          new ConstStringJumbo(1, message),
+          new InvokeStatic(2, logMethod, 0, 1, 0, 0, 0),
+          new NewInstance(0, exceptionType),
+          new InvokeDirect(2, exceptionInitMethod, 0, 1, 0, 0, 0),
+          new Throw(0),
+          new InvokeDirect(1, method, 2, 0, 0, 0, 0));
+
+    } else {
+      // These methods might not get registered for jumbo string processing, therefore we always
+      // use the jumbo string encoding for the const string instruction.
+      code = generateCodeFromTemplate(2, 2, new ConstStringJumbo(0, tag),
+          new ConstStringJumbo(1, message),
+          new InvokeStatic(2, logMethod, 0, 1, 0, 0, 0),
+          new NewInstance(0, exceptionType),
+          new InvokeDirect(2, exceptionInitMethod, 0, 1, 0, 0, 0),
+          new Throw(0));
+    }
     Builder builder = builder(this);
     builder.setCode(code);
     return builder.build();

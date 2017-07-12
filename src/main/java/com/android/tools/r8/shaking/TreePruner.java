@@ -55,14 +55,15 @@ public class TreePruner {
   private List<DexProgramClass> getNewProgramClasses(List<DexProgramClass> classes) {
     List<DexProgramClass> newClasses = new ArrayList<>();
     for (DexProgramClass clazz : classes) {
-      if (!appInfo.liveTypes.contains(clazz.type) && !options.debugKeepRules) {
+      if (!appInfo.liveTypes.contains(clazz.type)) {
         // The class is completely unused and we can remove it.
         if (Log.ENABLED) {
           Log.debug(getClass(), "Removing class: " + clazz);
         }
       } else {
         newClasses.add(clazz);
-        if (!appInfo.instantiatedTypes.contains(clazz.type) && !options.debugKeepRules) {
+        if (!appInfo.instantiatedTypes.contains(clazz.type) &&
+            (!options.debugKeepRules || !hasDefaultConstructor(clazz))) {
           // The class is only needed as a type but never instantiated. Make it abstract to reflect
           // this.
           if (clazz.accessFlags.isFinal()) {
@@ -86,6 +87,15 @@ public class TreePruner {
     return newClasses;
   }
 
+  private boolean hasDefaultConstructor(DexProgramClass clazz) {
+    for (DexEncodedMethod method : clazz.directMethods()) {
+      if (isDefaultConstructor(method)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private <S extends PresortedComparable<S>, T extends KeyedDexItem<S>> int firstUnreachableIndex(
       T[] items, Set<S> live) {
     for (int i = 0; i < items.length; i++) {
@@ -94,6 +104,11 @@ public class TreePruner {
       }
     }
     return -1;
+  }
+
+  private boolean isDefaultConstructor(DexEncodedMethod method) {
+    return method.accessFlags.isConstructor() && !method.accessFlags.isStatic()
+        && method.method.proto.parameters.isEmpty();
   }
 
   private DexEncodedMethod[] reachableMethods(DexEncodedMethod[] methods, DexClass clazz) {
@@ -109,7 +124,7 @@ public class TreePruner {
     for (int i = firstUnreachable; i < methods.length; i++) {
       if (appInfo.liveMethods.contains(methods[i].getKey())) {
         reachableMethods.add(methods[i]);
-      } else if (options.debugKeepRules) {
+      } else if (options.debugKeepRules && isDefaultConstructor(methods[i])) {
         // Keep the method but rewrite its body, if it has one.
         reachableMethods.add(methods[i].accessFlags.isAbstract()
             ? methods[i]

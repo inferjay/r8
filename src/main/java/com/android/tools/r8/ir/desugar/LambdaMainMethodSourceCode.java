@@ -4,8 +4,6 @@
 
 package com.android.tools.r8.ir.desugar;
 
-import static com.android.tools.r8.ir.desugar.LambdaRewriter.EMPTY_TYPE_ARRAY;
-
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexItemFactory;
@@ -421,28 +419,28 @@ final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
     DexProto proto;
     switch (primitive) {
       case 'Z':  // byte
-        proto = factory.createProto(factory.booleanType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.booleanType);
         return factory.createMethod(boxType, proto, factory.unboxBooleanMethodName);
       case 'B':  // byte
-        proto = factory.createProto(factory.byteType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.byteType);
         return factory.createMethod(boxType, proto, factory.unboxByteMethodName);
       case 'S':  // short
-        proto = factory.createProto(factory.shortType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.shortType);
         return factory.createMethod(boxType, proto, factory.unboxShortMethodName);
       case 'C':  // char
-        proto = factory.createProto(factory.charType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.charType);
         return factory.createMethod(boxType, proto, factory.unboxCharMethodName);
       case 'I':  // int
-        proto = factory.createProto(factory.intType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.intType);
         return factory.createMethod(boxType, proto, factory.unboxIntMethodName);
       case 'J':  // long
-        proto = factory.createProto(factory.longType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.longType);
         return factory.createMethod(boxType, proto, factory.unboxLongMethodName);
       case 'F':  // float
-        proto = factory.createProto(factory.floatType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.floatType);
         return factory.createMethod(boxType, proto, factory.unboxFloatMethodName);
       case 'D':  // double
-        proto = factory.createProto(factory.doubleType, EMPTY_TYPE_ARRAY);
+        proto = factory.createProto(factory.doubleType);
         return factory.createMethod(boxType, proto, factory.unboxDoubleMethodName);
       default:
         throw new Unreachable("Invalid primitive type descriptor: " + primitive);

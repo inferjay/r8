@@ -54,7 +54,6 @@ public class LambdaRewriter {
 
   static final String LAMBDA_CLASS_NAME_PREFIX = "-$$Lambda$";
   static final String EXPECTED_LAMBDA_METHOD_PREFIX = "lambda$";
-  static final DexType[] EMPTY_TYPE_ARRAY = new DexType[0];
   static final String LAMBDA_INSTANCE_FIELD_NAME = "INSTANCE";
 
   final IRConverter converter;
@@ -103,20 +102,17 @@ public class LambdaRewriter {
     DexType objectArrayType = factory.createType(OBJECT_ARRAY_TYPE_DESCR);
 
     this.metafactoryMethod = factory.createMethod(metafactoryType,
-        factory.createProto(callSiteType, new DexType[] {
-            lookupType, factory.stringType, methodTypeType,
-            methodTypeType, methodHandleType, methodTypeType
-        }),
+        factory.createProto(callSiteType, lookupType, factory.stringType, methodTypeType,
+            methodTypeType, methodHandleType, methodTypeType),
         factory.createString(METAFACTORY_METHOD_NAME));
 
     this.metafactoryAltMethod = factory.createMethod(metafactoryType,
-        factory.createProto(callSiteType, new DexType[] {
-            lookupType, factory.stringType, methodTypeType, objectArrayType
-        }),
+        factory.createProto(callSiteType, lookupType, factory.stringType, methodTypeType,
+            objectArrayType),
         factory.createString(METAFACTORY_ALT_METHOD_NAME));
 
     this.constructorName = factory.createString(Constants.INSTANCE_INITIALIZER_NAME);
-    DexProto initProto = factory.createProto(factory.voidType, EMPTY_TYPE_ARRAY);
+    DexProto initProto = factory.createProto(factory.voidType);
     this.objectInitMethod = factory.createMethod(factory.objectType, initProto, constructorName);
     this.classConstructorName = factory.createString(Constants.CLASS_INITIALIZER_NAME);
     this.instanceFieldName = factory.createString(LAMBDA_INSTANCE_FIELD_NAME);
@@ -124,7 +120,7 @@ public class LambdaRewriter {
 
     this.deserializeLambdaMethodName = factory.createString(DESERIALIZE_LAMBDA_METHOD_NAME);
     this.deserializeLambdaMethodProto = factory.createProto(
-        factory.objectType, new DexType[] { factory.createType(SERIALIZED_LAMBDA_TYPE_DESCR) });
+        factory.objectType, factory.createType(SERIALIZED_LAMBDA_TYPE_DESCR));
   }
 
   /**
