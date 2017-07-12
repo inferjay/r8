@@ -222,32 +222,22 @@ public class DexItemFactory {
       DexString toStringMethodName = createString("toString");
 
 
-      appendBoolean =
-          createMethod(receiver, createProto(receiver, new DexType[]{booleanType}), append);
-      appendChar = createMethod(receiver, createProto(receiver, new DexType[]{charType}), append);
-      appendCharArray =
-          createMethod(receiver, createProto(receiver, new DexType[]{charArrayType}), append);
+      appendBoolean = createMethod(receiver, createProto(receiver, booleanType), append);
+      appendChar = createMethod(receiver, createProto(receiver, charType), append);
+      appendCharArray = createMethod(receiver, createProto(receiver, charArrayType), append);
       appendSubCharArray =
-          createMethod(receiver,
-              createProto(receiver, new DexType[]{charArrayType, intType, intType}), append);
-      appendCharSequence =
-          createMethod(receiver, createProto(receiver, new DexType[]{charSequenceType}), append);
+          createMethod(receiver, createProto(receiver, charArrayType, intType, intType), append);
+      appendCharSequence = createMethod(receiver, createProto(receiver, charSequenceType), append);
       appendSubCharSequence =
-          createMethod(receiver,
-              createProto(receiver, new DexType[]{charSequenceType, intType, intType}), append);
-      appendInt = createMethod(receiver, createProto(receiver, new DexType[]{intType}), append);
-      appendDouble =
-          createMethod(receiver, createProto(receiver, new DexType[]{doubleType}), append);
-      appendFloat = createMethod(receiver, createProto(receiver, new DexType[]{floatType}), append);
-      appendLong = createMethod(receiver, createProto(receiver, new DexType[]{longType}), append);
-      appendObject =
-          createMethod(receiver, createProto(receiver, new DexType[]{objectType}), append);
-      appendString =
-          createMethod(receiver, createProto(receiver, new DexType[]{stringType}), append);
-      appendStringBuffer =
-          createMethod(receiver, createProto(receiver, new DexType[]{sbufType}), append);
-      toString =
-          createMethod(receiver, createProto(stringType, DexType.EMPTY_ARRAY), toStringMethodName);
+          createMethod(receiver, createProto(receiver, charSequenceType, intType, intType), append);
+      appendInt = createMethod(receiver, createProto(receiver, intType), append);
+      appendDouble = createMethod(receiver, createProto(receiver, doubleType), append);
+      appendFloat = createMethod(receiver, createProto(receiver, floatType), append);
+      appendLong = createMethod(receiver, createProto(receiver, longType), append);
+      appendObject = createMethod(receiver, createProto(receiver, objectType), append);
+      appendString = createMethod(receiver, createProto(receiver, stringType), append);
+      appendStringBuffer = createMethod(receiver, createProto(receiver, sbufType), append);
+      toString = createMethod(receiver, createProto(stringType), toStringMethodName);
     }
 
     public void forEachAppendMethod(Consumer<DexMethod> consumer) {
@@ -322,7 +312,7 @@ public class DexItemFactory {
         parameters.length == 0 ? DexTypeList.empty() : new DexTypeList(parameters));
   }
 
-  public DexProto createProto(DexType returnType, DexType[] parameters) {
+  public DexProto createProto(DexType returnType, DexType... parameters) {
     return createProto(createShorty(returnType, parameters), returnType, parameters);
   }
 

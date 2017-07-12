@@ -19,8 +19,6 @@ import java.util.function.Function;
 
 public class DexType extends IndexedDexItem implements PresortedComparable<DexType> {
 
-  public static final DexType[] EMPTY_ARRAY = new DexType[]{};
-
   private final static int ROOT_LEVEL = 0;
   private final static int UNKNOWN_LEVEL = -1;
   private final static int INTERFACE_LEVEL = -2;
