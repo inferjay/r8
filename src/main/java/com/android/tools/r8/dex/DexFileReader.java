@@ -47,6 +47,7 @@ import com.android.tools.r8.graph.DexTypeList;
 import com.android.tools.r8.graph.DexValue;
 import com.android.tools.r8.graph.DexValue.DexValueMethodHandle;
 import com.android.tools.r8.graph.DexValue.DexValueMethodType;
+import com.android.tools.r8.graph.DexValue.DexValueNull;
 import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.OffsetToObjectMapping;
 import com.android.tools.r8.logging.Log;
@@ -226,7 +227,7 @@ public class DexFileReader {
       }
       case DexValue.VALUE_NULL: {
         assert valueArg == 0;
-        return DexValue.NULL;
+        return DexValueNull.NULL;
       }
       case DexValue.VALUE_BOOLEAN: {
         // 0 is false, and 1 is true.

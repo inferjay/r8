@@ -36,8 +36,6 @@ public abstract class DexValue extends DexItem {
   public static final byte VALUE_NULL = 0x1e;
   public static final byte VALUE_BOOLEAN = 0x1f;
 
-  public static final DexValue NULL = new DexValueNull();
-
   private static void writeHeader(byte type, int arg, DexOutputBuffer dest) {
     dest.putByte((byte) ((arg << 5) | type));
   }
@@ -87,7 +85,7 @@ public abstract class DexValue extends DexItem {
       return DexValueDouble.DEFAULT;
     }
     if (type.isArrayType() || type.isClassType()) {
-      return DexValue.NULL;
+      return DexValueNull.NULL;
     }
     throw new Unreachable("No default value for unexpected type " + type);
   }
@@ -688,7 +686,9 @@ public abstract class DexValue extends DexItem {
 
   static public class DexValueNull extends SimpleDexValue {
 
-    // See DexValue.NULL
+    public static final DexValue NULL = new DexValueNull();
+
+    // See DexValueNull.NULL
     private DexValueNull() {
     }
 
