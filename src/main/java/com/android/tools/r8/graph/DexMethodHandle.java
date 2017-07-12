@@ -132,7 +132,7 @@ public class DexMethodHandle extends IndexedDexItem {
   public boolean computeEquals(Object other) {
     if (other instanceof DexMethodHandle) {
       DexMethodHandle o = (DexMethodHandle) other;
-      return type.equals(o.type) && fieldOrMethod.computeEquals(o.fieldOrMethod);
+      return type.equals(o.type) && fieldOrMethod.equals(o.fieldOrMethod);
     }
     return false;
   }
