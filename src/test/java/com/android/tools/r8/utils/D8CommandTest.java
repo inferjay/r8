@@ -163,6 +163,12 @@ public class D8CommandTest {
     parse("--output", invalidType.toString());
   }
 
+  @Test
+  public void nonExistingOutputJar() throws Throwable {
+    Path nonExistingJar = temp.getRoot().toPath().resolve("non-existing-archive.jar");
+    D8Command.builder().setOutputPath(nonExistingJar).build();
+  }
+
   private D8Command parse(String... args) throws IOException, CompilationException {
     return D8Command.parse(args).build();
   }

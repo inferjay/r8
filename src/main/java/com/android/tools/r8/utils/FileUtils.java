@@ -75,9 +75,12 @@ public class FileUtils {
 
   public static Path validateOutputFile(Path path) throws CompilationException {
     if (path != null) {
-      if (!isZipFile(path) && !(Files.exists(path) && Files.isDirectory(path))) {
+      boolean isJarOrZip = isZipFile(path) || isJarFile(path);
+      if (!isJarOrZip  && !(Files.exists(path) && Files.isDirectory(path))) {
         throw new CompilationException(
-            "Invalid output: " + path + "\nOutput must be a zip archive or an existing directory");
+            "Invalid output: "
+                + path +
+                "\nOutput must be a .zip or .jar archive or an existing directory");
       }
     }
     return path;

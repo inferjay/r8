@@ -184,6 +184,12 @@ public class R8CommandTest {
     assertEquals(1, ToolHelper.getApp(command).getDexProgramResources().size());
   }
 
+  @Test
+  public void nonExistingOutputJar() throws Throwable {
+    Path nonExistingJar = temp.getRoot().toPath().resolve("non-existing-archive.jar");
+    R8Command.builder().setOutputPath(nonExistingJar).build();
+  }
+
   private R8Command parse(String... args)
       throws CompilationException, ProguardRuleParserException, IOException {
     return R8Command.parse(args).build();
