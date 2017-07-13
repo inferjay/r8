@@ -3,6 +3,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
+from __future__ import print_function
 import optparse
 import os
 import sys
@@ -55,8 +56,11 @@ def ParseOptions():
                          'If passing several options use a quoted string.')
   result.add_option('--r8-flags',
                     help='Additional option(s) for the compiler. ' +
-                         'Same as --compiler-flags, keeping it for backward compatibility. ' +
+                         'Same as --compiler-flags, keeping it for backward'
+                         ' compatibility. ' +
                          'If passing several options use a quoted string.')
+  # TODO(tamaskenez) remove track-memory-to-file as soon as we updated golem
+  # to use --print-memoryuse instead
   result.add_option('--track-memory-to-file',
                     help='Track how much memory the jvm is using while ' +
                     ' compiling. Output to the specified file.')
@@ -73,6 +77,11 @@ def ParseOptions():
                     help='Prints the line \'<BENCHMARKNAME>(RunTimeRaw):' +
                          ' <elapsed> ms\' at the end where <elapsed> is' +
                          ' the elapsed time in milliseconds.')
+  result.add_option('--print-memoryuse',
+                    metavar='BENCHMARKNAME',
+                    help='Prints the line \'<BENCHMARKNAME>(MemoryUse):' +
+                         ' <mem>\' at the end where <mem> is the peak' +
+                         ' peak resident set size (VmHWM) in bytes.')
   return result.parse_args()
 
 # Most apps have the -printmapping and -printseeds in the Proguard
@@ -81,10 +90,10 @@ def ParseOptions():
 # placing these two output files together with the dex output.
 def GenerateAdditionalProguardConfiguration(temp, outdir):
   name = "output.config"
-  with open(os.path.join(temp, name), 'w') as file:
-    file.write('-printmapping ' + os.path.join(outdir, 'proguard.map') + "\n")
-    file.write('-printseeds ' + os.path.join(outdir, 'proguard.seeds') + "\n")
-    return os.path.abspath(file.name)
+  with open(os.path.join(temp, name), 'w') as f:
+    f.write('-printmapping ' + os.path.join(outdir, 'proguard.map') + "\n")
+    f.write('-printseeds ' + os.path.join(outdir, 'proguard.seeds') + "\n")
+    return os.path.abspath(f.name)
 
 def main():
   app_provided_pg_conf = False;
@@ -104,8 +113,9 @@ def main():
     raise 'Unexpected'
 
   if not options.version in data.VERSIONS.keys():
-    print 'No version %s for application %s' % (options.version, options.app)
-    print 'Valid versions are %s' % data.VERSIONS.keys()
+    print('No version {} for application {}'
+        .format(options.version, options.app))
+    print('Valid versions are {}'.format(data.VERSIONS.keys()))
     return 1
 
   version = data.VERSIONS[options.version]
@@ -115,13 +125,15 @@ def main():
         else 'proguarded'
 
   if options.type not in version:
-    print 'No type %s for version %s' % (options.type, options.version)
-    print 'Valid types are %s' % version.keys()
+    print('No type {} for version {}'.format(options.type, options.version))
+    print('Valid types are {}'.format(version.keys()))
     return 1
   values = version[options.type]
   inputs = None
-  # For R8 'deploy' the JAR is located using the Proguard configuration -injars option.
-  if 'inputs' in values and (options.compiler != 'r8' or options.type != 'deploy'):
+  # For R8 'deploy' the JAR is located using the Proguard configuration
+  # -injars option.
+  if 'inputs' in values and (options.compiler != 'r8'
+      or options.type != 'deploy'):
     inputs = values['inputs']
 
   args.extend(['--output', outdir])
@@ -145,7 +157,8 @@ def main():
     for lib in values['libraries']:
       args.extend(['--lib', lib])
 
-  if not outdir.endswith('.zip') and not outdir.endswith('.jar') and not os.path.exists(outdir):
+  if not outdir.endswith('.zip') and not outdir.endswith('.jar') \
+      and not os.path.exists(outdir):
     os.makedirs(outdir)
 
   if options.compiler == 'r8':
@@ -161,16 +174,18 @@ def main():
     args.extend(inputs)
 
   t0 = time.time()
-
   if options.dump_args_file:
     with open(options.dump_args_file, 'w') as args_file:
       args_file.writelines([arg + os.linesep for arg in args])
   else:
-    if options.compiler == 'd8':
-      d8.run(args, not options.no_build, not options.no_debug, options.profile,
-             options.track_memory_to_file)
-    else:
-      with utils.TempDir() as temp:
+    with utils.TempDir() as temp:
+      if options.print_memoryuse and not options.track_memory_to_file:
+        options.track_memory_to_file = os.path.join(temp,
+            utils.MEMORY_USE_TMP_FILE)
+      if options.compiler == 'd8':
+        d8.run(args, not options.no_build, not options.no_debug,
+            options.profile, options.track_memory_to_file)
+      else:
         if app_provided_pg_conf:
           # Ensure that output of -printmapping and -printseeds go to the output
           # location and not where the app Proguard configuration places them.
@@ -181,8 +196,12 @@ def main():
           additional_pg_conf = GenerateAdditionalProguardConfiguration(
               temp, os.path.abspath(pg_outdir))
           args.extend(['--pg-conf', additional_pg_conf])
-        r8.run(args, not options.no_build, not options.no_debug, options.profile,
-               options.track_memory_to_file)
+        r8.run(args, not options.no_build, not options.no_debug,
+            options.profile, options.track_memory_to_file)
+      if options.print_memoryuse:
+        print('{}(MemoryUse): {}'
+            .format(options.print_memoryuse,
+                utils.grep_memoryuse(options.track_memory_to_file)))
 
   if options.print_runtimeraw:
     print('{}(RunTimeRaw): {} ms'

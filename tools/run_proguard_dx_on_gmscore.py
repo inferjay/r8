@@ -40,6 +40,11 @@ def parse_arguments():
       help = 'Prints the line \'<BENCHMARKNAME>(RunTimeRaw): <elapsed>' +
              ' ms\' at the end where <elapsed> is the elapsed time in' +
              ' milliseconds.')
+  parser.add_argument('--print-memoryuse',
+      metavar='BENCHMARKNAME',
+      help='Prints the line \'<BENCHMARKNAME>(MemoryUse):' +
+           ' <mem>\' at the end where <mem> is the peak' +
+           ' peak resident set size (VmHWM) in bytes.')
   parser.add_argument('--compatdx',
       help = 'Use CompatDx (D8) instead of DX.',
       default = False,
@@ -72,7 +77,15 @@ def Main():
 
   t0 = time.time()
 
-  proguard.run(args)
+  proguard_memoryuse = None
+
+  with utils.TempDir() as temp:
+    track_memory_file = None
+    if options.print_memoryuse:
+      track_memory_file = join(temp, utils.MEMORY_USE_TMP_FILE)
+    proguard.run(args, track_memory_file = track_memory_file)
+    if options.print_memoryuse:
+      proguard_memoryuse = utils.grep_memoryuse(track_memory_file)
 
   # run dex on the result
   if options.compatdx:
@@ -80,10 +93,21 @@ def Main():
   else:
     jar = DX_JAR
 
-  cmd = ['java', '-jar', jar, '--min-sdk-version=26', '--multi-dex',
-      '--output=' + outdir, '--dex', PROGUARDED_OUTPUT];
-  utils.PrintCmd(cmd);
-  check_call(cmd)
+  with utils.TempDir() as temp:
+    track_memory_file = None
+    cmd = []
+    if options.print_memoryuse:
+      track_memory_file = join(temp, utils.MEMORY_USE_TMP_FILE)
+      cmd.extend(['tools/track_memory.sh', track_memory_file])
+    cmd.extend(['java', '-jar', jar, '--min-sdk-version=26', '--multi-dex',
+        '--output=' + outdir, '--dex', PROGUARDED_OUTPUT]);
+    utils.PrintCmd(cmd);
+    check_call(cmd)
+    if options.print_memoryuse:
+      dx_memoryuse = utils.grep_memoryuse(track_memory_file)
+      print('{}(MemoryUse): {}'
+          .format(options.print_memoryuse,
+              max(proguard_memoryuse, dx_memoryuse)))
 
   if options.print_runtimeraw:
     print('{}(RunTimeRaw): {} ms'
