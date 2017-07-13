@@ -53,6 +53,12 @@ def parse_arguments():
       required = True,
       help = 'Results will be printed using the specified benchmark name (e.g.'
           ' <NAME>-<segment>(CodeSize): <bytes>)')
+  parser.add_argument('--print-memoryuse',
+      help = 'Prints the line \'<NAME>(MemoryUse):' +
+             ' <mem>\' at the end where <mem> is the peak' +
+             ' peak resident set size (VmHWM) in bytes.',
+      default = False,
+      action = 'store_true')
   return parser.parse_args()
 
 # Return a dictionary: {segment_name -> segments_size}
@@ -96,10 +102,16 @@ def Main():
       if args.tool == 'd8-release':
         tool_args.append('--release')
 
+
+    cmd = []
+
+    track_memory_file = None
+    if args.print_memoryuse:
+      track_memory_file = os.path.join(temp_dir, utils.MEMORY_USE_TMP_FILE)
+      cmd.extend(['tools/track_memory.sh', track_memory_file])
+
     if tool_file.endswith('.jar'):
-      cmd = ['java', '-jar']
-    else:
-      cmd = []
+      cmd.extend(['java', '-jar'])
 
     cmd.extend([tool_file] + tool_args + [FRAMEWORK_JAR])
 
@@ -108,6 +120,10 @@ def Main():
     t0 = time.time()
     subprocess.check_call(cmd)
     dt = time.time() - t0
+
+    if args.print_memoryuse:
+      print('{}(MemoryUse): {}'
+          .format(args.name, utils.grep_memoryuse(track_memory_file)))
 
     dex_files = [f for f in glob(os.path.join(temp_dir, '*.dex'))]
     code_size = 0

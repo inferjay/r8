@@ -14,6 +14,7 @@ import tempfile
 
 TOOLS_DIR = os.path.abspath(os.path.normpath(os.path.join(__file__, '..')))
 REPO_ROOT = os.path.realpath(os.path.join(TOOLS_DIR, '..'))
+MEMORY_USE_TMP_FILE = 'memory_use.tmp'
 
 def PrintCmd(s):
   if type(s) is list:
@@ -118,3 +119,25 @@ def read_cts_test_result(file_xml):
         outcome = m.groups()[0]
         assert outcome in ['fail', 'pass']
         yield CtsTest(m.groups()[1], outcome == 'pass')
+
+def grep_memoryuse(logfile):
+  re_vmhwm = re.compile('^VmHWM:[ \t]*([0-9]+)[ \t]*([a-zA-Z]*)')
+  result = None
+  with open(logfile) as f:
+    for line in f:
+      m = re_vmhwm.search(line)
+      if m:
+        groups = m.groups()
+        s = len(groups)
+        if s >= 1:
+          result = int(groups[0])
+          if s >= 2:
+            unit = groups[1]
+            if unit == 'kB':
+              result *= 1024
+            elif unit != '':
+              raise Exception('Unrecognized unit in memory usage log: {}'
+                  .format(unit))
+  if result is None:
+    raise Exception('No memory usage found in log: {}'.format(logfile))
+  return result
