@@ -1354,10 +1354,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       unhandled.add(split);
     } else if (blockedPosition > unhandledInterval.getEnd()) {
       // Spilling can make a register available for the entire interval.
-      // It would have been nice to use assignRegisterToUnhandledInterval here, but unfortunately
-      // the order of the operations are extremely important here. updateRegisterState has to
-      // happen before spillOverlappingActiveIntervals and takeRegistersForIntervals has to happen
-      // after.
       assignRegisterAndSpill(unhandledInterval, needsRegisterPair, candidate);
     } else {
       // Spilling only makes a register available for the first part of current.
@@ -1390,7 +1386,9 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   private void assignRegisterAndSpill(
-      LiveIntervals unhandledInterval, boolean needsRegisterPair, int candidate) {
+      LiveIntervals unhandledInterval,
+      boolean needsRegisterPair,
+      int candidate) {
     assignRegister(unhandledInterval, candidate);
     updateRegisterState(candidate, needsRegisterPair);
     // Split and spill intersecting active intervals for this register.
@@ -1402,14 +1400,21 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     splitOverlappingInactiveIntervals(unhandledInterval, needsRegisterPair, candidate);
   }
 
-  private void splitOverlappingInactiveIntervals(LiveIntervals unhandledInterval,
-      boolean needsRegisterPair, int candidate) {
+  private void splitOverlappingInactiveIntervals(
+      LiveIntervals unhandledInterval,
+      boolean needsRegisterPair,
+      int candidate) {
     Iterator<LiveIntervals> inactiveIterator = inactive.iterator();
     while (inactiveIterator.hasNext()) {
       LiveIntervals intervals = inactiveIterator.next();
       if ((intervals.usesRegister(candidate) ||
           (needsRegisterPair && intervals.usesRegister(candidate + 1))) &&
           intervals.overlaps(unhandledInterval)) {
+        // If these assertions trigger we have changed the way blocked parts of intervals
+        // are handled. If we ever get intervals with fixed registers in here, we need
+        // to split them before the first use in the same way that we do when spilling
+        // overlapping active intervals.
+        assert !intervals.isLinked() || intervals.isArgumentInterval();
         if (intervals.getStart() > unhandledInterval.getStart()) {
           // The inactive live intervals hasn't started yet. Clear the temporary register
           // assignment and move back to unhandled for register reassignment.
@@ -1426,8 +1431,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
   }
 
-  private void spillOverlappingActiveIntervals(LiveIntervals unhandledInterval,
-      boolean needsRegisterPair, int candidate) {
+  private void spillOverlappingActiveIntervals(
+      LiveIntervals unhandledInterval,
+      boolean needsRegisterPair,
+      int candidate) {
     List<LiveIntervals> newActive = new ArrayList<>();
     Iterator<LiveIntervals> activeIterator = active.iterator();
     while (activeIterator.hasNext()) {
@@ -1844,8 +1851,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
               live.add(use);
               addLiveRange(use, block, number);
             }
-            LiveIntervals useIntervals = use.getLiveIntervals();
-            useIntervals.addUse(new LiveIntervalsUse(number, Constants.U16BIT_MAX, true));
           }
           Value use = instruction.getPreviousLocalValue();
           if (use != null) {
@@ -1854,8 +1859,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
               live.add(use);
               addLiveRange(use, block, number);
             }
-            LiveIntervals useIntervals = use.getLiveIntervals();
-            useIntervals.addUse(new LiveIntervalsUse(number, Constants.U16BIT_MAX, true));
           }
         }
       }
@@ -1887,14 +1890,27 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       Value previous = null;
       for (int i = 0; i < arguments.size(); i++) {
         Value argument = arguments.get(i);
-        // TODO(ager): Conditionally create a new argument if it is not already a move.
-        // Reverted optimization from CL: https://r8-review.googlesource.com/c/1985/
-        // Not considering debug-uses causes a unlinked/non-consecutive register in some cases.
-        Value newArgument = createValue(argument.outType());
-        Move move = new Move(newArgument, argument);
-        move.setBlock(invoke.getBlock());
-        replaceArgument(invoke, i, newArgument);
-        insertAt.add(move);
+        Value newArgument = argument;
+        // In debug mode, we have debug instructions that are also moves. Do not generate another
+        // move if there already is a move instruction that we can use. We generate moves if:
+        //
+        // 1. the argument is not defined by a move,
+        //
+        // 2. the argument is already linked or would cause a cycle if linked, or
+        //
+        // 3. the argument has a register constraint (the argument moves are there to make the
+        //    input value to a ranged invoke unconstrained.)
+        if (argument.definition == null ||
+            !argument.definition.isMove() ||
+            argument.isLinked() ||
+            argument == previous ||
+            argument.hasRegisterConstraint()) {
+          newArgument = createValue(argument.outType());
+          Move move = new Move(newArgument, argument);
+          move.setBlock(invoke.getBlock());
+          replaceArgument(invoke, i, newArgument);
+          insertAt.add(move);
+        }
         if (previous != null) {
           previous.linkTo(newArgument);
         }

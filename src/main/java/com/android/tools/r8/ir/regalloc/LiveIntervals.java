@@ -319,7 +319,7 @@ public class LiveIntervals {
 
   public int firstUseAfter(int unhandledStart) {
     for (LiveIntervalsUse use : uses) {
-      if (use.getPosition() >= unhandledStart && !use.isDebugUse()) {
+      if (use.getPosition() >= unhandledStart) {
         return use.getPosition();
       }
     }
