@@ -138,7 +138,7 @@ public class JctfTestSpecifications {
           // 1) t01
           // org.junit.ComparisonFailure: expected:<get[]StackTrace> but was:<get[Thread]StackTrace>
 
-          .put("lang.Thread.enumerate$Ljava_lang_Thread.Thread_enumerate_A02", any())
+          .put("lang.Thread.enumerate_Ljava_lang_Thread.Thread_enumerate_A02", any())
           // 1) t01
           // java.lang.AssertionError: test failed with error:java.lang.SecurityException
 
@@ -153,7 +153,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Expected exception: java.lang.IllegalThreadStateException
 
           .put("lang.Thread.getAllStackTraces.Thread_getAllStackTraces_A01",
-              match(runtimes(DexVm.ART_DEFAULT, DexVm.ART_7_0_0)))
+              match(runtimes(DexVm.ART_7_0_0)))
           // 1) t01
           // java.lang.AssertionError
 
@@ -195,7 +195,7 @@ public class JctfTestSpecifications {
           // java.lang.UnsupportedOperationException
 
           .put("lang.Thread.getContextClassLoader.Thread_getContextClassLoader_A03",
-              match(runtimes(DexVm.ART_DEFAULT, DexVm.ART_7_0_0)))
+              match(runtimes(DexVm.ART_7_0_0)))
           // 1) t01
           // java.lang.AssertionError: improper ClassLoader expected same:<null> was not:<dalvik.system.PathClassLoader[DexPathList[[dex file "/tmp/junit7794202178392390143/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]]>
 
@@ -316,8 +316,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructors.Class_getDeclaredConstructors_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 3) t03
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor$Ljava_lang_Class/Class_getDeclaredConstructor_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor_Ljava_lang_Class/Class_getDeclaredConstructor_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 4) t04
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredFields/Class_getDeclaredFields_A02;
@@ -332,8 +332,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethods.Class_getDeclaredMethods_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 7) t07
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String$Ljava_lang_Class/Class_getDeclaredMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String_Ljava_lang_Class/Class_getDeclaredMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 8) t08
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredClasses/Class_getDeclaredClasses_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredClasses.Class_getDeclaredClasses_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -341,8 +341,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructors/Class_getDeclaredConstructors_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructors.Class_getDeclaredConstructors_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 10) t10
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor$Ljava_lang_Class/Class_getDeclaredConstructor_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor_Ljava_lang_Class/Class_getDeclaredConstructor_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 11) t11
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredFields/Class_getDeclaredFields_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredFields.Class_getDeclaredFields_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -353,8 +353,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethods/Class_getDeclaredMethods_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethods.Class_getDeclaredMethods_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 14) t14
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String$Ljava_lang_Class/Class_getDeclaredMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String_Ljava_lang_Class/Class_getDeclaredMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 15) t15
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/newInstance/Class_newInstance_A07;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.newInstance.Class_newInstance_A07" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -372,8 +372,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructors.Class_getConstructors_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 19) t19
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor$Ljava_lang_Class/Class_getConstructor_A04;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor_Ljava_lang_Class/Class_getConstructor_A04;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 20) t20
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getFields/Class_getFields_A02;
@@ -388,8 +388,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethods.Class_getMethods_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 23) t23
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String$Ljava_lang_Class/Class_getMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String_Ljava_lang_Class/Class_getMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 24) t24
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getClasses/Class_getClasses_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getClasses.Class_getClasses_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -397,8 +397,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructors/Class_getConstructors_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructors.Class_getConstructors_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 26) t26
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor$Ljava_lang_Class/Class_getConstructor_A04;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor_Ljava_lang_Class/Class_getConstructor_A04;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 27) t27
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getFields/Class_getFields_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getFields.Class_getFields_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -409,8 +409,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethods/Class_getMethods_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethods.Class_getMethods_A02" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 30) t30
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String$Ljava_lang_Class/Class_getMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String_Ljava_lang_Class/Class_getMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit2603421343038865741/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 31) t31
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/SecurityManager/checkMemberAccessLjava_lang_ClassI/SecurityManager_checkMemberAccess_A02;
@@ -593,8 +593,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructors.Class_getDeclaredConstructors_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 3) t03
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor$Ljava_lang_Class/Class_getDeclaredConstructor_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor_Ljava_lang_Class/Class_getDeclaredConstructor_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 4) t04
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredFields/Class_getDeclaredFields_A02;
@@ -609,8 +609,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethods.Class_getDeclaredMethods_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 7) t07
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String$Ljava_lang_Class/Class_getDeclaredMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String_Ljava_lang_Class/Class_getDeclaredMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 8) t08
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredClasses/Class_getDeclaredClasses_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredClasses.Class_getDeclaredClasses_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -618,8 +618,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructors/Class_getDeclaredConstructors_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructors.Class_getDeclaredConstructors_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 10) t10
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor$Ljava_lang_Class/Class_getDeclaredConstructor_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredConstructor_Ljava_lang_Class/Class_getDeclaredConstructor_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A03" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 11) t11
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredFields/Class_getDeclaredFields_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredFields.Class_getDeclaredFields_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -630,8 +630,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethods/Class_getDeclaredMethods_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethods.Class_getDeclaredMethods_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 14) t14
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String$Ljava_lang_Class/Class_getDeclaredMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getDeclaredMethodLjava_lang_String_Ljava_lang_Class/Class_getDeclaredMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 15) t15
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/newInstance/Class_newInstance_A07;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.newInstance.Class_newInstance_A07" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -649,8 +649,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructors.Class_getConstructors_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 19) t19
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor$Ljava_lang_Class/Class_getConstructor_A04;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor_Ljava_lang_Class/Class_getConstructor_A04;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 20) t20
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getFields/Class_getFields_A02;
@@ -665,8 +665,8 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethods.Class_getMethods_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 23) t23
           // java.lang.Exception: Unexpected exception, expected<java.lang.SecurityException> but was<java.lang.NoClassDefFoundError>
-          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String$Ljava_lang_Class/Class_getMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String_Ljava_lang_Class/Class_getMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 24) t24
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getClasses/Class_getClasses_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getClasses.Class_getClasses_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -674,8 +674,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructors/Class_getConstructors_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructors.Class_getConstructors_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 26) t26
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor$Ljava_lang_Class/Class_getConstructor_A04;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getConstructor_Ljava_lang_Class/Class_getConstructor_A04;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A04" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 27) t27
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getFields/Class_getFields_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getFields.Class_getFields_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -686,8 +686,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethods/Class_getMethods_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethods.Class_getMethods_A02" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 30) t30
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String$Ljava_lang_Class/Class_getMethod_A05;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/Class/getMethodLjava_lang_String_Ljava_lang_Class/Class_getMethod_A05;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A05" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 31) t32
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/SecurityManager/checkPackageAccessLjava_lang_String/SecurityManager_checkPackageAccess_A01;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.SecurityManager.checkPackageAccessLjava_lang_String.SecurityManager_checkPackageAccess_A01" on path: DexPathList[[dex file "/tmp/junit7609456538458065688/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -745,7 +745,7 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ClassLoader/ConstructorLjava_lang_ClassLoader/ClassLoader_Constructor_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ClassLoader.ConstructorLjava_lang_ClassLoader.ClassLoader_Constructor_A02" on path: DexPathList[[dex file "/tmp/junit6765412840574788386/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A06",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A06",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -775,8 +775,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/getParent/ThreadGroup_getParent_A03;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.getParent.ThreadGroup_getParent_A03" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 8) t08
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/enumerate$ThreadGroup/ThreadGroup_enumerate_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.enumerate$ThreadGroup.ThreadGroup_enumerate_A03" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/enumerate_ThreadGroup/ThreadGroup_enumerate_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.enumerate_ThreadGroup.ThreadGroup_enumerate_A03" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 9) t09
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/interrupt/ThreadGroup_interrupt_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.interrupt.ThreadGroup_interrupt_A02" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -799,8 +799,8 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/getParent/ThreadGroup_getParent_A02;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.getParent.ThreadGroup_getParent_A02" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 16) t16
-          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/enumerate$ThreadGroup/ThreadGroup_enumerate_A03;
-          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.enumerate$ThreadGroup.ThreadGroup_enumerate_A03" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
+          // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/ThreadGroup/enumerate_ThreadGroup/ThreadGroup_enumerate_A03;
+          // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ThreadGroup.enumerate_ThreadGroup.ThreadGroup_enumerate_A03" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
           // 17) t17
           // java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/SecurityManager/checkAccessLjava_lang_ThreadGroup/SecurityManager_checkAccess_A01;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.SecurityManager.checkAccessLjava_lang_ThreadGroup.SecurityManager_checkAccess_A01" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
@@ -809,12 +809,12 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/jctf/test/lib/java/lang/SecurityManager/checkAccessLjava_lang_ThreadGroup/SecurityManager_checkAccess_A01;
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.SecurityManager.checkAccessLjava_lang_ThreadGroup.SecurityManager_checkAccess_A01" on path: DexPathList[[dex file "/tmp/junit7453598412317397853/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A05",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A05",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A02",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A02",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -823,26 +823,26 @@ public class JctfTestSpecifications {
           // 3) t03
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A04",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A04",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
           // 2) t02
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A03",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A03",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A01",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A01",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
           // 2) t02
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClassLjava_lang_String$BII.ClassLoader_defineClass_A07",
+          .put("lang.ClassLoader.defineClassLjava_lang_String_BII.ClassLoader_defineClass_A07",
               any())
           // 1) t01
           // java.lang.Exception: Unexpected exception, expected<java.lang.NullPointerException> but was<java.lang.UnsupportedOperationException>
@@ -969,7 +969,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.setSignersLjava_lang_Class$Ljava_lang_Object.ClassLoader_setSigners_A01",
+              "lang.ClassLoader.setSignersLjava_lang_Class_Ljava_lang_Object.ClassLoader_setSigners_A01",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1025,7 +1025,7 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.ClassLoader.findLoadedClassLjava_lang_String.TestLoader" on path: DexPathList[[dex file "/tmp/junit1789265657215742712/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A02",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A02",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1047,7 +1047,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A05",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A05",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1055,7 +1055,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A01",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A01",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1063,7 +1063,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A06",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A06",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1071,14 +1071,14 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A08",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A08",
               any())
           // 1) t01
           // java.lang.Exception: Unexpected exception, expected<java.lang.NullPointerException> but was<java.lang.UnsupportedOperationException>
           // Caused by: java.lang.UnsupportedOperationException: can't load this type of class file
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A03",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A03",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -1098,25 +1098,25 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Resource not found:
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A07",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A07",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A09",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A09",
               any())
           // 1) t01
           // java.lang.Exception: Unexpected exception, expected<java.lang.NullPointerException> but was<java.lang.UnsupportedOperationException>
           // Caused by: java.lang.UnsupportedOperationException: can't load this type of class file
 
           .put(
-              "lang.ClassLoader.defineClassLjava_lang_String$BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A04",
+              "lang.ClassLoader.defineClassLjava_lang_String_BIILjava_security_ProtectionDomain.ClassLoader_defineClass_A04",
               any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClass$BII.ClassLoader_defineClass_A02", any())
+          .put("lang.ClassLoader.defineClass_BII.ClassLoader_defineClass_A02", any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
           // 2) t02
@@ -1155,19 +1155,19 @@ public class JctfTestSpecifications {
           // 2) t02
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClass$BII.ClassLoader_defineClass_A03", any())
+          .put("lang.ClassLoader.defineClass_BII.ClassLoader_defineClass_A03", any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
           // 2) t02
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClass$BII.ClassLoader_defineClass_A01", any())
+          .put("lang.ClassLoader.defineClass_BII.ClassLoader_defineClass_A01", any())
           // 1) t01
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
           // 2) t02
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.ClassLoader.defineClass$BII.ClassLoader_defineClass_A04", any())
+          .put("lang.ClassLoader.defineClass_BII.ClassLoader_defineClass_A04", any())
           // 1) t01
           // java.lang.Exception: Unexpected exception, expected<java.lang.NullPointerException> but was<java.lang.UnsupportedOperationException>
           // Caused by: java.lang.UnsupportedOperationException: can't load this type of class file
@@ -1293,16 +1293,16 @@ public class JctfTestSpecifications {
           // 2) t02
           // java.lang.AssertionError
 
-          .put("lang.Runtime.exec$Ljava_lang_String.Runtime_exec_A02", any())
+          .put("lang.Runtime.exec_Ljava_lang_String.Runtime_exec_A02", any())
           // 1) t01
-          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec$Ljava_lang_String.Runtime_exec_A02$T01
+          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec_Ljava_lang_String.Runtime_exec_A02$T01
           // ]>
 
-          .put("lang.Runtime.exec$Ljava_lang_String.Runtime_exec_A03", any())
+          .put("lang.Runtime.exec_Ljava_lang_String.Runtime_exec_A03", any())
           // 1) t01
           // java.lang.AssertionError: expected:<0> but was:<1>
 
-          .put("lang.Runtime.exec$Ljava_lang_String.Runtime_exec_A01", any())
+          .put("lang.Runtime.exec_Ljava_lang_String.Runtime_exec_A01", any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[com google jctf test lib java lang Runtime]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoArgs
           // ]>
@@ -1408,19 +1408,19 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Bad exit code of spawned java proccess, err=Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.addShutdownHookLjava_lang_Thread.Runtime_addShutdownHook_A06$T02
           // expected:<0> but was:<1>
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_String.Runtime_exec_A03", any())
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_String.Runtime_exec_A03", any())
           // 1) t01
           // java.lang.AssertionError: expected:<0> but was:<1>
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_String.Runtime_exec_A02", any())
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_String.Runtime_exec_A02", any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[t01]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoEnv
           // ]>
           // 2) t02
-          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.execLjava_lang_String$Ljava_lang_String.Runtime_exec_A02$T02
+          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.execLjava_lang_String_Ljava_lang_String.Runtime_exec_A02$T02
           // ]>
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_String.Runtime_exec_A01", any())
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_String.Runtime_exec_A01", any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[com google jctf test lib java lang Runtime]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoArgs
           // ]>
@@ -1434,7 +1434,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Bad exit code of spawned java proccess, err=Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.removeShutdownHookLjava_lang_Thread.Runtime_removeShutdownHook_A02$T02
           // expected:<0> but was:<1>
 
-          .put("lang.Runtime.exec$Ljava_lang_String$Ljava_lang_String.Runtime_exec_A01", any())
+          .put("lang.Runtime.exec_Ljava_lang_String_Ljava_lang_String.Runtime_exec_A01", any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[com google jctf test lib java lang Runtime]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoArgs
           // ]>
@@ -1444,12 +1444,12 @@ public class JctfTestSpecifications {
           // 1) t01
           // java.lang.SecurityException
 
-          .put("lang.Runtime.exec$Ljava_lang_String$Ljava_lang_String.Runtime_exec_A02", any())
+          .put("lang.Runtime.exec_Ljava_lang_String_Ljava_lang_String.Runtime_exec_A02", any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[t01]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoEnv
           // ]>
           // 2) t02
-          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec$Ljava_lang_String$Ljava_lang_String.Runtime_exec_A02$T02
+          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec_Ljava_lang_String$Ljava_lang_String.Runtime_exec_A02$T02
           // ]>
 
           .put("lang.Runtime.removeShutdownHookLjava_lang_Thread.Runtime_removeShutdownHook_A03",
@@ -1459,24 +1459,24 @@ public class JctfTestSpecifications {
           // expected:<0> but was:<1>
 
           .put(
-              "lang.Runtime.exec$Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A01",
+              "lang.Runtime.exec_Ljava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A01",
               any())
           // 1) t01
           // java.lang.AssertionError: actual=Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoArgs
           // : array lengths differed, expected.length=8 actual.length=9
 
-          .put("lang.Runtime.exec$Ljava_lang_String$Ljava_lang_String.Runtime_exec_A03", any())
+          .put("lang.Runtime.exec_Ljava_lang_String_Ljava_lang_String.Runtime_exec_A03", any())
           // 1) t01
           // java.lang.AssertionError: expected:<0> but was:<1>
 
           .put(
-              "lang.Runtime.exec$Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A02",
+              "lang.Runtime.exec_Ljava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A02",
               any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[t01]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoEnv
           // ]>
           // 2) t02
-          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec$Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A02$T02
+          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exec_Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A02$T02
           // ]>
 
           .put("lang.Runtime.haltI.Runtime_halt_A02", any())
@@ -1488,7 +1488,7 @@ public class JctfTestSpecifications {
           // expected:<0> but was:<1>
 
           .put(
-              "lang.Runtime.exec$Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A03",
+              "lang.Runtime.exec_Ljava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A03",
               any())
           // 1) t02
           // java.lang.AssertionError: expected:<0> but was:<1>
@@ -1541,12 +1541,12 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Bad exit code of spawned java proccess, err=Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.runFinalizersOnExitZ.Runtime_runFinalizersOnExit_A03$T03
           // expected:<0> but was:<1>
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A03",
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A03",
               any())
           // 1) t02
           // java.lang.AssertionError: expected:<0> but was:<1>
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A01",
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A01",
               any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[com google jctf test lib java lang Runtime]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoArgs
@@ -1568,13 +1568,13 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Process did not block but exited with code 1;
           // err=Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.exitI.Runtime_exit_A03$T03
 
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A02",
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A02",
               any())
           // 1) t01
           // org.junit.ComparisonFailure: expected:<[t01]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.EchoEnv
           // ]>
           // 2) t02
-          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.execLjava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A02$T02
+          // org.junit.ComparisonFailure: expected:<[t02]> but was:<[Error: Could not find or load main class com.google.jctf.test.lib.java.lang.Runtime.execLjava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A02$T02
           // ]>
 
           .put("lang.Runtime.exitI.Runtime_exit_A04", any())
@@ -2178,7 +2178,7 @@ public class JctfTestSpecifications {
           // 2) t02
           // java.lang.UnsupportedOperationException
 
-          .put("lang.ThreadGroup.enumerate$Thread.ThreadGroup_enumerate_A01", any())
+          .put("lang.ThreadGroup.enumerate_Thread.ThreadGroup_enumerate_A01", any())
           // 1) t05
           // java.lang.UnsupportedOperationException
 
@@ -2200,7 +2200,7 @@ public class JctfTestSpecifications {
           // 1) t01
           // java.lang.SecurityException
 
-          .put("lang.ThreadGroup.enumerate$ThreadZ.ThreadGroup_enumerate_A01", any())
+          .put("lang.ThreadGroup.enumerate_ThreadZ.ThreadGroup_enumerate_A01", any())
           // 1) t06
           // java.lang.UnsupportedOperationException
 
@@ -2299,7 +2299,7 @@ public class JctfTestSpecifications {
           // 6) t07
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A03", any())
+          .put("lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A03", any())
           // 1) t03
           // java.lang.AssertionError: Vague error message
 
@@ -2324,7 +2324,7 @@ public class JctfTestSpecifications {
           // java.lang.ClassNotFoundException: [[[Lcom.google.jctf.test.lib.java.lang.Class.forNameLjava_lang_StringZLjava_lang_ClassLoader.Class_forName_A01$TestFixture;
           // Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
-          .put("lang.Class.getConstructor$Ljava_lang_Class.Class_getConstructor_A04", any())
+          .put("lang.Class.getConstructor_Ljava_lang_Class.Class_getConstructor_A04", any())
           // 1) t01
           // java.lang.SecurityException
           // 2) t03
@@ -2347,7 +2347,7 @@ public class JctfTestSpecifications {
           // java.lang.SecurityException
 
           .put(
-              "lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A05",
+              "lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A05",
               any())
           // 1) t01
           // java.lang.SecurityException
@@ -2365,7 +2365,7 @@ public class JctfTestSpecifications {
           // java.lang.SecurityException
 
           .put(
-              "lang.Class.getDeclaredMethodLjava_lang_String$Ljava_lang_Class.Class_getDeclaredMethod_A03",
+              "lang.Class.getDeclaredMethodLjava_lang_String_Ljava_lang_Class.Class_getDeclaredMethod_A03",
               any())
           // 1) t05
           // java.lang.AssertionError: Vague error message
@@ -2546,10 +2546,10 @@ public class JctfTestSpecifications {
           // java.lang.NoClassDefFoundError: sun.security.jca.Providers
           // Caused by: java.lang.AssertionError: Unable to configure default providers
 
-          .put("lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A01",
+          .put("lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A01",
               match(runtimes(DexVm.ART_DEFAULT, DexVm.ART_7_0_0)))
           // 1) t04
-          // java.lang.AssertionError: expected:<interface com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A01$I1> but was:<interface com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A01$I2>
+          // java.lang.AssertionError: expected:<interface com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A01$I1> but was:<interface com.google.jctf.test.lib.java.lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A01$I2>
 
           .put("lang.Class.getGenericSuperclass.Class_getGenericSuperclass_A01", any())
           // 1) t03
@@ -2570,12 +2570,12 @@ public class JctfTestSpecifications {
           // java.lang.SecurityException
 
           .put(
-              "lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A02",
+              "lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A02",
               any())
           // 1) t03
           // java.lang.AssertionError: Vague error message
 
-          .put("lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A05", any())
+          .put("lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A05", any())
           // 1) t01
           // java.lang.SecurityException
           // 2) t03
@@ -2590,7 +2590,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.Class.getDeclaredConstructor$Ljava_lang_Class.Class_getDeclaredConstructor_A03",
+              "lang.Class.getDeclaredConstructor_Ljava_lang_Class.Class_getDeclaredConstructor_A03",
               any())
           // 1) t01
           // java.lang.SecurityException
@@ -2599,7 +2599,7 @@ public class JctfTestSpecifications {
           // 3) t04
           // java.lang.SecurityException
 
-          .put("lang.Class.getMethodLjava_lang_String$Ljava_lang_Class.Class_getMethod_A03", any())
+          .put("lang.Class.getMethodLjava_lang_String_Ljava_lang_Class.Class_getMethod_A03", any())
           // 1) t03
           // java.lang.AssertionError: Vague error message
 
@@ -2648,7 +2648,7 @@ public class JctfTestSpecifications {
           // 1) t09
           // org.junit.ComparisonFailure: Incorrect double string returned expected:<0.001[0]> but was:<0.001[]>
 
-          .put("lang.String.Constructor$BLjava_nio_charset_Charset.String_Constructor_A01", any())
+          .put("lang.String.Constructor_BLjava_nio_charset_Charset.String_Constructor_A01", any())
           // 1) t02
           // org.junit.ComparisonFailure: expected:<�[]> but was:<�[�]>
           // 2) t03
@@ -2701,13 +2701,13 @@ public class JctfTestSpecifications {
           // 1) t06
           // java.lang.AssertionError: array lengths differed, expected.length=1 actual.length=2
 
-          .put("lang.String.getBytesII$BI.String_getBytes_A03", any())
+          .put("lang.String.getBytesII_BI.String_getBytes_A03", any())
           // 1) t04
           // java.lang.AssertionError: Should throws IndexOutOfBoundsException: 0
           // 2) t05
           // java.lang.AssertionError: Should throws IndexOutOfBoundsException: 0
 
-          .put("lang.String.getBytesII$BI.String_getBytes_A02", any())
+          .put("lang.String.getBytesII_BI.String_getBytes_A02", any())
           // 1) t01
           // java.lang.AssertionError: Expected exception: java.lang.NullPointerException
 
@@ -2715,7 +2715,7 @@ public class JctfTestSpecifications {
           // 1) t02
           // org.junit.ComparisonFailure: expected:<i[]> but was:<i[̇]>
 
-          .put("lang.String.Constructor$BIILjava_nio_charset_Charset.String_Constructor_A01", any())
+          .put("lang.String.Constructor_BIILjava_nio_charset_Charset.String_Constructor_A01", any())
           // 1) t02
           // org.junit.ComparisonFailure: expected:<�[]> but was:<�[�]>
           // 2) t03
@@ -3609,7 +3609,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
 
           .put(
-              "lang.reflect.Proxy.getProxyClassLjava_lang_ClassLoader$Ljava_lang_Class.Proxy_getProxyClass_A01",
+              "lang.reflect.Proxy.getProxyClassLjava_lang_ClassLoader_Ljava_lang_Class.Proxy_getProxyClass_A01",
               any())
           // 1) t01
           // java.lang.AssertionError: expected same:<null> was not:<java.lang.BootClassLoader@ecc20b9>
@@ -3617,7 +3617,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: expected same:<null> was not:<java.lang.BootClassLoader@ecc20b9>
 
           .put(
-              "lang.reflect.Proxy.getProxyClassLjava_lang_ClassLoader$Ljava_lang_Class.Proxy_getProxyClass_A03",
+              "lang.reflect.Proxy.getProxyClassLjava_lang_ClassLoader_Ljava_lang_Class.Proxy_getProxyClass_A03",
               any())
           // 1) t03
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -3648,7 +3648,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Failed to load serialization resource file: serialization/com/google/jctf/test/lib/java/lang/reflect/GenericSignatureFormatError/serialization/GenericSignatureFormatError_serialization_A01.golden.0.ser
 
           .put(
-              "lang.reflect.Proxy.newProxyInstanceLjava_lang_ClassLoader$Ljava_lang_ClassLjava_lang_reflect_InvocationHandler.Proxy_newProxyInstance_A02",
+              "lang.reflect.Proxy.newProxyInstanceLjava_lang_ClassLoader_Ljava_lang_ClassLjava_lang_reflect_InvocationHandler.Proxy_newProxyInstance_A02",
               any())
           // 1) t03
           // java.lang.NullPointerException: Attempt to invoke virtual method 'int java.io.InputStream.available()' on a null object reference
@@ -3660,7 +3660,7 @@ public class JctfTestSpecifications {
           // java.lang.NullPointerException
 
           .put(
-              "lang.reflect.Proxy.newProxyInstanceLjava_lang_ClassLoader$Ljava_lang_ClassLjava_lang_reflect_InvocationHandler.Proxy_newProxyInstance_A01",
+              "lang.reflect.Proxy.newProxyInstanceLjava_lang_ClassLoader_Ljava_lang_ClassLjava_lang_reflect_InvocationHandler.Proxy_newProxyInstance_A01",
               any())
           // 1) t01
           // java.lang.AssertionError: Bad classloader expected:<null> but was:<java.lang.BootClassLoader@fda9ca7>
@@ -3719,7 +3719,7 @@ public class JctfTestSpecifications {
           // java.lang.ClassNotFoundException: com.google.jctf.test.lib.java.lang.reflect.Method.getGenericExceptionTypes.Method_getGenericExceptionTypes_A01$Fourth
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.reflect.Method.getGenericExceptionTypes.Method_getGenericExceptionTypes_A01$Fourth" on path: DexPathList[[dex file "/tmp/junit8600081041276641493/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
 
-          .put("lang.reflect.Method.invokeLjava_lang_Object$Ljava_lang_Object.Method_invoke_A07",
+          .put("lang.reflect.Method.invokeLjava_lang_Object_Ljava_lang_Object.Method_invoke_A07",
               any())
           // 1) t01
           // java.lang.AssertionError: Expected exception: java.lang.IllegalAccessException
@@ -3772,7 +3772,7 @@ public class JctfTestSpecifications {
           // Caused by: java.lang.ClassNotFoundException: Didn't find class "com.google.jctf.test.lib.java.lang.reflect.Method.MissingParameterTypeMethod" on path: DexPathList[[dex file "/tmp/junit3534060116722105133/classes.dex"],nativeLibraryDirectories=[r8/tools/linux/art/bin/../lib, r8/tools/linux/art/bin/../lib]]
 
           .put(
-              "lang.reflect.InvocationHandler.invokeLjava_lang_ObjectLjava_lang_reflect_Method$Ljava_lang_Object.InvocationHandler_invoke_A02",
+              "lang.reflect.InvocationHandler.invokeLjava_lang_ObjectLjava_lang_reflect_Method_Ljava_lang_Object.InvocationHandler_invoke_A02",
               any())
           // 1) t04
           // java.lang.AssertionError: ClassCastException should be thrown
@@ -4005,7 +4005,7 @@ public class JctfTestSpecifications {
           // 1) t02
           // java.lang.AssertionError: Exception is not thrown: field: shortPublicField, object: com.google.jctf.test.lib.java.lang.reflect.Field.TestStaticFinalPrimitiveField@bf7ecde
 
-          .put("lang.reflect.Constructor.newInstance$Ljava_lang_Object.Constructor_newInstance_A06",
+          .put("lang.reflect.Constructor.newInstance_Ljava_lang_Object.Constructor_newInstance_A06",
               any())
           // 1) t05
           // java.lang.AssertionError: Expected exception: java.lang.IllegalArgumentException
@@ -4125,7 +4125,7 @@ public class JctfTestSpecifications {
           // java.lang.SecurityException
 
           .put(
-              "lang.reflect.AccessibleObject.setAccessible$Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A03",
+              "lang.reflect.AccessibleObject.setAccessible_Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A03",
               any())
           // 1) t01
           // java.lang.SecurityException
@@ -4139,7 +4139,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Misconfiguration: MissingAntn should not be accessible
 
           .put(
-              "lang.reflect.AccessibleObject.setAccessible$Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A02",
+              "lang.reflect.AccessibleObject.setAccessible_Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A02",
               any())
           // 1) t01
           // java.lang.SecurityException
@@ -4452,7 +4452,7 @@ public class JctfTestSpecifications {
           // 2) t02(com.google.jctf.test.lib.java.util.concurrent.CopyOnWriteArrayList.lastIndexOfLjava_lang_ObjectI.CopyOnWriteArrayList_lastIndexOf_A01)
           // java.lang.ArrayIndexOutOfBoundsException: length=3; index=2147483647
 
-          .put("lang.StringBuffer.getCharsII$CI.StringBuffer_getChars_A03",
+          .put("lang.StringBuffer.getCharsII_CI.StringBuffer_getChars_A03",
               match(runtimes(DexVm.ART_6_0_1, DexVm.ART_5_1_1)))
           // 1) t03
           // java.lang.NullPointerException: dst == null
@@ -4462,7 +4462,7 @@ public class JctfTestSpecifications {
           // 1) t02
           // java.lang.AssertionError: Buffer is invalid length after append expected:<26> but was:<25>
 
-          .put("lang.StringBuffer.insertI$CII.StringBuffer_insert_A02",
+          .put("lang.StringBuffer.insertI_CII.StringBuffer_insert_A02",
               match(runtimes(DexVm.ART_6_0_1, DexVm.ART_5_1_1)))
           // 1) t01
           // java.lang.NullPointerException: Attempt to get length of null array
@@ -4623,7 +4623,7 @@ public class JctfTestSpecifications {
           // java.lang.AssertionError: Invalid length of created builder expected:<14> but was:<13>
 
           .put(
-              "lang.reflect.AccessibleObject.setAccessible$Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A04",
+              "lang.reflect.AccessibleObject.setAccessible_Ljava_lang_reflect_AccessibleObjectZ.AccessibleObject_setAccessible_A04",
               match(runtimes(DexVm.ART_6_0_1, DexVm.ART_5_1_1)))
           // 1) t01
           // java.lang.AssertionError: SecurityException expected.
@@ -4745,34 +4745,34 @@ public class JctfTestSpecifications {
               any())
           .put("lang.Thread.setPriorityI.Thread_setPriority_A02", any())
           .put("lang.Thread.stopLjava_lang_Throwable.Thread_stop_A02", any())
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A04",
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A04",
               any())
           .put("lang.Thread.getContextClassLoader.Thread_getContextClassLoader_A02", any())
           .put("lang.ThreadGroup.suspend.ThreadGroup_suspend_A02", any())
           .put("lang.Thread.setDaemonZ.Thread_setDaemon_A03", any())
           .put("lang.ProcessBuilder.environment.ProcessBuilder_environment_A07", any())
           .put(
-              "lang.Runtime.exec$Ljava_lang_String$Ljava_lang_StringLjava_io_File.Runtime_exec_A04",
+              "lang.Runtime.exec_Ljava_lang_String_Ljava_lang_StringLjava_io_File.Runtime_exec_A04",
               any())
-          .put("lang.Runtime.execLjava_lang_String$Ljava_lang_String.Runtime_exec_A04", any())
-          .put("lang.Runtime.exec$Ljava_lang_String.Runtime_exec_A04", any())
+          .put("lang.Runtime.execLjava_lang_String_Ljava_lang_String.Runtime_exec_A04", any())
+          .put("lang.Runtime.exec_Ljava_lang_String.Runtime_exec_A04", any())
           .put("lang.Runtime.execLjava_lang_String.Runtime_exec_A04", any())
           .put("lang.System.clearPropertyLjava_lang_String.System_clearProperty_A03", any())
           .put("lang.System.getSecurityManager.System_getSecurityManager_A01", any())
           .put("lang.System.setInLjava_io_InputStream.System_setIn_A02", any())
           .put("lang.System.setOutLjava_io_PrintStream.System_setOut_A02", any())
           .put("lang.ThreadGroup.destroy.ThreadGroup_destroy_A04", any())
-          .put("lang.ThreadGroup.enumerate$ThreadGroupZ.ThreadGroup_enumerate_A03", any())
-          .put("lang.ThreadGroup.enumerate$Thread.ThreadGroup_enumerate_A03", any())
-          .put("lang.ThreadGroup.enumerate$ThreadZ.ThreadGroup_enumerate_A03", any())
+          .put("lang.ThreadGroup.enumerate_ThreadGroupZ.ThreadGroup_enumerate_A03", any())
+          .put("lang.ThreadGroup.enumerate_Thread.ThreadGroup_enumerate_A03", any())
+          .put("lang.ThreadGroup.enumerate_ThreadZ.ThreadGroup_enumerate_A03", any())
           .put("lang.ThreadGroup.interrupt.ThreadGroup_interrupt_A02", any())
           .put("lang.ThreadGroup.resume.ThreadGroup_resume_A02", any())
           .put("lang.ThreadGroup.setMaxPriorityI.ThreadGroup_setMaxPriority_A02", any())
-          .put("lang.Runtime.exec$Ljava_lang_String$Ljava_lang_String.Runtime_exec_A04", any())
+          .put("lang.Runtime.exec_Ljava_lang_String_Ljava_lang_String.Runtime_exec_A04", any())
           .put("lang.System.getenvLjava_lang_String.System_getenv_A03", any())
           .put("lang.System.setPropertyLjava_lang_StringLjava_lang_String.System_setProperty_A02",
               any())
-          .put("lang.ThreadGroup.enumerate$ThreadGroup.ThreadGroup_enumerate_A03", any())
+          .put("lang.ThreadGroup.enumerate_ThreadGroup.ThreadGroup_enumerate_A03", any())
           .put("lang.ThreadGroup.getParent.ThreadGroup_getParent_A02", any())
           .put("lang.ThreadGroup.setDaemonZ.ThreadGroup_setDaemon_A02", any())
           .put("lang.ThreadGroup.stop.ThreadGroup_stop_A02", any())
