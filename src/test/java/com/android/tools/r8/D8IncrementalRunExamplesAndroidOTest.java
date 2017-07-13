@@ -5,6 +5,7 @@
 package com.android.tools.r8;
 
 import static com.android.tools.r8.utils.FileUtils.JAR_EXTENSION;
+import static org.junit.Assert.assertEquals;
 
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InternalCompilerError;
@@ -264,18 +265,25 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
     D8IncrementalTestRunner test = test(testName, testPackage, mainClass);
     test.compileClassesTogether(inputJarFile, out);
 
-    String[] dexFiles = out.toFile().list();
+
+    String[] topLevelDir = out.toFile().list();
+    assert topLevelDir != null;
+    assertEquals(1, topLevelDir.length);
+    assertEquals("incremental", topLevelDir[0]);
+
+    String[] dexFiles = out.resolve(topLevelDir[0]).toFile().list();
     assert dexFiles != null;
     Arrays.sort(dexFiles);
 
     String[] expectedFileNames = {
-        "incremental.IncrementallyCompiled$A$AB.dex",
-        "incremental.IncrementallyCompiled$A.dex",
-        "incremental.IncrementallyCompiled$B$BA.dex",
-        "incremental.IncrementallyCompiled$B.dex",
-        "incremental.IncrementallyCompiled$C.dex",
-        "incremental.IncrementallyCompiled.dex"
+        "IncrementallyCompiled$A$AB.dex",
+        "IncrementallyCompiled$A.dex",
+        "IncrementallyCompiled$B$BA.dex",
+        "IncrementallyCompiled$B.dex",
+        "IncrementallyCompiled$C.dex",
+        "IncrementallyCompiled.dex"
     };
+    Arrays.sort(expectedFileNames);
 
     Assert.assertArrayEquals(expectedFileNames, dexFiles);
   }

@@ -278,8 +278,11 @@ public class AndroidApp {
     try (Closer closer = Closer.create()) {
       List<Resource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
-        Path fileName = directory.resolve(outputMode.getFileName(dexProgramSources.get(i), i));
-        Files.copy(dexProgramSources.get(i).getStream(closer), fileName, options);
+        Path filePath = directory.resolve(outputMode.getOutputPath(dexProgramSources.get(i), i));
+        if (!Files.exists(filePath.getParent())) {
+          Files.createDirectories(filePath.getParent());
+        }
+        Files.copy(dexProgramSources.get(i).getStream(closer), filePath, options);
       }
     }
   }
@@ -333,7 +336,7 @@ public class AndroidApp {
       try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(archive, options))) {
         List<Resource> dexProgramSources = getDexProgramResources();
         for (int i = 0; i < dexProgramSources.size(); i++) {
-          ZipEntry zipEntry = new ZipEntry(outputMode.getFileName(dexProgramSources.get(i), i));
+          ZipEntry zipEntry = new ZipEntry(outputMode.getOutputPath(dexProgramSources.get(i), i));
           byte[] bytes = ByteStreams.toByteArray(dexProgramSources.get(i).getStream(closer));
           zipEntry.setSize(bytes.length);
           out.putNextEntry(zipEntry);

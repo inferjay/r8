@@ -10,21 +10,21 @@ import java.util.Set;
 public enum OutputMode {
   Indexed {
     @Override
-    String getFileName(Resource resource, int index) {
+    String getOutputPath(Resource resource, int index) {
       return index == 0 ? "classes.dex" : ("classes" + (index + 1) + ".dex");
     }
   },
   FilePerClass {
     @Override
-    String getFileName(Resource resource, int index) {
+    String getOutputPath(Resource resource, int index) {
       Set<String> classDescriptors = resource.getClassDescriptors();
       assert classDescriptors != null;
       assert classDescriptors.size() == 1;
       String classDescriptor = classDescriptors.iterator().next();
-      assert !classDescriptor.contains(".");
-      return DescriptorUtils.descriptorToJavaType(classDescriptor) + ".dex";
+      assert DescriptorUtils.isClassDescriptor(classDescriptor);
+      return classDescriptor.substring(1, classDescriptor.length() - 1) + ".dex";
     }
   };
 
-  abstract String getFileName(Resource resource, int index);
+  abstract String getOutputPath(Resource resource, int index);
 }
