@@ -2,26 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 import org.gradle.internal.os.OperatingSystem
-import utils.Utils
+import utils.Utils;
 
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'jacoco'
-apply plugin: 'com.google.protobuf'
 
 apply from: 'copyAdditionalJctfCommonFiles.gradle'
 
 repositories {
     mavenCentral()
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
-    }
 }
 
 // Custom source set for example tests and generated tests.
@@ -48,12 +38,7 @@ sourceSets {
     }
     examples {
         java {
-            srcDirs = ['src/test/examples', 'build/generated/source/proto/examples/javalite/' ]
-        }
-        proto {
-            srcDirs = [
-                    'src/test/examples',
-            ]
+            srcDirs = ['src/test/examples']
         }
         output.resourcesDir = 'build/classes/examples'
     }
@@ -112,31 +97,6 @@ dependencies {
     jctfTestsCompile 'junit:junit:4.12'
     jctfTestsCompile sourceSets.jctfCommon.output
     examplesAndroidOCompile group: 'org.ow2.asm', name: 'asm', version: '5.1'
-    examplesCompile 'com.google.protobuf:protobuf-lite:3.0.0'
-    examplesRuntime 'com.google.protobuf:protobuf-lite:3.0.0'
-}
-
-protobuf {
-    protoc {
-        // Download from repositories
-        artifact = 'com.google.protobuf:protoc:3.0.0'
-    }
-    plugins {
-        javalite {
-            artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
-        }
-    }
-    generateProtoTasks {
-        all().each { task ->
-            task.builtins {
-                // Disable the java code generator, as we want javalite only.
-                remove java
-            }
-            task.plugins {
-                javalite {}
-            }
-        }
-    }
 }
 
 def osString = OperatingSystem.current().isLinux() ? "linux" :
@@ -504,26 +464,16 @@ task buildDebugTestResourcesJars {
 task buildExampleJars {
     dependsOn downloadProguard
     def examplesDir = file("src/test/examples")
-    def protoSourceDir = file("build/generated/source/proto/examples/javalite")
     def proguardScript
     if (OperatingSystem.current().isWindows()) {
         proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.bat"
     } else {
         proguardScript = "third_party/proguard/proguard5.2.1/bin/proguard.sh"
     }
-    task extractExamplesRuntime(type: Sync) {
-        dependsOn configurations.examplesRuntime
-        from configurations.examplesRuntime.collect { zipTree(it) }
-        include "**/*.class"
-        includeEmptyDirs false
-        into "$buildDir/runtime/examples/"
-    }
-
-    task "compile_examples"(type: JavaCompile, dependsOn: "generateExamplesProto") {
-        source examplesDir, protoSourceDir
-        include "**/*.java"
+    task "compile_examples"(type: JavaCompile) {
+        source = fileTree(dir: examplesDir, include: '**/*.java')
         destinationDir = file("build/test/examples/classes")
-        classpath = sourceSets.examples.compileClasspath
+        classpath = sourceSets.main.compileClasspath
         sourceCompatibility = JavaVersion.VERSION_1_7
         targetCompatibility = JavaVersion.VERSION_1_7
         options.compilerArgs += ["-Xlint:-options"]
@@ -533,15 +483,6 @@ task buildExampleJars {
         def exampleOutputDir = file("build/test/examples");
         def jarName = "${name}.jar"
         dependsOn "jar_example_${name}"
-        dependsOn "extractExamplesRuntime"
-        def runtimeDependencies = copySpec { }
-        if (!fileTree(dir: dir, include: '**/*.proto').empty) {
-            // If we have any proto use, we have to include those classes and the runtime.
-            runtimeDependencies = copySpec {
-                from "$buildDir/runtime/examples/"
-                include "com/google/protobuf/**/*.class"
-            }
-        }
         // The "throwing" test verifies debugging/stack info on the post-proguarded output.
         def proguardConfigPath = "${dir}/proguard.cfg"
         if (new File(proguardConfigPath).exists()) {
@@ -549,9 +490,7 @@ task buildExampleJars {
                 archiveName = "${name}_pre_proguard.jar"
                 destinationDir = exampleOutputDir
                 from "build/test/examples/classes"
-                include name + "/**/*.class"
-                with runtimeDependencies
-                includeEmptyDirs false
+                include "**/" + name + "/**/*.class"
             }
             def jarPath = files(tasks.getByPath("pre_proguard_example_${name}")).files.first();
             def proguardJarPath = "${exampleOutputDir}/${jarName}"
@@ -580,9 +519,7 @@ task buildExampleJars {
                 archiveName = jarName
                 destinationDir = exampleOutputDir
                 from "build/test/examples/classes"
-                include name + "/**/*.class"
-                with runtimeDependencies
-                includeEmptyDirs false
+                include "**/" + name + "/**/*.class"
             }
         }
     }
