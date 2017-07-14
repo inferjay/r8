@@ -7,8 +7,9 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.Unreachable;
+import java.util.function.Supplier;
 
-public class DexLibraryClass extends DexClass {
+public class DexLibraryClass extends DexClass implements Supplier<DexLibraryClass> {
 
   public DexLibraryClass(DexType type, Resource.Kind origin, DexAccessFlags accessFlags,
       DexType superType, DexTypeList interfaces, DexString sourceFile, DexAnnotationSet annotations,
@@ -46,6 +47,11 @@ public class DexLibraryClass extends DexClass {
 
   @Override
   public DexLibraryClass asLibraryClass() {
+    return this;
+  }
+
+  @Override
+  public DexLibraryClass get() {
     return this;
   }
 }

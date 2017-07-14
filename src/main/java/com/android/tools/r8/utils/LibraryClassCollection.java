@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexLibraryClass;
 import com.android.tools.r8.logging.Log;
+import java.util.function.Supplier;
 
 /** Represents a collection of library classes. */
 public class LibraryClassCollection extends ClassMap<DexLibraryClass> {
@@ -28,6 +29,11 @@ public class LibraryClassCollection extends ClassMap<DexLibraryClass> {
           "Class `%s` was specified twice as a library type.", a.type.toSourceString());
     }
     return a;
+  }
+
+  @Override
+  Supplier<DexLibraryClass> getTransparentSupplier(DexLibraryClass clazz) {
+    return clazz;
   }
 
   @Override

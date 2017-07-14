@@ -6,6 +6,7 @@ package com.android.tools.r8.utils;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.ClassKind;
 import com.android.tools.r8.graph.DexClasspathClass;
+import java.util.function.Supplier;
 
 /** Represents a collection of classpath classes. */
 public class ClasspathClassCollection extends ClassMap<DexClasspathClass> {
@@ -16,6 +17,11 @@ public class ClasspathClassCollection extends ClassMap<DexClasspathClass> {
   @Override
   DexClasspathClass resolveClassConflict(DexClasspathClass a, DexClasspathClass b) {
     throw new CompilationError("Classpath type already present: " + a.type.toSourceString());
+  }
+
+  @Override
+  Supplier<DexClasspathClass> getTransparentSupplier(DexClasspathClass clazz) {
+    return clazz;
   }
 
   @Override

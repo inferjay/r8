@@ -7,8 +7,9 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import java.util.Arrays;
+import java.util.function.Supplier;
 
-public class DexProgramClass extends DexClass {
+public class DexProgramClass extends DexClass implements Supplier<DexProgramClass> {
 
   private DexEncodedArray staticValues;
 
@@ -151,5 +152,10 @@ public class DexProgramClass extends DexClass {
     assert !staticMethod.accessFlags.isConstructor();
     directMethods = Arrays.copyOf(directMethods, directMethods.length + 1);
     directMethods[directMethods.length - 1] = staticMethod;
+  }
+
+  @Override
+  public DexProgramClass get() {
+    return this;
   }
 }

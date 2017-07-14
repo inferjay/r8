@@ -11,25 +11,20 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.desugar.LambdaRewriter;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.function.Supplier;
 
 /** Represents a collection of library classes. */
 public class ProgramClassCollection extends ClassMap<DexProgramClass> {
   public static ProgramClassCollection create(List<DexProgramClass> classes) {
     // We have all classes preloaded, but not necessarily without conflicts.
-    IdentityHashMap<DexType, Value<DexProgramClass>> map = new IdentityHashMap<>();
+    IdentityHashMap<DexType, Supplier<DexProgramClass>> map = new IdentityHashMap<>();
     for (DexProgramClass clazz : classes) {
-      Value<DexProgramClass> value = map.get(clazz.type);
-      if (value == null) {
-        value = new Value<>(clazz);
-        map.put(clazz.type, value);
-      } else {
-        value.clazz = resolveClassConflictImpl(value.clazz, clazz);
-      }
+      map.merge(clazz.type, clazz, (a, b) -> resolveClassConflictImpl(a.get(), b.get()));
     }
     return new ProgramClassCollection(map);
   }
 
-  private ProgramClassCollection(IdentityHashMap<DexType, Value<DexProgramClass>> classes) {
+  private ProgramClassCollection(IdentityHashMap<DexType, Supplier<DexProgramClass>> classes) {
     super(classes, null);
   }
 
@@ -41,6 +36,11 @@ public class ProgramClassCollection extends ClassMap<DexProgramClass> {
   @Override
   DexProgramClass resolveClassConflict(DexProgramClass a, DexProgramClass b) {
     return resolveClassConflictImpl(a, b);
+  }
+
+  @Override
+  Supplier<DexProgramClass> getTransparentSupplier(DexProgramClass clazz) {
+    return clazz;
   }
 
   @Override

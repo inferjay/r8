@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Hashtable;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +86,8 @@ public class DexApplication {
   }
 
   public List<DexProgramClass> classes() {
-    List<DexProgramClass> classes = programClasses.collectLoadedClasses();
+    programClasses.forceLoad(type -> true);
+    List<DexProgramClass> classes = programClasses.getAllClasses();
     assert reorderClasses(classes);
     return classes;
   }
@@ -110,16 +110,16 @@ public class DexApplication {
 
     // program classes are supposed to be loaded, but force-loading them is no-op.
     programClasses.forceLoad(type -> true);
-    programClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+    programClasses.getAllClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
 
     if (classpathClasses != null) {
       classpathClasses.forceLoad(type -> !loaded.containsKey(type));
-      classpathClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+      classpathClasses.getAllClasses().forEach(clazz -> loaded.putIfAbsent(clazz.type, clazz));
     }
 
     if (libraryClasses != null) {
       libraryClasses.forceLoad(type -> !loaded.containsKey(type));
-      libraryClasses.collectLoadedClasses().forEach(clazz -> loaded.put(clazz.type, clazz));
+      libraryClasses.getAllClasses().forEach(clazz -> loaded.putIfAbsent(clazz.type, clazz));
     }
 
     return loaded;
@@ -192,7 +192,7 @@ public class DexApplication {
    * <p>If no directory is provided everything is written to System.out.
    */
   public void disassemble(Path outputDir, InternalOptions options) {
-    for (DexProgramClass clazz : programClasses.collectLoadedClasses()) {
+    for (DexProgramClass clazz : programClasses.getAllClasses()) {
       for (DexEncodedMethod method : clazz.virtualMethods()) {
         if (options.methodMatchesFilter(method)) {
           disassemble(method, getProguardMap(), outputDir);
@@ -246,7 +246,7 @@ public class DexApplication {
    * Write smali source for the application code on the provided PrintStream.
    */
   public void smali(InternalOptions options, PrintStream ps) {
-    List<DexProgramClass> classes = programClasses.collectLoadedClasses();
+    List<DexProgramClass> classes = programClasses.getAllClasses();
     classes.sort(Comparator.comparing(DexProgramClass::toSourceString));
     boolean firstClass = true;
     for (DexClass clazz : classes) {
@@ -322,7 +322,7 @@ public class DexApplication {
     }
 
     public Builder(DexApplication application) {
-      programClasses = application.programClasses.collectLoadedClasses();
+      programClasses = application.programClasses.getAllClasses();
       classpathClasses = application.classpathClasses;
       libraryClasses = application.libraryClasses;
       proguardMap = application.proguardMap;

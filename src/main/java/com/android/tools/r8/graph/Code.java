@@ -34,15 +34,15 @@ public abstract class Code extends CanonicalizedDexItem {
   }
 
   public DexCode asDexCode() {
-    throw new Unreachable();
+    throw new Unreachable(getClass().getCanonicalName() + ".asDexCode()");
   }
 
   public JarCode asJarCode() {
-    throw new Unreachable();
+    throw new Unreachable(getClass().getCanonicalName() + ".asJarCode()");
   }
 
   public OutlineCode asOutlineCode() {
-    throw new Unreachable();
+    throw new Unreachable(getClass().getCanonicalName() + ".asOutlineCode()");
   }
 
   @Override
