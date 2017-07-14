@@ -88,7 +88,7 @@ public class ObjectToOffsetMapping {
   private void setIndexes(IndexedDexItem[] items) {
     int index = 0;
     for (IndexedDexItem item : items) {
-      item.assignVirtualFileIndex(virtualFileId, index++);
+      item.assignVirtualFileIndex(virtualFileId, index);
       // For strings collect the first jumbo string (if any).
       if (index > Constants.MAX_NON_JUMBO_INDEX) {
         assert item instanceof DexString;
@@ -96,6 +96,7 @@ public class ObjectToOffsetMapping {
           firstJumboString = (DexString) item;
         }
       }
+      index++;
     }
   }
 
