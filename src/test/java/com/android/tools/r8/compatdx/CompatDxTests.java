@@ -100,10 +100,21 @@ public class CompatDxTests {
   }
 
   @Test
+  public void singleDexProgramFull() throws IOException, ExecutionException {
+    // Generate an application that fills the whole dex file.
+    AndroidApp generated =
+        MainDexListTests.generateApplication(
+            ImmutableList.of("A"), Constants.ANDROID_L_API, Constants.U16BIT_MAX + 1);
+    Path applicationJar = temp.newFile("application.jar").toPath();
+    generated.write(applicationJar, OutputMode.Indexed);
+    runDexer(applicationJar.toString());
+  }
+
+  @Test
   public void singleDexProgramIsTooLarge() throws IOException, ExecutionException {
     // Generate an application that will not fit into a single dex file.
     AndroidApp generated = MainDexListTests.generateApplication(
-        ImmutableList.of("A", "B"), Constants.ANDROID_L_API, Constants.U16BIT_MAX / 2 + 1);
+        ImmutableList.of("A", "B"), Constants.ANDROID_L_API, Constants.U16BIT_MAX / 2 + 2);
     Path applicationJar = temp.newFile("application.jar").toPath();
     generated.write(applicationJar, OutputMode.Indexed);
     thrown.expect(CompilationError.class);

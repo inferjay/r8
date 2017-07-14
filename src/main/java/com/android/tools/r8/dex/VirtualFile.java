@@ -67,7 +67,7 @@ public class VirtualFile {
     // TODO(sgjesse): Does "minimal main dex" combined with "leave space for growth" make sense?
   }
 
-  private static final int MAX_ENTRIES = (Short.MAX_VALUE << 1) + 1;
+  private static final int MAX_ENTRIES = Constants.U16BIT_MAX + 1;
   /**
    * When distributing classes across files we aim to leave some space. The amount of space left is
    * driven by this constant.
