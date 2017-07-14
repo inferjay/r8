@@ -7,7 +7,10 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
+
 import com.google.common.base.MoreObjects;
+
+import java.util.function.Consumer;
 
 public abstract class DexClass extends DexItem {
 
@@ -71,6 +74,14 @@ public abstract class DexClass extends DexItem {
     return MoreObjects.firstNonNull(virtualMethods, NO_METHODS);
   }
 
+  public void forEachMethod(Consumer<DexEncodedMethod> consumer) {
+    for (DexEncodedMethod method : directMethods()) {
+      consumer.accept(method);
+    }
+    for (DexEncodedMethod method : virtualMethods()) {
+      consumer.accept(method);
+    }
+  }
 
   public DexEncodedField[] staticFields() {
     return MoreObjects.firstNonNull(staticFields, NO_FIELDS);

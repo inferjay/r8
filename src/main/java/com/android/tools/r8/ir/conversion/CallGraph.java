@@ -20,6 +20,7 @@ import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -48,13 +49,13 @@ public class CallGraph {
 
     public final DexEncodedMethod method;
     private int invokeCount = 0;
-    private boolean isRecursive = false;
+    private boolean isSelfRecursive = false;
 
     // Outgoing calls from this method.
-    public final Set<Node> calls = new LinkedHashSet<>();
+    public final Set<Node> callees = new LinkedHashSet<>();
 
     // Incoming calls to this method.
-    public final Set<Node> callees = new LinkedHashSet<>();
+    public final Set<Node> callers = new LinkedHashSet<>();
 
     private Node(DexEncodedMethod method) {
       this.method = method;
@@ -64,24 +65,24 @@ public class CallGraph {
       return method.accessFlags.isBridge();
     }
 
-    private void addCalls(Node method) {
-      calls.add(method);
-    }
-
-    private void addCaller(Node method) {
+    private void addCallee(Node method) {
       callees.add(method);
     }
 
-    boolean isRecursive() {
-      return isRecursive;
+    private void addCaller(Node method) {
+      callers.add(method);
+    }
+
+    boolean isSelfRecursive() {
+      return isSelfRecursive;
     }
 
     boolean isLeaf() {
-      return calls.isEmpty();
+      return callees.isEmpty();
     }
 
     int callDegree() {
-      return calls.size();
+      return callees.size();
     }
 
     @Override
@@ -100,31 +101,31 @@ public class CallGraph {
       builder.append("MethodNode for: ");
       builder.append(method.qualifiedName());
       builder.append(" (");
-      builder.append(calls.size());
-      builder.append(" calls, ");
       builder.append(callees.size());
-      builder.append(" callees");
+      builder.append(" callees, ");
+      builder.append(callers.size());
+      builder.append(" callers");
       if (isBridge()) {
         builder.append(", bridge");
       }
-      if (isRecursive()) {
+      if (isSelfRecursive()) {
         builder.append(", recursive");
       }
       builder.append(", invoke count " + invokeCount);
       builder.append(").\n");
-      if (calls.size() > 0) {
-        builder.append("Calls:\n");
-        for (Node call : calls) {
+      if (callees.size() > 0) {
+        builder.append("Callees:\n");
+        for (Node call : callees) {
           builder.append("  ");
           builder.append(call.method.qualifiedName());
           builder.append("\n");
         }
       }
-      if (callees.size() > 0) {
-        builder.append("Callees:\n");
-        for (Node callee : callees) {
+      if (callers.size() > 0) {
+        builder.append("Callers:\n");
+        for (Node caller : callers) {
           builder.append("  ");
-          builder.append(callee.method.qualifiedName());
+          builder.append(caller.method.qualifiedName());
           builder.append("\n");
         }
       }
@@ -154,7 +155,7 @@ public class CallGraph {
       return leaves;
     }
 
-    public boolean brokeCycles() {
+    public boolean hasBrokeCycles() {
       return brokeCycles;
     }
 
@@ -182,6 +183,8 @@ public class CallGraph {
   }
 
   private final Map<DexEncodedMethod, Node> nodes = new LinkedHashMap<>();
+  private final Map<DexEncodedMethod, Set<DexEncodedMethod>> breakers = new HashMap<>();
+
   private List<Node> leaves = null;
   private Set<DexEncodedMethod> singleCallSite = Sets.newIdentityHashSet();
   private Set<DexEncodedMethod> doubleCallSite = Sets.newIdentityHashSet();
@@ -190,22 +193,15 @@ public class CallGraph {
       GraphLense graphLense) {
 
     CallGraph graph = new CallGraph();
-
     for (DexClass clazz : application.classes()) {
-      for (DexEncodedMethod method : clazz.directMethods()) {
+      clazz.forEachMethod( method -> {
         Node node = graph.ensureMethodNode(method);
         InvokeExtractor extractor = new InvokeExtractor(appInfo, graphLense, node, graph);
         method.registerReachableDefinitions(extractor);
-      }
-      for (DexEncodedMethod method : clazz.virtualMethods()) {
-        Node node = graph.ensureMethodNode(method);
-        InvokeExtractor extractor = new InvokeExtractor(appInfo, graphLense, node, graph);
-        method.registerReachableDefinitions(extractor);
-      }
+      });
     }
 
     assert allMethodsExists(application, graph);
-
     graph.fillCallSiteSets(appInfo);
     graph.fillInitialLeaves();
     return graph;
@@ -255,12 +251,7 @@ public class CallGraph {
 
   private static boolean allMethodsExists(DexApplication application, CallGraph graph) {
     for (DexProgramClass clazz : application.classes()) {
-      for (DexEncodedMethod method : clazz.directMethods()) {
-        assert graph.nodes.get(method) != null;
-      }
-      for (DexEncodedMethod method : clazz.virtualMethods()) {
-        assert graph.nodes.get(method) != null;
-      }
+      clazz.forEachMethod( method -> { assert graph.nodes.get(method) != null; });
     }
     return true;
   }
@@ -275,7 +266,7 @@ public class CallGraph {
     List<DexEncodedMethod> result = new ArrayList<>();
     List<Node> newLeaves = new ArrayList<>();
     for (Node leaf : leaves) {
-      assert nodes.containsKey(leaf.method) && nodes.get(leaf.method).calls.isEmpty();
+      assert nodes.containsKey(leaf.method) && nodes.get(leaf.method).callees.isEmpty();
       remove(leaf, newLeaves);
       result.add(leaf.method);
     }
@@ -368,30 +359,30 @@ public class CallGraph {
     assert caller != null;
     assert callee != null;
     if (caller != callee) {
-      caller.addCalls(callee);
+      caller.addCallee(callee);
       callee.addCaller(caller);
     } else {
-      caller.isRecursive = true;
+      caller.isSelfRecursive = true;
     }
     callee.invokeCount++;
   }
 
   private Set<DexEncodedMethod> removeAllCalls(Node node) {
     Set<DexEncodedMethod> calls = Sets.newIdentityHashSet();
-    for (Node call : node.calls) {
+    for (Node call : node.callees) {
       calls.add(call.method);
-      call.callees.remove(node);
+      call.callers.remove(node);
     }
-    node.calls.clear();
+    node.callees.clear();
     return calls;
   }
 
   private void remove(Node node, List<Node> leaves) {
     assert node != null;
-    for (Node callee : node.callees) {
-      boolean removed = callee.calls.remove(node);
-      if (callee.isLeaf()) {
-        leaves.add(callee);
+    for (Node caller : node.callers) {
+      boolean removed = caller.callees.remove(node);
+      if (caller.isLeaf()) {
+        leaves.add(caller);
       }
       assert removed;
     }

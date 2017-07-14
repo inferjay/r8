@@ -40,7 +40,6 @@ import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -295,15 +294,26 @@ public class IRConverter {
         // optimization feedback to reprocess methods affected by it. This is required to get
         // deterministic behaviour, as the processing order within each set of leaves is
         // non-deterministic.
-        for (DexEncodedMethod method : methods) {
-          futures.add(executorService.submit(() -> {
+
+        // Due to a race condition, we serialize processing of methods if cycles are broken.
+        // TODO(bak)
+        if (leaves.hasBrokeCycles()) {
+          for (DexEncodedMethod method : methods) {
             processMethod(method,
-                leaves.brokeCycles() ? delayedFeedback : directFeedback,
+                leaves.hasBrokeCycles() ? delayedFeedback : directFeedback,
                 outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
-          }));
+          }
+        } else {
+          for (DexEncodedMethod method : methods) {
+            futures.add(executorService.submit(() -> {
+              processMethod(method,
+                  leaves.hasBrokeCycles() ? delayedFeedback : directFeedback,
+                  outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
+            }));
+          }
+          ThreadUtils.awaitFutures(futures);
         }
-        ThreadUtils.awaitFutures(futures);
-        if (leaves.brokeCycles()) {
+        if (leaves.hasBrokeCycles()) {
           // If cycles in the call graph were broken, then re-process all methods which are
           // affected by the optimization feedback of other methods in this group.
           methods = delayedFeedback.applyAndClear(methods, leaves);
@@ -357,8 +367,7 @@ public class IRConverter {
   }
 
   private void clearDexMethodCompilationState(DexProgramClass clazz) {
-    Arrays.stream(clazz.directMethods()).forEach(DexEncodedMethod::markNotProcessed);
-    Arrays.stream(clazz.virtualMethods()).forEach(DexEncodedMethod::markNotProcessed);
+    clazz.forEachMethod(DexEncodedMethod::markNotProcessed);
   }
 
   /**
@@ -407,12 +416,7 @@ public class IRConverter {
 
   public void optimizeSynthesizedClass(DexProgramClass clazz) {
     // Process the generated class, but don't apply any outlining.
-    for (DexEncodedMethod method : clazz.directMethods()) {
-      optimizeSynthesizedMethod(method);
-    }
-    for (DexEncodedMethod method : clazz.virtualMethods()) {
-      optimizeSynthesizedMethod(method);
-    }
+    clazz.forEachMethod(this::optimizeSynthesizedMethod);
   }
 
   public void optimizeSynthesizedMethod(DexEncodedMethod method) {

@@ -70,7 +70,7 @@ public class DeterministicProcessingTest extends SmaliTestBase {
 
   public List<DexEncodedMethod> permutationsOfTwo(
       List<DexEncodedMethod> methods, CallGraph.Leaves leaves) {
-    if (!leaves.brokeCycles()) {
+    if (!leaves.hasBrokeCycles()) {
       return methods;
     }
     methods.sort(Comparator.comparing(DexEncodedMethod::qualifiedName));
