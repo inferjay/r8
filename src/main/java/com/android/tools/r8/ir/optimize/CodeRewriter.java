@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -853,7 +854,7 @@ public class CodeRewriter {
 
   private void splitPhiConstants(IRCode code, BasicBlock block) {
     for (int i = 0; i < block.getPredecessors().size(); i++) {
-      Map<ConstNumber, ConstNumber> oldToNew = new HashMap<>();
+      Map<ConstNumber, ConstNumber> oldToNew = new IdentityHashMap<>();
       BasicBlock predecessor = block.getPredecessors().get(i);
       for (Phi phi : block.getPhis()) {
         Value operand = phi.getOperand(i);

@@ -19,7 +19,9 @@ import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.code.ValueNumberGenerator;
 import com.android.tools.r8.ir.conversion.CallGraph;
+import com.android.tools.r8.ir.conversion.IRConverter;
 import com.android.tools.r8.ir.conversion.LensCodeRewriter;
+import com.android.tools.r8.ir.conversion.OptimizationFeedback;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.utils.InternalOptions;
 import com.google.common.collect.Sets;
@@ -39,10 +41,10 @@ public class Inliner {
   private final InternalOptions options;
 
   // State for inlining methods which are known to be called twice.
-  public boolean applyDoubleInlining = false;
-  public final Set<DexEncodedMethod> doubleInlineCallers = Sets.newIdentityHashSet();
-  public final Set<DexEncodedMethod> doubleInlineSelectedTargets = Sets.newIdentityHashSet();
-  public final Map<DexEncodedMethod, DexEncodedMethod> doubleInlineeCandidates = new HashMap<>();
+  private boolean applyDoubleInlining = false;
+  private final Set<DexEncodedMethod> doubleInlineCallers = Sets.newIdentityHashSet();
+  private final Set<DexEncodedMethod> doubleInlineSelectedTargets = Sets.newIdentityHashSet();
+  private final Map<DexEncodedMethod, DexEncodedMethod> doubleInlineeCandidates = new HashMap<>();
 
   public Inliner(AppInfoWithSubtyping appInfo, GraphLense graphLense, InternalOptions options) {
     this.appInfo = appInfo;
@@ -89,7 +91,7 @@ public class Inliner {
     return result;
   }
 
-  protected boolean hasInliningAccess(DexEncodedMethod method, DexEncodedMethod target) {
+  boolean hasInliningAccess(DexEncodedMethod method, DexEncodedMethod target) {
     if (target.accessFlags.isPublic()) {
       return true;
     }
@@ -103,6 +105,40 @@ public class Inliner {
       return true;
     }
     return methodHolder.isSamePackage(targetHolder);
+  }
+
+  synchronized DexEncodedMethod doubleInlining(DexEncodedMethod method,
+      DexEncodedMethod target) {
+    if (!applyDoubleInlining) {
+      if (doubleInlineeCandidates.containsKey(target)) {
+        // Both calls can be inlined.
+        doubleInlineCallers.add(doubleInlineeCandidates.get(target));
+        doubleInlineCallers.add(method);
+        doubleInlineSelectedTargets.add(target);
+      } else {
+        // First call can be inlined.
+        doubleInlineeCandidates.put(target, method);
+      }
+      // Just preparing for double inlining.
+      return null;
+    } else {
+      // Don't perform the actual inlining if this was not selected.
+      if (!doubleInlineSelectedTargets.contains(target)) {
+        return null;
+      }
+    }
+    return target;
+  }
+
+  public synchronized void processDoubleInlineCallers(IRConverter converter,
+      OptimizationFeedback feedback) {
+    if (doubleInlineCallers.size() > 0) {
+      applyDoubleInlining = true;
+      for (DexEncodedMethod method : doubleInlineCallers) {
+        converter.processMethod(method, feedback, Outliner::noProcessing);
+        assert method.isProcessed();
+      }
+    }
   }
 
   public enum Constraint {

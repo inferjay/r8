@@ -38,6 +38,8 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -136,7 +138,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   private List<LiveIntervals> inactive = new LinkedList<>();
   // List of intervals that no register has been allocated to sorted by first live range.
   private PriorityQueue<LiveIntervals> unhandled =
-      new PriorityQueue<>((o1, o2) -> Integer.compare(o1.getStart(), o2.getStart()));
+      new PriorityQueue<>(Comparator.comparingInt(LiveIntervals::getStart));
 
   // The first register used for parallel moves. After register allocation the parallel move
   // temporary registers are [firstParallelMoveTemporary, maxRegisterNumber].

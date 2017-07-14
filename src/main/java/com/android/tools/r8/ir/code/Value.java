@@ -57,7 +57,7 @@ public class Value {
   public static final Value UNDEFINED = new Value(-1, MoveType.OBJECT, null);
 
   protected final int number;
-  protected MoveType type;
+  protected final MoveType type;
   public Instruction definition = null;
   private LinkedList<Instruction> users = new LinkedList<>();
   private Set<Instruction> uniqueUsers = null;
@@ -71,7 +71,7 @@ public class Value {
   private boolean isThis = false;
   private boolean isArgument = false;
   private LongInterval valueRange;
-  private DebugData debugData;
+  private final DebugData debugData;
 
   public Value(int number, MoveType type, DebugInfo debugInfo) {
     this.number = number;

@@ -277,11 +277,9 @@ public class IRConverter {
 
     // Process the application identifying outlining candidates.
     timing.begin("IR conversion phase 1");
-    int count = 0;
     OptimizationFeedback directFeedback = new OptimizationFeedbackDirect();
     OptimizationFeedbackDelayed delayedFeedback = new OptimizationFeedbackDelayed();
     while (!callGraph.isEmpty()) {
-      count++;
       CallGraph.Leaves leaves = callGraph.pickLeaves();
       List<DexEncodedMethod> methods = leaves.getLeaves();
       assert methods.size() > 0;
@@ -320,13 +318,9 @@ public class IRConverter {
     Builder builder = new Builder(application);
     builder.setHighestSortingString(highestSortingString);
 
-    // Second inlining pass.
-    if ((inliner != null) && (inliner.doubleInlineCallers.size() > 0)) {
-      inliner.applyDoubleInlining = true;
-      for (DexEncodedMethod method : inliner.doubleInlineCallers) {
-        processMethod(method, ignoreOptimizationFeedback, Outliner::noProcessing);
-        assert method.isProcessed();
-      }
+    // Second inlining pass for dealing with double inline callers.
+    if (inliner != null) {
+      inliner.processDoubleInlineCallers(this, ignoreOptimizationFeedback);
     }
 
     synthesizeLambdaClasses(builder);
@@ -430,7 +424,7 @@ public class IRConverter {
     return options.useSmaliSyntax ? method.toSmaliString(null) : method.codeToString();
   }
 
-  private void processMethod(DexEncodedMethod method,
+  public void processMethod(DexEncodedMethod method,
       OptimizationFeedback feedback,
       BiConsumer<IRCode, DexEncodedMethod> outlineHandler) {
     Code code = method.getCode();

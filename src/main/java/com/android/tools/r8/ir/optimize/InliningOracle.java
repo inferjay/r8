@@ -82,28 +82,6 @@ public class InliningOracle {
     return candidate;
   }
 
-  private synchronized DexEncodedMethod doubleInlining(DexEncodedMethod candidate) {
-    if (!inliner.applyDoubleInlining) {
-      if (inliner.doubleInlineeCandidates.containsKey(candidate)) {
-        // Both calls can be inlined.
-        inliner.doubleInlineCallers.add(inliner.doubleInlineeCandidates.get(candidate));
-        inliner.doubleInlineCallers.add(method);
-        inliner.doubleInlineSelectedTargets.add(candidate);
-      } else {
-        // First call can be inlined.
-        inliner.doubleInlineeCandidates.put(candidate, method);
-      }
-      // Just preparing for double inlining.
-      return null;
-    } else {
-      // Don't perform the actual inlining if this was not selected.
-      if (!inliner.doubleInlineSelectedTargets.contains(candidate)) {
-        return null;
-      }
-    }
-    return candidate;
-  }
-
   private Reason computeInliningReason(DexEncodedMethod target) {
     if (target.getOptimizationInfo().forceInline()) {
       return Reason.FORCE;
@@ -185,7 +163,7 @@ public class InliningOracle {
     }
 
     // Attempt to inline a candidate that is only called twice.
-    if ((reason == Reason.DUAL_CALLER) && (doubleInlining(target) == null)) {
+    if ((reason == Reason.DUAL_CALLER) && (inliner.doubleInlining(method, target) == null)) {
       if (info != null) {
         info.exclude(invoke, "target is not ready for double inlining");
       }
@@ -253,7 +231,7 @@ public class InliningOracle {
     }
 
     // Attempt to inline a candidate that is only called twice.
-    if ((reason == Reason.DUAL_CALLER) && (doubleInlining(candidate) == null)) {
+    if ((reason == Reason.DUAL_CALLER) && (inliner.doubleInlining(method, candidate) == null)) {
       if (info != null) {
         info.exclude(invoke, "target is not ready for double inlining");
       }
