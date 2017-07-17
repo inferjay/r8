@@ -550,7 +550,7 @@ public class IRConverter {
     feedback.markProcessed(method, state);
   }
 
-  private void updateHighestSortingStrings(DexEncodedMethod method) {
+  private synchronized void updateHighestSortingStrings(DexEncodedMethod method) {
     DexString highestSortingReferencedString = method.getCode().asDexCode().highestSortingString;
     if (highestSortingReferencedString != null) {
       if (highestSortingString == null
