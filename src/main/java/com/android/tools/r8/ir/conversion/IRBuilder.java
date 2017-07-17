@@ -270,6 +270,8 @@ public class IRBuilder {
   private List<Value> debugLocalReads = new ArrayList<>();
   private List<Value> debugLocalEnds = new ArrayList<>();
 
+  private int nextBlockNumber = 0;
+
   public IRBuilder(DexEncodedMethod method, SourceCode source, InternalOptions options) {
     this(method, source, new ValueNumberGenerator(), options);
   }
@@ -350,15 +352,14 @@ public class IRBuilder {
 
     // Process normal blocks reachable from the entry block using a worklist of reachable
     // blocks.
-    int blockNumber = 0;
     addToWorklist(currentBlock, 0);
-    blockNumber = processWorklist(blockNumber);
+    processWorklist();
 
     // Check that the last block is closed and does not fall off the end.
     assert currentBlock == null;
 
     // Handle where a catch handler hits the same block as the fallthrough.
-    blockNumber = handleFallthroughToCatchBlock(blockNumber);
+    handleFallthroughToCatchBlock();
 
     // Verify that we have properly filled all blocks
     // Must be after handle-catch (which has delayed edges),
@@ -366,7 +367,7 @@ public class IRBuilder {
     assert verifyFilledPredecessors();
 
     // If there are multiple returns create an exit block.
-    blockNumber = handleExitBlock(blockNumber);
+    handleExitBlock();
 
     // Clear all reaching definitions to free up memory (and avoid invalid use).
     for (BasicBlock block : blocks) {
@@ -437,14 +438,14 @@ public class IRBuilder {
     return true;
   }
 
-  private int processWorklist(int blockNumber) {
+  private void processWorklist() {
     for (WorklistItem item = ssaWorklist.poll(); item != null; item = ssaWorklist.poll()) {
       if (item.block.isFilled()) {
         continue;
       }
       setCurrentBlock(item.block);
       blocks.add(currentBlock);
-      currentBlock.setNumber(blockNumber++);
+      currentBlock.setNumber(nextBlockNumber++);
       // Build IR for each dex instruction in the block.
       for (int i = item.firstInstructionIndex; i < source.instructionCount(); ++i) {
         if (currentBlock == null) {
@@ -461,7 +462,6 @@ public class IRBuilder {
         source.buildInstruction(this, i);
       }
     }
-    return blockNumber;
   }
 
   // Helper to resolve switch payloads and build switch instructions (dex code only).
@@ -1536,6 +1536,7 @@ public class IRBuilder {
       return;
     }
     BasicBlock block = new BasicBlock();
+    block.setNumber(nextBlockNumber++);
     blocks.add(block);
     block.incrementUnfilledPredecessorCount();
     int freshOffset = INITIAL_BLOCK_OFFSET - 1;
@@ -1721,7 +1722,7 @@ public class IRBuilder {
     closeCurrentBlock();
   }
 
-  int handleExitBlock(int blockNumber) {
+  void handleExitBlock() {
     if (exitBlocks.size() > 0) {
       // Create and populate the exit block if needed (eg, synchronized support for jar).
       setCurrentBlock(new BasicBlock());
@@ -1730,11 +1731,11 @@ public class IRBuilder {
       if (currentBlock.getInstructions().isEmpty() && exitBlocks.size() == 1) {
         normalExitBlock = exitBlocks.get(0);
         setCurrentBlock(null);
-        return blockNumber;
+        return;
       }
       // Commit to creating the new exit block.
       normalExitBlock = currentBlock;
-      normalExitBlock.setNumber(blockNumber++);
+      normalExitBlock.setNumber(nextBlockNumber++);
       blocks.add(normalExitBlock);
       // Add the return instruction possibly creating a phi of return values.
       Return origReturn = exitBlocks.get(0).exit().asReturn();
@@ -1776,10 +1777,9 @@ public class IRBuilder {
         phi.addOperands(operands);
       }
     }
-    return blockNumber;
   }
 
-  private int handleFallthroughToCatchBlock(int blockNumber) {
+  private void handleFallthroughToCatchBlock() {
     // When a catch handler for a block goes to the same block as the fallthrough for that
     // block the graph only has one edge there. In these cases we add an additional block so the
     // catch edge goes through that and then make the fallthrough go through a new direct edge.
@@ -1788,7 +1788,7 @@ public class IRBuilder {
       BasicBlock target = pair.second;
 
       // New block with one unfilled predecessor.
-      BasicBlock newBlock = BasicBlock.createGotoBlock(target, blockNumber++);
+      BasicBlock newBlock = BasicBlock.createGotoBlock(target, nextBlockNumber++);
       blocks.add(newBlock);
       newBlock.incrementUnfilledPredecessorCount();
 
@@ -1808,7 +1808,6 @@ public class IRBuilder {
       }
       target.filledPredecessor(this);
     }
-    return blockNumber;
   }
 
   /**
