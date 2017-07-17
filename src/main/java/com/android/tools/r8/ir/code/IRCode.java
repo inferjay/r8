@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class IRCode {
 
@@ -135,6 +136,7 @@ public class IRCode {
   }
 
   public boolean isConsistentGraph() {
+    assert consistentBlockNumbering();
     assert consistentPredecessorSuccessors();
     assert consistentCatchHandlers();
     assert consistentBlockInstructions();
@@ -263,6 +265,12 @@ public class IRCode {
     return true;
   }
 
+  public boolean consistentBlockNumbering() {
+    return blocks.stream()
+        .collect(Collectors.groupingBy(BasicBlock::getNumber, Collectors.counting()))
+        .entrySet().stream().noneMatch((bb2count) -> bb2count.getValue() > 1);
+  }
+
   private boolean consistentBlockInstructions() {
     for (BasicBlock block : blocks) {
       for (Instruction instruction : block.getInstructions()) {
@@ -377,5 +385,9 @@ public class IRCode {
 
   public ConstNumber createFalse() {
     return new ConstNumber(ConstType.INT, createValue(MoveType.SINGLE), 0);
+  }
+
+  public final int getHighestBlockNumber() {
+    return blocks.stream().max(Comparator.comparingInt(BasicBlock::getNumber)).get().getNumber();
   }
 }

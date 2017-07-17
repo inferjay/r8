@@ -42,6 +42,7 @@ public class PeepholeOptimizer {
   private static void shareIdenticalBlockSuffix(IRCode code, RegisterAllocator allocator) {
     Collection<BasicBlock> blocks = code.blocks;
     do {
+      int startNumberOfNewBlock = code.getHighestBlockNumber() + 1;
       Map<BasicBlock, BasicBlock> newBlocks = new IdentityHashMap<>();
       for (BasicBlock block : blocks) {
         InstructionEquivalence equivalence = new InstructionEquivalence(allocator);
@@ -79,7 +80,7 @@ public class PeepholeOptimizer {
                 commonSuffixSize, sharedSuffixSizeExcludingExit(firstPred, pred, allocator));
           }
           assert commonSuffixSize >= 1;
-          int blockNumber = code.blocks.size() + newBlocks.size();
+          int blockNumber = startNumberOfNewBlock + newBlocks.size();
           BasicBlock newBlock = createAndInsertBlockForSuffix(
               blockNumber, commonSuffixSize, predsWithSameLastInstruction, block);
           newBlocks.put(predsWithSameLastInstruction.get(0), newBlock);

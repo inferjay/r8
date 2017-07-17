@@ -428,7 +428,11 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
     }
 
     // Insert inlinee blocks into the IR code.
-    inlinee.blocks.forEach(blocksIterator::add);
+    int blockNumber = code.getHighestBlockNumber() + 1;
+    for (BasicBlock bb : inlinee.blocks) {
+      bb.setNumber(blockNumber++);
+      blocksIterator.add(bb);
+    }
 
     // If the invoke block had catch handlers copy those down to all inlined blocks.
     if (invokeBlock.hasCatchHandlers()) {
