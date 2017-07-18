@@ -129,8 +129,8 @@ public class DexItemFactory {
   public DexType annotationType = createType(annotationDescriptor);
   public DexType throwableType = createType(throwableDescriptor);
 
-  public DexType stringBuilderType = createType(createString("Ljava/lang/StringBuilder;"));
-  public DexType stringBufferType = createType(createString("Ljava/lang/StringBuffer;"));
+  public DexType stringBuilderType = createType("Ljava/lang/StringBuilder;");
+  public DexType stringBufferType = createType("Ljava/lang/StringBuffer;");
 
   public StringBuildingMethods stringBuilderMethods = new StringBuildingMethods(stringBuilderType);
   public StringBuildingMethods stringBufferMethods = new StringBuildingMethods(stringBufferType);
@@ -139,6 +139,21 @@ public class DexItemFactory {
   public LongMethods longMethods = new LongMethods();
   public ThrowableMethods throwableMethods = new ThrowableMethods();
   public ClassMethods classMethods = new ClassMethods();
+
+  // Dex system annotations.
+  // See https://source.android.com/devices/tech/dalvik/dex-format.html#system-annotation
+  public final DexType annotationDefault = createType("Ldalvik/annotation/AnnotationDefault;");
+  public final DexType annotationEnclosingClass = createType("Ldalvik/annotation/EnclosingClass;");
+  public final DexType annotationEnclosingMethod = createType(
+      "Ldalvik/annotation/EnclosingMethod;");
+  public final DexType annotationInnerClass = createType("Ldalvik/annotation/InnerClass;");
+  public final DexType annotationMemberClasses = createType("Ldalvik/annotation/MemberClasses;");
+  public final DexType annotationMethodParameters = createType(
+      "Ldalvik/annotation/MethodParameters;");
+  public final DexType annotationSignature = createType("Ldalvik/annotation/Signature;");
+  public final DexType annotationSourceDebugExtension = createType(
+      "Ldalvik/annotation/SourceDebugExtension;");
+  public final DexType annotationThrows = createType("Ldalvik/annotation/Throws;");
 
   public void clearSubtypeInformation() {
     types.values().forEach(DexType::clearSubtypeInformation);

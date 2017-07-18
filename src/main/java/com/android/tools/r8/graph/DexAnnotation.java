@@ -15,19 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DexAnnotation extends DexItem {
-  // Dex system annotations.
-  // See https://source.android.com/devices/tech/dalvik/dex-format.html#system-annotation
-  private static final String ANNOTATION_DEFAULT_DESCRIPTOR =
-      "Ldalvik/annotation/AnnotationDefault;";
-  private static final String ENCLOSING_CLASS_DESCRIPTOR = "Ldalvik/annotation/EnclosingClass;";
-  private static final String ENCLOSING_METHOD_DESCRIPTOR = "Ldalvik/annotation/EnclosingMethod;";
-  private static final String INNER_CLASS_DESCRIPTOR = "Ldalvik/annotation/InnerClass;";
-  private static final String MEMBER_CLASSES_DESCRIPTOR = "Ldalvik/annotation/MemberClasses;";
-  private static final String METHOD_PARAMETERS_DESCRIPTOR = "Ldalvik/annotation/MethodParameters;";
-  private static final String SIGNATURE_DESCRIPTOR = "Ldalvik/annotation/Signature;";
-  private static final String SOURCE_DEBUG_EXTENSION = "Ldalvik/annotation/SourceDebugExtension;";
-  private static final String THROWS_DESCRIPTOR = "Ldalvik/annotation/Throws;";
-
   public static final int VISIBILITY_BUILD = 0x00;
   public static final int VISIBILITY_RUNTIME = 0x01;
   public static final int VISIBILITY_SYSTEM = 0x02;
@@ -73,37 +60,36 @@ public class DexAnnotation extends DexItem {
 
   public static DexAnnotation createEnclosingClassAnnotation(DexType enclosingClass,
       DexItemFactory factory) {
-    return createSystemValueAnnotation(ENCLOSING_CLASS_DESCRIPTOR, factory,
+    return createSystemValueAnnotation(factory.annotationEnclosingClass, factory,
         new DexValueType(enclosingClass));
   }
 
   public static DexAnnotation createEnclosingMethodAnnotation(DexMethod enclosingMethod,
       DexItemFactory factory) {
-    return createSystemValueAnnotation(ENCLOSING_METHOD_DESCRIPTOR, factory,
+    return createSystemValueAnnotation(factory.annotationEnclosingMethod, factory,
         new DexValueMethod(enclosingMethod));
   }
 
-  public static boolean isEnclosingClassAnnotation(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(ENCLOSING_CLASS_DESCRIPTOR);
+  public static boolean isEnclosingClassAnnotation(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationEnclosingClass;
   }
 
-  public static boolean isEnclosingMethodAnnotation(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(ENCLOSING_METHOD_DESCRIPTOR);
+  public static boolean isEnclosingMethodAnnotation(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationEnclosingMethod;
   }
 
-  public static boolean isEnclosingAnnotation(DexAnnotation annotation) {
-    return isEnclosingClassAnnotation(annotation) || isEnclosingMethodAnnotation(annotation);
-  }
-
-  public static boolean isInnerClassesAnnotation(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(MEMBER_CLASSES_DESCRIPTOR)
-        || annotation.annotation.type.toDescriptorString().equals(INNER_CLASS_DESCRIPTOR);
+  public static boolean isInnerClassesAnnotation(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationMemberClasses
+        || annotation.annotation.type == factory.annotationInnerClass;
   }
 
   public static DexAnnotation createInnerClassAnnotation(String clazz, int access,
       DexItemFactory factory) {
     return new DexAnnotation(VISIBILITY_SYSTEM,
-        new DexEncodedAnnotation(factory.createType(INNER_CLASS_DESCRIPTOR),
+        new DexEncodedAnnotation(factory.annotationInnerClass,
             new DexAnnotationElement[]{
                 new DexAnnotationElement(
                     factory.createString("accessFlags"),
@@ -122,14 +108,14 @@ public class DexAnnotation extends DexItem {
     for (int i = 0; i < classes.size(); i++) {
       values[i] = new DexValueType(classes.get(i));
     }
-    return createSystemValueAnnotation(MEMBER_CLASSES_DESCRIPTOR, factory,
+    return createSystemValueAnnotation(factory.annotationMemberClasses, factory,
         new DexValueArray(values));
   }
 
   public static DexAnnotation createSourceDebugExtensionAnnotation(DexValue value,
       DexItemFactory factory) {
     return new DexAnnotation(VISIBILITY_SYSTEM,
-        new DexEncodedAnnotation(factory.createType(SOURCE_DEBUG_EXTENSION),
+        new DexEncodedAnnotation(factory.annotationSourceDebugExtension,
             new DexAnnotationElement[] {
               new DexAnnotationElement(factory.createString("value"), value)
             }));
@@ -139,7 +125,7 @@ public class DexAnnotation extends DexItem {
       DexValue[] accessFlags, DexItemFactory factory) {
     assert names.length == accessFlags.length;
     return new DexAnnotation(VISIBILITY_SYSTEM,
-        new DexEncodedAnnotation(factory.createType(METHOD_PARAMETERS_DESCRIPTOR),
+        new DexEncodedAnnotation(factory.annotationMethodParameters,
             new DexAnnotationElement[]{
                 new DexAnnotationElement(
                     factory.createString("names"),
@@ -152,7 +138,7 @@ public class DexAnnotation extends DexItem {
 
   public static DexAnnotation createAnnotationDefaultAnnotation(DexType type,
       List<DexAnnotationElement> defaults, DexItemFactory factory) {
-    return createSystemValueAnnotation(ANNOTATION_DEFAULT_DESCRIPTOR, factory,
+    return createSystemValueAnnotation(factory.annotationDefault, factory,
         new DexValueAnnotation(
             new DexEncodedAnnotation(type,
                 defaults.toArray(new DexAnnotationElement[defaults.size()])))
@@ -160,34 +146,38 @@ public class DexAnnotation extends DexItem {
   }
 
   public static DexAnnotation createSignatureAnnotation(String signature, DexItemFactory factory) {
-    return createSystemValueAnnotation(SIGNATURE_DESCRIPTOR, factory,
+    return createSystemValueAnnotation(factory.annotationSignature, factory,
         compressSignature(signature, factory));
   }
 
   public static DexAnnotation createThrowsAnnotation(DexValue[] exceptions,
       DexItemFactory factory) {
-    return createSystemValueAnnotation(THROWS_DESCRIPTOR, factory, new DexValueArray(exceptions));
+    return createSystemValueAnnotation(factory.annotationThrows, factory,
+        new DexValueArray(exceptions));
   }
 
-  private static DexAnnotation createSystemValueAnnotation(String desc, DexItemFactory factory,
+  private static DexAnnotation createSystemValueAnnotation(DexType type, DexItemFactory factory,
       DexValue value) {
     return new DexAnnotation(VISIBILITY_SYSTEM,
-        new DexEncodedAnnotation(factory.createType(desc), new DexAnnotationElement[] {
+        new DexEncodedAnnotation(type, new DexAnnotationElement[]{
             new DexAnnotationElement(factory.createString("value"), value)
         }));
   }
 
-  public static boolean isThrowingAnnotation(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(THROWS_DESCRIPTOR);
+  public static boolean isThrowingAnnotation(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationThrows;
   }
 
-  public static boolean isSignatureAnnotation(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(SIGNATURE_DESCRIPTOR);
+  public static boolean isSignatureAnnotation(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationSignature;
   }
 
 
-  public static boolean isSourceDebugExtension(DexAnnotation annotation) {
-    return annotation.annotation.type.toDescriptorString().equals(SOURCE_DEBUG_EXTENSION);
+  public static boolean isSourceDebugExtension(DexAnnotation annotation,
+      DexItemFactory factory) {
+    return annotation.annotation.type == factory.annotationSourceDebugExtension;
   }
 
   /**
