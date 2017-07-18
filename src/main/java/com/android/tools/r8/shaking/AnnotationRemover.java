@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.DexAnnotationSet;
 import com.android.tools.r8.graph.DexAnnotationSetRefList;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
@@ -42,21 +43,24 @@ public class AnnotationRemover {
       case DexAnnotation.VISIBILITY_SYSTEM:
         // EnclosingClass and InnerClass are used in Dalvik to represent the InnerClasses
         // attribute section from class files.
-        if (keep.innerClasses &&
-            (DexAnnotation.isInnerClassesAnnotation(annotation) ||
-                DexAnnotation.isEnclosingClassAnnotation(annotation))) {
+        DexItemFactory factory = appInfo.dexItemFactory;
+        if (keep.innerClasses
+            && (DexAnnotation.isInnerClassesAnnotation(annotation, factory) ||
+                DexAnnotation.isEnclosingClassAnnotation(annotation, factory))) {
           return true;
         }
-        if (keep.enclosingMethod && DexAnnotation.isEnclosingMethodAnnotation(annotation)) {
+        if (keep.enclosingMethod
+            && DexAnnotation.isEnclosingMethodAnnotation(annotation, factory)) {
           return true;
         }
-        if (keep.exceptions && DexAnnotation.isThrowingAnnotation(annotation)) {
+        if (keep.exceptions && DexAnnotation.isThrowingAnnotation(annotation, factory)) {
           return true;
         }
-        if (keep.signature && DexAnnotation.isSignatureAnnotation(annotation)) {
+        if (keep.signature && DexAnnotation.isSignatureAnnotation(annotation, factory)) {
           return true;
         }
-        if (keep.sourceDebugExtension && DexAnnotation.isSourceDebugExtension(annotation)) {
+        if (keep.sourceDebugExtension
+            && DexAnnotation.isSourceDebugExtension(annotation, factory)) {
           return true;
         }
         return false;

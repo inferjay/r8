@@ -68,6 +68,15 @@ public class DexAnnotationSet extends DexItem {
     sorted = hashCode();
   }
 
+  public DexAnnotation getFirstMatching(DexType type) {
+    for (DexAnnotation annotation : annotations) {
+      if (annotation.annotation.type == type) {
+        return annotation;
+      }
+    }
+    return null;
+  }
+
   private int sortedHashCode() {
     int hashCode = hashCode();
     return hashCode == UNSORTED ? 1 : hashCode;
