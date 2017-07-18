@@ -10,6 +10,7 @@ import com.android.tools.r8.errors.Unreachable;
 
 import com.google.common.base.MoreObjects;
 
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 public abstract class DexClass extends DexItem {
@@ -81,6 +82,17 @@ public abstract class DexClass extends DexItem {
     for (DexEncodedMethod method : virtualMethods()) {
       consumer.accept(method);
     }
+  }
+
+  public DexEncodedMethod[] allMethodsSorted() {
+    int vLen = virtualMethods().length;
+    int dLen = directMethods().length;
+    DexEncodedMethod[] result = new DexEncodedMethod[vLen+dLen];
+    System.arraycopy(virtualMethods(), 0, result, 0, vLen);
+    System.arraycopy(directMethods(), 0, result, vLen, dLen);
+    Arrays.sort(result,
+        (DexEncodedMethod a, DexEncodedMethod b) -> a.method.slowCompareTo(b.method));
+    return result;
   }
 
   public DexEncodedField[] staticFields() {

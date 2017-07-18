@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableSet;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class InternalOptions {
 
@@ -140,8 +141,7 @@ public class InternalOptions {
   }
 
   public static class TestingOptions {
-
-    public BiFunction<List<DexEncodedMethod>, CallGraph.Leaves, List<DexEncodedMethod>> irOrdering;
+    public Function<List<DexEncodedMethod>, List<DexEncodedMethod>> irOrdering;
   }
 
   public static class AttributeRemovalOptions {

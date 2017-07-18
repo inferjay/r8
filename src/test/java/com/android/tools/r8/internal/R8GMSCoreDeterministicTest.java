@@ -12,7 +12,6 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.DexEncodedMethod;
-import com.android.tools.r8.ir.conversion.CallGraph;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.OutputMode;
@@ -29,7 +28,7 @@ import org.junit.Test;
 
 public class R8GMSCoreDeterministicTest extends GMSCoreCompilationTestBase {
 
-  public List<DexEncodedMethod> shuffle(List<DexEncodedMethod> methods, CallGraph.Leaves leaves) {
+  public List<DexEncodedMethod> shuffle(List<DexEncodedMethod> methods) {
     Collections.shuffle(methods);
     return methods;
   }

@@ -66,6 +66,7 @@ public class InliningOracle {
       assert !candidate.getOptimizationInfo().forceInline();
       return null;
     }
+
     if (candidate.accessFlags.isSynchronized()) {
       // Don't inline if target is synchronized.
       if (info != null) {
@@ -73,6 +74,12 @@ public class InliningOracle {
       }
       return null;
     }
+
+    if (callGraph.isBreaker(method, candidate)) {
+      // Cycle breaker so abort to preserve compilation order.
+      return null;
+    }
+
     if (!inliner.hasInliningAccess(method, candidate)) {
       if (info != null) {
         info.exclude(invoke, "Inlinee candidate does not have right access flags");
@@ -151,6 +158,11 @@ public class InliningOracle {
       if (info != null) {
         info.exclude(invoke, "target is not identified for inlining");
       }
+      return null;
+    }
+
+    if (callGraph.isBreaker(method, target)) {
+      // Cycle breaker so abort to preserve compilation order.
       return null;
     }
 

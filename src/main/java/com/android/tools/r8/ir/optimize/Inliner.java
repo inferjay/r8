@@ -284,6 +284,10 @@ public class Inliner {
               if (block.hasCatchHandlers() && inlinee.getNormalExitBlock() == null) {
                 continue;
               }
+              if (callGraph.isBreaker(method, target)) {
+                // Make sure we don't inline a call graph breaker.
+                continue;
+              }
               // If this code did not go through the full pipeline, apply inlining to make sure
               // that force inline targets get processed.
               if (!target.isProcessed()) {

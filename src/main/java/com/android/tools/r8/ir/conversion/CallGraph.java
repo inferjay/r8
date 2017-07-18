@@ -19,9 +19,9 @@ import com.android.tools.r8.ir.code.Invoke.Type;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -52,10 +52,10 @@ public class CallGraph {
     private boolean isSelfRecursive = false;
 
     // Outgoing calls from this method.
-    public final Set<Node> callees = new LinkedHashSet<>();
+    private final Set<Node> callees = new LinkedHashSet<>();
 
     // Incoming calls to this method.
-    public final Set<Node> callers = new LinkedHashSet<>();
+    private final Set<Node> callers = new LinkedHashSet<>();
 
     private Node(DexEncodedMethod method) {
       this.method = method;
@@ -79,10 +79,6 @@ public class CallGraph {
 
     boolean isLeaf() {
       return callees.isEmpty();
-    }
-
-    int callDegree() {
-      return callees.size();
     }
 
     @Override
@@ -133,57 +129,15 @@ public class CallGraph {
     }
   }
 
-  public class Leaves {
-
-    private final List<DexEncodedMethod> leaves;
-    private final boolean brokeCycles;
-    private final Map<DexEncodedMethod, Set<DexEncodedMethod>> cycleBreakingCalls;
-
-    private Leaves(List<DexEncodedMethod> leaves, boolean brokeCycles,
-        Map<DexEncodedMethod, Set<DexEncodedMethod>> cycleBreakingCalls) {
-      this.leaves = leaves;
-      this.brokeCycles = brokeCycles;
-      this.cycleBreakingCalls = cycleBreakingCalls;
-      assert brokeCycles == (cycleBreakingCalls.size() != 0);
-    }
-
-    public int size() {
-      return leaves.size();
-    }
-
-    public List<DexEncodedMethod> getLeaves() {
-      return leaves;
-    }
-
-    public boolean hasBrokeCycles() {
-      return brokeCycles;
-    }
-
-    /**
-     * Calls that were broken to produce the leaves.
-     *
-     * If {@link Leaves#breakCycles()} return <code>true</code> this provides the calls for each
-     * leaf that were broken.
-     *
-     * NOTE: The broken calls are not confined to the set of leaves.
-     */
-    public Map<DexEncodedMethod, Set<DexEncodedMethod>> getCycleBreakingCalls() {
-      return cycleBreakingCalls;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("Leaves: ");
-      builder.append(leaves.size());
-      builder.append("\n");
-      builder.append(brokeCycles ? "Call cycles broken" : "No call cycles broken");
-      return builder.toString();
-    }
-  }
-
   private final Map<DexEncodedMethod, Node> nodes = new LinkedHashMap<>();
   private final Map<DexEncodedMethod, Set<DexEncodedMethod>> breakers = new HashMap<>();
+
+  // Returns whether the method->callee edge has been removed from the call graph
+  // to break a cycle in the call graph.
+  public boolean isBreaker(DexEncodedMethod method, DexEncodedMethod callee) {
+    Set<DexEncodedMethod> value = breakers.get(method);
+    return (value != null) && value.contains(callee);
+  }
 
   private List<Node> leaves = null;
   private Set<DexEncodedMethod> singleCallSite = Sets.newIdentityHashSet();
@@ -191,17 +145,19 @@ public class CallGraph {
 
   public static CallGraph build(DexApplication application, AppInfoWithSubtyping appInfo,
       GraphLense graphLense) {
-
     CallGraph graph = new CallGraph();
-    for (DexClass clazz : application.classes()) {
-      clazz.forEachMethod( method -> {
+    DexClass[] classes = application.classes().toArray(new DexClass[application.classes().size()]);
+    Arrays.sort(classes, (DexClass a, DexClass b) -> a.type.slowCompareTo(b.type));
+    for (DexClass clazz : classes) {
+      for (DexEncodedMethod method : clazz.allMethodsSorted()) {
         Node node = graph.ensureMethodNode(method);
         InvokeExtractor extractor = new InvokeExtractor(appInfo, graphLense, node, graph);
         method.registerReachableDefinitions(extractor);
-      });
+      }
     }
-
     assert allMethodsExists(application, graph);
+    graph.breakCycles();
+    assert graph.breakCycles() == 0;  // This time the cycles should be gone.
     graph.fillCallSiteSets(appInfo);
     graph.fillInitialLeaves();
     return graph;
@@ -258,7 +214,6 @@ public class CallGraph {
 
   /**
    * Remove all leaves (nodes with an call (outgoing) degree of 0).
-   * <p>
    *
    * @return List of {@link DexEncodedMethod} of the leaves removed.
    */
@@ -282,73 +237,62 @@ public class CallGraph {
    * leave is returned if the graph is not empty.
    * <p>
    *
-   * @return object with the leaves as a List of {@link DexEncodedMethod} and <code>boolean</code>
-   * indication of whether cycles were broken to produce leaves. <code>null</code> if the graph is
-   * empty.
+   * @return  List of {@link DexEncodedMethod}.
    */
-  public Leaves pickLeaves() {
-    boolean cyclesBroken = false;
-    Map<DexEncodedMethod, Set<DexEncodedMethod>> brokenCalls = Collections.emptyMap();
+  List<DexEncodedMethod> extractLeaves() {
     if (isEmpty()) {
       return null;
     }
     List<DexEncodedMethod> leaves = removeLeaves();
-    if (leaves.size() == 0) {
-      // The graph had no more leaves, so break cycles to construct leaves.
-      brokenCalls = breakCycles();
-      cyclesBroken = true;
-      leaves = removeLeaves();
-    }
     assert leaves.size() > 0;
-    for (DexEncodedMethod leaf : leaves) {
-      assert !leaf.isProcessed();
-    }
-    return new Leaves(leaves, cyclesBroken, brokenCalls);
+    leaves.forEach( leaf -> { assert !leaf.isProcessed(); });
+    return leaves;
   }
 
-  /**
-   * Break some cycles in the graph by removing edges.
-   * <p>
-   * This will find the lowest call (outgoing) degree in the graph. Then go through all nodes with
-   * that call (outgoing) degree, and remove all call (outgoing) edges from nodes with that call
-   * (outgoing) degree.
-   * <p>
-   * It will avoid removing edges from bridge-methods if possible.
-   * <p>
-   * Returns the calls that were broken.
-   */
-  private Map<DexEncodedMethod, Set<DexEncodedMethod>> breakCycles() {
-    Map<DexEncodedMethod, Set<DexEncodedMethod>> brokenCalls = new IdentityHashMap<>();
-    // Break non bridges with degree 1.
-    int minDegree = nodes.size();
-    for (Node node : nodes.values()) {
-      // Break cycles and add all leaves created in the process.
-      if (!node.isBridge() && node.callDegree() <= 1) {
-        assert node.callDegree() == 1;
-        Set<DexEncodedMethod> calls = removeAllCalls(node);
-        leaves.add(node);
-        brokenCalls.put(node.method, calls);
-      } else {
-        minDegree = Integer.min(minDegree, node.callDegree());
+  private int traverse(Node node, HashSet<Node> stack, HashSet<Node> marked) {
+    int numberOfCycles = 0;
+    if (!marked.contains(node)) {
+      assert !stack.contains(node);
+      stack.add(node);
+      ArrayList<Node> toBeRemoved = null;
+      // Sort the callees before calling traverse recursively.
+      // This will ensure cycles are broken the same way across
+      // multiple invocations of the R8 compiler.
+      Node[] callees = node.callees.toArray(new Node[node.callees.size()]);
+      Arrays.sort(callees, (Node a, Node b) -> a.method.method.slowCompareTo(b.method.method));
+      for (Node callee : callees) {
+        if (stack.contains(callee)) {
+          if (toBeRemoved == null) {
+            toBeRemoved = new ArrayList<>();
+          }
+          // We have a cycle; break it by removing node->callee.
+          toBeRemoved.add(callee);
+          callee.callers.remove(node);
+          breakers.computeIfAbsent(node.method, ignore -> new HashSet<>()).add(callee.method);
+        } else {
+          numberOfCycles += traverse(callee, stack, marked);
+        }
       }
-    }
-
-    // Return if new leaves were created.
-    if (leaves.size() > 0) {
-      return brokenCalls;
-    }
-
-    // Break methods with the found minimum degree and add all leaves created in the process.
-    for (Node node : nodes.values()) {
-      if (node.callDegree() <= minDegree) {
-        assert node.callDegree() == minDegree;
-        Set<DexEncodedMethod> calls = removeAllCalls(node);
-        leaves.add(node);
-        brokenCalls.put(node.method, calls);
+      if (toBeRemoved != null) {
+        numberOfCycles += toBeRemoved.size();
+        node.callees.removeAll(toBeRemoved);
       }
+      stack.remove(node);
+      marked.add(node);
     }
-    assert leaves.size() > 0;
-    return brokenCalls;
+    return numberOfCycles;
+  }
+
+  private int breakCycles() {
+    // Break cycles in this call graph by removing edges causing cycles.
+    // The remove edges are stored in @breakers.
+    int numberOfCycles = 0;
+    HashSet<Node> stack = new HashSet<>();
+    HashSet<Node> marked = new HashSet<>();
+    for(Node node : nodes.values()) {
+      numberOfCycles += traverse(node, stack, marked);
+    }
+    return numberOfCycles;
   }
 
   synchronized private Node ensureMethodNode(DexEncodedMethod method) {
@@ -365,16 +309,6 @@ public class CallGraph {
       caller.isSelfRecursive = true;
     }
     callee.invokeCount++;
-  }
-
-  private Set<DexEncodedMethod> removeAllCalls(Node node) {
-    Set<DexEncodedMethod> calls = Sets.newIdentityHashSet();
-    for (Node call : node.callees) {
-      calls.add(call.method);
-      call.callers.remove(node);
-    }
-    node.callees.clear();
-    return calls;
   }
 
   private void remove(Node node, List<Node> leaves) {

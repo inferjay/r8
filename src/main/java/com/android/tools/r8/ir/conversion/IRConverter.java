@@ -37,7 +37,7 @@ import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
-import com.google.common.collect.ImmutableList;
+
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -277,50 +277,21 @@ public class IRConverter {
     // Process the application identifying outlining candidates.
     timing.begin("IR conversion phase 1");
     OptimizationFeedback directFeedback = new OptimizationFeedbackDirect();
-    OptimizationFeedbackDelayed delayedFeedback = new OptimizationFeedbackDelayed();
     while (!callGraph.isEmpty()) {
-      CallGraph.Leaves leaves = callGraph.pickLeaves();
-      List<DexEncodedMethod> methods = leaves.getLeaves();
+      List<DexEncodedMethod> methods = callGraph.extractLeaves();
       assert methods.size() > 0;
-      List<Future<?>> futures = new ArrayList<>();
-
       // For testing we have the option to determine the processing order of the methods.
       if (options.testing.irOrdering != null) {
-        methods = options.testing.irOrdering.apply(methods, leaves);
+        methods = options.testing.irOrdering.apply(methods);
       }
-
-      while (methods.size() > 0) {
-        // Process the methods on multiple threads. If cycles where broken collect the
-        // optimization feedback to reprocess methods affected by it. This is required to get
-        // deterministic behaviour, as the processing order within each set of leaves is
-        // non-deterministic.
-
-        // Due to a race condition, we serialize processing of methods if cycles are broken.
-        // TODO(bak)
-        if (leaves.hasBrokeCycles()) {
-          for (DexEncodedMethod method : methods) {
-            processMethod(method,
-                leaves.hasBrokeCycles() ? delayedFeedback : directFeedback,
-                outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
-          }
-        } else {
-          for (DexEncodedMethod method : methods) {
-            futures.add(executorService.submit(() -> {
-              processMethod(method,
-                  leaves.hasBrokeCycles() ? delayedFeedback : directFeedback,
-                  outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
-            }));
-          }
-          ThreadUtils.awaitFutures(futures);
-        }
-        if (leaves.hasBrokeCycles()) {
-          // If cycles in the call graph were broken, then re-process all methods which are
-          // affected by the optimization feedback of other methods in this group.
-          methods = delayedFeedback.applyAndClear(methods, leaves);
-        } else {
-          methods = ImmutableList.of();
-        }
+      List<Future<?>> futures = new ArrayList<>();
+      for (DexEncodedMethod method : methods) {
+        futures.add(executorService.submit(() -> {
+          processMethod(method, directFeedback,
+              outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
+        }));
       }
+      ThreadUtils.awaitFutures(futures);
     }
     timing.end();
 
