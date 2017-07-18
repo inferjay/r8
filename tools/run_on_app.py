@@ -4,6 +4,7 @@
 # BSD-style license that can be found in the LICENSE file.
 
 from __future__ import print_function
+from glob import glob
 import optparse
 import os
 import sys
@@ -74,14 +75,18 @@ def ParseOptions():
                     'the run.')
   result.add_option('--print-runtimeraw',
                     metavar='BENCHMARKNAME',
-                    help='Prints the line \'<BENCHMARKNAME>(RunTimeRaw):' +
-                         ' <elapsed> ms\' at the end where <elapsed> is' +
-                         ' the elapsed time in milliseconds.')
+                    help='Print the line \'<BENCHMARKNAME>(RunTimeRaw):' +
+                        ' <elapsed> ms\' at the end where <elapsed> is' +
+                        ' the elapsed time in milliseconds.')
   result.add_option('--print-memoryuse',
                     metavar='BENCHMARKNAME',
-                    help='Prints the line \'<BENCHMARKNAME>(MemoryUse):' +
-                         ' <mem>\' at the end where <mem> is the peak' +
-                         ' peak resident set size (VmHWM) in bytes.')
+                    help='Print the line \'<BENCHMARKNAME>(MemoryUse):' +
+                        ' <mem>\' at the end where <mem> is the peak' +
+                        ' peak resident set size (VmHWM) in bytes.')
+  result.add_option('--print-dexsegments',
+                    metavar='BENCHMARKNAME',
+                    help='Print the sizes of individual dex segments as ' +
+                        '\'<BENCHMARKNAME>-<segment>(CodeSize): <bytes>\'')
   return result.parse_args()
 
 # Most apps have the -printmapping and -printseeds in the Proguard
@@ -206,6 +211,10 @@ def main():
   if options.print_runtimeraw:
     print('{}(RunTimeRaw): {} ms'
         .format(options.print_runtimeraw, 1000.0 * (time.time() - t0)))
+
+  if options.print_dexsegments:
+    dex_files = glob(os.path.join(outdir, '*.dex'))
+    utils.print_dexsegments(options.print_dexsegments, dex_files)
 
 if __name__ == '__main__':
   sys.exit(main())
