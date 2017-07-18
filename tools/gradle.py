@@ -14,6 +14,7 @@ import utils
 
 GRADLE_DIR = os.path.join(utils.REPO_ROOT, 'third_party', 'gradle')
 GRADLE_SHA1 = os.path.join(GRADLE_DIR, 'gradle.tar.gz.sha1')
+GRADLE_TGZ = os.path.join(GRADLE_DIR, 'gradle.tar.gz')
 if utils.IsWindows():
   GRADLE = os.path.join(GRADLE_DIR, 'gradle', 'bin', 'gradle.bat')
 else:
@@ -27,9 +28,12 @@ def PrintCmd(s):
   sys.stdout.flush()
 
 def EnsureGradle():
-  if not os.path.exists(GRADLE):
-    # Bootstrap gradle, everything else is controlled using gradle.
+  if not os.path.exists(GRADLE) or os.path.getmtime(GRADLE_TGZ) < os.path.getmtime(GRADLE_SHA1):
+    # Bootstrap or update gradle, everything else is controlled using gradle.
     utils.DownloadFromGoogleCloudStorage(GRADLE_SHA1)
+    # Update the mtime of the tar file to make sure we do not run again unless
+    # there is an update.
+    os.utime(GRADLE_TGZ, None)
   else:
     print 'gradle.py: Gradle binary present'
 
