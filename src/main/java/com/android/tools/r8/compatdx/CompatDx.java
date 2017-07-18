@@ -294,9 +294,12 @@ public class CompatDx {
       multiDex = options.has(spec.multiDex);
       mainDexList = options.valueOf(spec.mainDexList);
       minimalMainDex = options.has(spec.minimalMainDex);
-      minApiLevel = options.has(spec.minApiLevel)
-              ? options.valueOf(spec.minApiLevel)
-              : Constants.DEFAULT_ANDROID_API;
+      if (options.has(spec.minApiLevel)) {
+        List<Integer> allMinApiLevels = options.valuesOf(spec.minApiLevel);
+        minApiLevel = allMinApiLevels.get(allMinApiLevels.size() - 1);
+      } else {
+        minApiLevel = Constants.DEFAULT_ANDROID_API;
+      }
       inputList = options.valueOf(spec.inputList);
       inputs = ImmutableList.copyOf(options.valuesOf(spec.inputs));
       maxIndexNumber = options.valueOf(spec.maxIndexNumber);
