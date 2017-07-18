@@ -35,9 +35,6 @@ GOYT_EXE = os.path.join('third_party', 'goyt',
     'goyt_160525751')
 FRAMEWORK_JAR = os.path.join('third_party', 'framework',
     'framework_160115954.jar')
-DEX_SEGMENTS_JAR = os.path.join(utils.REPO_ROOT, 'build', 'libs',
-    'dexsegments.jar')
-DEX_SEGMENTS_RESULT_PATTERN = re.compile('- ([^:]+): ([0-9]+)')
 MIN_SDK_VERSION = '24'
 
 def parse_arguments():
@@ -60,27 +57,6 @@ def parse_arguments():
       default = False,
       action = 'store_true')
   return parser.parse_args()
-
-# Return a dictionary: {segment_name -> segments_size}
-def getDexSegmentSizes(dex_files):
-  assert len(dex_files) > 0
-  cmd = ['java', '-jar', DEX_SEGMENTS_JAR]
-  cmd.extend(dex_files)
-  utils.PrintCmd(cmd)
-  output = subprocess.check_output(cmd)
-
-  matches = DEX_SEGMENTS_RESULT_PATTERN.findall(output)
-
-  if matches is None or len(matches) == 0:
-    raise Exception('DexSegments failed to return any output for' \
-        ' these files: {}'.format(dex_files))
-
-  result = {}
-
-  for match in matches:
-    result[match[0]] = int(match[1])
-
-  return result
 
 def Main():
   args = parse_arguments()
@@ -136,9 +112,7 @@ def Main():
     print('{}-Total(CodeSize): {}'
       .format(args.name, code_size))
 
-    for segment_name, size in getDexSegmentSizes(dex_files).items():
-      print('{}-{}(CodeSize): {}'
-          .format(args.name, segment_name, size))
+    utils.print_dexsegments(args.name, dex_files)
 
 if __name__ == '__main__':
   sys.exit(Main())

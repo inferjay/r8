@@ -6,6 +6,7 @@
 # Run ProGuard and the DX or CompatDX (= D8) tool on GmsCore V10.
 
 from __future__ import print_function
+from glob import glob
 from os import makedirs
 from os.path import exists, join
 from subprocess import check_call
@@ -37,18 +38,22 @@ def parse_arguments():
       default = os.getcwd())
   parser.add_argument('--print-runtimeraw',
       metavar = 'BENCHMARKNAME',
-      help = 'Prints the line \'<BENCHMARKNAME>(RunTimeRaw): <elapsed>' +
+      help = 'Print the line \'<BENCHMARKNAME>(RunTimeRaw): <elapsed>' +
              ' ms\' at the end where <elapsed> is the elapsed time in' +
              ' milliseconds.')
   parser.add_argument('--print-memoryuse',
       metavar='BENCHMARKNAME',
-      help='Prints the line \'<BENCHMARKNAME>(MemoryUse):' +
+      help='Print the line \'<BENCHMARKNAME>(MemoryUse):' +
            ' <mem>\' at the end where <mem> is the peak' +
            ' peak resident set size (VmHWM) in bytes.')
   parser.add_argument('--compatdx',
       help = 'Use CompatDx (D8) instead of DX.',
       default = False,
       action = 'store_true')
+  parser.add_argument('--print-dexsegments',
+      metavar = 'BENCHMARKNAME',
+      help = 'Print the sizes of individual dex segments as ' +
+          '\'<BENCHMARKNAME>-<segment>(CodeSize): <bytes>\'')
   return parser.parse_args()
 
 def Main():
@@ -112,6 +117,10 @@ def Main():
   if options.print_runtimeraw:
     print('{}(RunTimeRaw): {} ms'
         .format(options.print_runtimeraw, 1000.0 * (time.time() - t0)))
+
+  if options.print_dexsegments:
+    dex_files = glob(os.path.join(outdir, '*.dex'))
+    utils.print_dexsegments(options.print_dexsegments, dex_files)
 
 if __name__ == '__main__':
   sys.exit(Main())

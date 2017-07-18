@@ -246,8 +246,7 @@ def Main():
     print('Comparing test results to baseline:\n')
 
     passing_tests = consistently_passing_tests_from_test_results([results_xml])
-    baseline_results = \
-        [f for f in glob(join(CTS_BASELINE_FILES_DIR, '*.xml'))]
+    baseline_results = glob(join(CTS_BASELINE_FILES_DIR, '*.xml'))
     assert len(baseline_results) != 0
 
     passing_tests_in_baseline = \

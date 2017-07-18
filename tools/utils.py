@@ -15,6 +15,9 @@ import tempfile
 TOOLS_DIR = os.path.abspath(os.path.normpath(os.path.join(__file__, '..')))
 REPO_ROOT = os.path.realpath(os.path.join(TOOLS_DIR, '..'))
 MEMORY_USE_TMP_FILE = 'memory_use.tmp'
+DEX_SEGMENTS_JAR = os.path.join(REPO_ROOT, 'build', 'libs',
+    'dexsegments.jar')
+DEX_SEGMENTS_RESULT_PATTERN = re.compile('- ([^:]+): ([0-9]+)')
 
 def PrintCmd(s):
   if type(s) is list:
@@ -141,3 +144,29 @@ def grep_memoryuse(logfile):
   if result is None:
     raise Exception('No memory usage found in log: {}'.format(logfile))
   return result
+
+# Return a dictionary: {segment_name -> segments_size}
+def getDexSegmentSizes(dex_files):
+  assert len(dex_files) > 0
+  cmd = ['java', '-jar', DEX_SEGMENTS_JAR]
+  cmd.extend(dex_files)
+  PrintCmd(cmd)
+  output = subprocess.check_output(cmd)
+
+  matches = DEX_SEGMENTS_RESULT_PATTERN.findall(output)
+
+  if matches is None or len(matches) == 0:
+    raise Exception('DexSegments failed to return any output for' \
+        ' these files: {}'.format(dex_files))
+
+  result = {}
+
+  for match in matches:
+    result[match[0]] = int(match[1])
+
+  return result
+
+def print_dexsegments(prefix, dex_files):
+  for segment_name, size in getDexSegmentSizes(dex_files).items():
+    print('{}-{}(CodeSize): {}'
+        .format(prefix, segment_name, size))
