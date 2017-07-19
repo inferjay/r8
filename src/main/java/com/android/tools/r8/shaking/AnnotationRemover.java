@@ -107,25 +107,19 @@ public class AnnotationRemover {
     keep.ensureValid(minificationEnabled);
     for (DexProgramClass clazz : appInfo.classes()) {
       clazz.annotations = stripAnnotations(clazz.annotations, this::filterAnnotations);
-      processMethods(clazz.virtualMethods());
-      processMethods(clazz.directMethods());
-      processFields(clazz.staticFields());
-      processFields(clazz.instanceFields());
+      clazz.forEachMethod(this::processMethod);
+      clazz.forEachField(this::processField);
     }
   }
 
-  private void processMethods(DexEncodedMethod[] methods) {
-    for (DexEncodedMethod method : methods) {
-      method.annotations = stripAnnotations(method.annotations, this::filterAnnotations);
-      method.parameterAnnotations = stripAnnotations(method.parameterAnnotations,
-          this::filterParameterAnnotations);
-    }
+  private void processMethod(DexEncodedMethod method) {
+    method.annotations = stripAnnotations(method.annotations, this::filterAnnotations);
+    method.parameterAnnotations = stripAnnotations(method.parameterAnnotations,
+        this::filterParameterAnnotations);
   }
 
-  private void processFields(DexEncodedField[] fields) {
-    for (DexEncodedField field : fields) {
+  private void processField(DexEncodedField field) {
       field.annotations = stripAnnotations(field.annotations, this::filterAnnotations);
-    }
   }
 
   private DexAnnotationSetRefList stripAnnotations(DexAnnotationSetRefList annotations,

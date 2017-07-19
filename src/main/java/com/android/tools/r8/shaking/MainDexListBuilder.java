@@ -150,20 +150,11 @@ public class MainDexListBuilder {
       addMainDexType(type);
       // Super and interfaces are live, no need to add them.
       traceAnnotationsDirectDendencies(clazz.annotations);
-      for (DexEncodedField field : clazz.instanceFields()) {
-        addMainDexType(field.field.type);
-      }
-      for (DexEncodedField field : clazz.staticFields()) {
-        addMainDexType(field.field.type);
-      }
-      for (DexEncodedMethod method : clazz.directMethods()) {
+      clazz.forEachField( field -> addMainDexType(field.field.type));
+      clazz.forEachMethod( method -> {
         traceMethodDirectDependencies(method.method);
         method.registerReachableDefinitions(codeDirectReferenceCollector);
-      }
-      for (DexEncodedMethod method : clazz.virtualMethods()) {
-        traceMethodDirectDependencies(method.method);
-        method.registerReachableDefinitions(codeDirectReferenceCollector);
-      }
+      });
     }
   }
 

@@ -48,10 +48,6 @@ public class DexAnnotationDirectory extends DexItem {
     }
   }
 
-  public DexProgramClass getDexProgramClass() {
-    return clazz;
-  }
-
   public DexAnnotationSet getClazzAnnotations() {
     return clazz.annotations;
   }

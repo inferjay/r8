@@ -95,6 +95,15 @@ public abstract class DexClass extends DexItem {
     return result;
   }
 
+  public void forEachField(Consumer<DexEncodedField> consumer) {
+    for (DexEncodedField field : staticFields()) {
+      consumer.accept(field);
+    }
+    for (DexEncodedField field : instanceFields()) {
+      consumer.accept(field);
+    }
+  }
+
   public DexEncodedField[] staticFields() {
     return MoreObjects.firstNonNull(staticFields, NO_FIELDS);
   }

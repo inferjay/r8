@@ -24,25 +24,19 @@ public class DiscardedChecker {
 
   public void run() {
     for (DexProgramClass clazz : application.classes()) {
-      if (checkDiscarded.contains(clazz)) {
-        report(clazz);
-      }
-      processSubItems(clazz.directMethods());
-      processSubItems(clazz.virtualMethods());
-      processSubItems(clazz.staticFields());
-      processSubItems(clazz.instanceFields());
+      checkItem(clazz);
+      clazz.forEachMethod(this::checkItem);
+      clazz.forEachField(this::checkItem);
     }
     if (fail) {
       throw new CompilationError("Discard checks failed.");
     }
   }
 
-  private void processSubItems(DexItem[] items) {
-    Arrays.stream(items).filter(checkDiscarded::contains).forEach(this::report);
-  }
-
-  private void report(DexItem item) {
-    System.err.println("Item " + item.toSourceString() + " was not discarded.");
-    fail = true;
+  private void checkItem(DexItem item) {
+    if (checkDiscarded.contains(item)) {
+      System.err.println("Item " + item.toSourceString() + " was not discarded.");
+      fail = true;
+    }
   }
 }
