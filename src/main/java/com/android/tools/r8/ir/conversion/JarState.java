@@ -3,8 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.conversion;
 
-import static com.android.tools.r8.ir.conversion.JarSourceCode.getArrayElementType;
-
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
@@ -66,6 +64,14 @@ public class JarState {
       return isCategory1(type);
     }
 
+    public Type getArrayElementType() {
+      assert type == NULL_TYPE || type == ARRAY_TYPE || type.getSort() == Type.ARRAY;
+      if (type == JarState.NULL_TYPE) {
+        return null;
+      }
+      return getArrayElementType(type);
+    }
+
     public static boolean isCategory1(Type type) {
       return type != Type.LONG_TYPE && type != Type.DOUBLE_TYPE;
     }
@@ -88,6 +94,12 @@ public class JarState {
       }
       // In all other cases we require the two types to represent the same concrete type.
       return type.equals(other);
+    }
+
+    private static Type getArrayElementType(Type type) {
+      String desc = type.getDescriptor();
+      assert desc.charAt(0) == '[';
+      return Type.getType(desc.substring(1));
     }
 
     private static boolean isIntCompatible(int sort) {
