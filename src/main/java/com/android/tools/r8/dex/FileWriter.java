@@ -49,16 +49,19 @@ import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LebUtils;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.IdentityHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -252,7 +255,7 @@ public class FileWriter {
     return Arrays.copyOf(dest.asArray(), layout.getEndOfFile());
   }
 
-  private void sortClassData(List<DexProgramClass> classesWithData) {
+  private void sortClassData(Collection<DexProgramClass> classesWithData) {
     for (DexProgramClass clazz : classesWithData) {
       sortEncodedFields(clazz.instanceFields);
       sortEncodedFields(clazz.staticFields);
@@ -325,7 +328,8 @@ public class FileWriter {
     }
   }
 
-  private List<DexCode> sortDexCodesByClassName(List<DexCode> codes, DexApplication application) {
+  private List<DexCode> sortDexCodesByClassName(Collection<DexCode> codes,
+      DexApplication application) {
     Map<DexCode, String> codeToSignatureMap = new IdentityHashMap<>();
     for (DexProgramClass clazz : mapping.getClasses()) {
       addSignaturesFromMethods(clazz.directMethods(), codeToSignatureMap,
@@ -367,12 +371,12 @@ public class FileWriter {
     }
   }
 
-  private <T extends DexItem> void writeItems(List<T> items, Consumer<Integer> offsetSetter,
+  private <T extends DexItem> void writeItems(Collection<T> items, Consumer<Integer> offsetSetter,
       Consumer<T> writer) {
     writeItems(items, offsetSetter, writer, 1);
   }
 
-  private <T extends DexItem> void writeItems(List<T> items, Consumer<Integer> offsetSetter,
+  private <T extends DexItem> void writeItems(Collection<T> items, Consumer<Integer> offsetSetter,
       Consumer<T> writer, int alignment) {
     if (items.isEmpty()) {
       offsetSetter.accept(0);
@@ -1054,48 +1058,59 @@ public class FileWriter {
   private static class MixedSectionOffsets extends MixedSectionCollection {
 
     private static final int NOT_SET = -1;
+    private static final int NOT_KNOWN = -2;
 
-    private final Map<DexCode, Integer> codes = Maps.newIdentityHashMap();
-    private final List<DexCode> codesList = new LinkedList<>();
-    private final Hashtable<DexDebugInfo, Integer> debugInfos = new Hashtable<>();
-    private final List<DexDebugInfo> debugInfosList = new LinkedList<>();
-    private final Hashtable<DexTypeList, Integer> typeLists = new Hashtable<>();
-    private final List<DexTypeList> typeListsList = new LinkedList<>();
-    private final Hashtable<DexString, Integer> stringData = new Hashtable<>();
-    private final List<DexString> stringDataList = new LinkedList<>();
-    private final Hashtable<DexAnnotation, Integer> annotations = new Hashtable<>();
-    private final List<DexAnnotation> annotationsList = new LinkedList<>();
-    private final Hashtable<DexAnnotationSet, Integer> annotationSets = new Hashtable<>();
-    private final List<DexAnnotationSet> annotationSetsList = new LinkedList<>();
-    private final Hashtable<DexAnnotationSetRefList, Integer> annotationSetRefLists
-        = new Hashtable<>();
-    private final List<DexAnnotationSetRefList> annotationSetRefListsList = new LinkedList<>();
+    private final Reference2IntMap<DexCode> codes = createReference2IntMap();
+    private final Object2IntMap<DexDebugInfo> debugInfos = createObject2IntMap();
+    private final Object2IntMap<DexTypeList> typeLists = createObject2IntMap();
+    private final Reference2IntMap<DexString> stringData = createReference2IntMap();
+    private final Object2IntMap<DexAnnotation> annotations = createObject2IntMap();
+    private final Object2IntMap<DexAnnotationSet> annotationSets = createObject2IntMap();
+    private final Object2IntMap<DexAnnotationSetRefList> annotationSetRefLists
+        = createObject2IntMap();
+    private final Object2IntMap<DexAnnotationDirectory> annotationDirectories
+        = createObject2IntMap();
+    private final Object2IntMap<DexProgramClass> classesWithData = createObject2IntMap();
+    private final Object2IntMap<DexEncodedArray> encodedArrays = createObject2IntMap();
     private final Hashtable<DexProgramClass, DexAnnotationDirectory> clazzToAnnotationDirectory
         = new Hashtable<>();
-    private final Hashtable<DexAnnotationDirectory, Integer> annotationDirectories
-        = new Hashtable<>();
-    private final List<DexAnnotationDirectory> annotationDirectoriesList = new LinkedList<>();
-    private final Hashtable<DexProgramClass, Integer> classesWithData = new Hashtable<>();
-    private final List<DexProgramClass> classesWithDataList = new LinkedList<>();
-    private final Hashtable<DexEncodedArray, Integer> encodedArrays = new Hashtable<>();
-    private final List<DexEncodedArray> encodedArraysList = new LinkedList<>();
 
-    private <T> boolean add(Map<T, Integer> map, List<T> list, T item) {
-      boolean notSeen = map.put(item, NOT_SET) == null;
-      if (notSeen) {
-        list.add(item);
+    private static <T> Object2IntMap<T> createObject2IntMap() {
+      Object2IntMap<T> result = new Object2IntLinkedOpenHashMap<>();
+      result.defaultReturnValue(NOT_KNOWN);
+      return result;
+    }
+
+    private static <T> Reference2IntMap<T> createReference2IntMap() {
+      Reference2IntMap<T> result = new Reference2IntLinkedOpenHashMap<>();
+      result.defaultReturnValue(NOT_KNOWN);
+      return result;
+    }
+
+    private <T> boolean add(Object2IntMap<T> map, T item) {
+      if (!map.containsKey(item)) {
+        map.put(item, NOT_SET);
+        return true;
       }
-      return notSeen;
+      return false;
+    }
+
+    private <T> boolean add(Reference2IntMap<T> map, T item) {
+      if (!map.containsKey(item)) {
+        map.put(item, NOT_SET);
+        return true;
+      }
+      return false;
     }
 
     @Override
     public boolean add(DexProgramClass aClassWithData) {
-      return add(classesWithData, classesWithDataList, aClassWithData);
+      return add(classesWithData, aClassWithData);
     }
 
     @Override
     public boolean add(DexEncodedArray encodedArray) {
-      return add(encodedArrays, encodedArraysList, encodedArray);
+      return add(encodedArrays, encodedArray);
     }
 
     @Override
@@ -1103,17 +1118,17 @@ public class FileWriter {
       if (annotationSet.isEmpty()) {
         return false;
       }
-      return add(annotationSets, annotationSetsList, annotationSet);
+      return add(annotationSets, annotationSet);
     }
 
     @Override
     public boolean add(DexCode code) {
-      return add(codes, codesList, code);
+      return add(codes, code);
     }
 
     @Override
     public boolean add(DexDebugInfo debugInfo) {
-      return add(debugInfos, debugInfosList, debugInfo);
+      return add(debugInfos, debugInfo);
     }
 
     @Override
@@ -1121,7 +1136,7 @@ public class FileWriter {
       if (typeList.isEmpty()) {
         return false;
       }
-      return add(typeLists, typeListsList, typeList);
+      return add(typeLists, typeList);
     }
 
     @Override
@@ -1129,12 +1144,12 @@ public class FileWriter {
       if (annotationSetRefList.isEmpty()) {
         return false;
       }
-      return add(annotationSetRefLists, annotationSetRefListsList, annotationSetRefList);
+      return add(annotationSetRefLists, annotationSetRefList);
     }
 
     @Override
     public boolean add(DexAnnotation annotation) {
-      return add(annotations, annotationsList, annotation);
+      return add(annotations, annotation);
     }
 
     @Override
@@ -1142,60 +1157,68 @@ public class FileWriter {
         DexAnnotationDirectory annotationDirectory) {
       DexAnnotationDirectory previous = clazzToAnnotationDirectory.put(clazz, annotationDirectory);
       assert previous == null;
-      return add(annotationDirectories, annotationDirectoriesList, annotationDirectory);
+      return add(annotationDirectories, annotationDirectory);
     }
 
     public boolean add(DexString string) {
-      return add(stringData, stringDataList, string);
+      return add(stringData, string);
     }
 
-    public List<DexCode> getCodes() {
-      return Collections.unmodifiableList(codesList);
+    public Collection<DexCode> getCodes() {
+      return codes.keySet();
     }
 
-    public List<DexDebugInfo> getDebugInfos() {
-      return Collections.unmodifiableList(debugInfosList);
+    public Collection<DexDebugInfo> getDebugInfos() {
+      return debugInfos.keySet();
     }
 
-    public List<DexTypeList> getTypeLists() {
-      return Collections.unmodifiableList(typeListsList);
+    public Collection<DexTypeList> getTypeLists() {
+      return typeLists.keySet();
     }
 
-    public List<DexString> getStringData() {
-      return Collections.unmodifiableList(stringDataList);
+    public Collection<DexString> getStringData() {
+      return stringData.keySet();
     }
 
-    public List<DexAnnotation> getAnnotations() {
-      return Collections.unmodifiableList(annotationsList);
+    public Collection<DexAnnotation> getAnnotations() {
+      return annotations.keySet();
     }
 
-    public List<DexAnnotationSet> getAnnotationSets() {
-      return Collections.unmodifiableList(annotationSetsList);
+    public Collection<DexAnnotationSet> getAnnotationSets() {
+      return annotationSets.keySet();
     }
 
-    public List<DexAnnotationSetRefList> getAnnotationSetRefLists() {
-      return Collections.unmodifiableList(annotationSetRefListsList);
+    public Collection<DexAnnotationSetRefList> getAnnotationSetRefLists() {
+      return annotationSetRefLists.keySet();
     }
 
-    public List<DexProgramClass> getClassesWithData() {
-      return Collections.unmodifiableList(classesWithDataList);
+    public Collection<DexProgramClass> getClassesWithData() {
+      return classesWithData.keySet();
     }
 
-    public List<DexAnnotationDirectory> getAnnotationDirectories() {
-      return Collections.unmodifiableList(annotationDirectoriesList);
+    public Collection<DexAnnotationDirectory> getAnnotationDirectories() {
+      return annotationDirectories.keySet();
     }
 
-    public List<DexEncodedArray> getEncodedArrays() {
-      return Collections.unmodifiableList(encodedArraysList);
+    public Collection<DexEncodedArray> getEncodedArrays() {
+      return encodedArrays.keySet();
     }
 
-    private <T> int lookup(T item, Map<T, Integer> table) {
+    private <T> int lookup(T item, Object2IntMap<T> table) {
       if (item == null) {
         return Constants.NO_OFFSET;
       }
-      Integer offset = table.get(item);
-      assert offset != null;
-      assert offset != NOT_SET;
+      int offset = table.getInt(item);
+      assert offset != NOT_SET && offset != NOT_KNOWN;
+      return offset;
+    }
+
+    private <T> int lookup(T item, Reference2IntMap<T> table) {
+      if (item == null) {
+        return Constants.NO_OFFSET;
+      }
+      int offset = table.getInt(item);
+      assert offset != NOT_SET && offset != NOT_KNOWN;
       return offset;
     }
 
@@ -1227,8 +1250,8 @@ public class FileWriter {
       if (!clazz.hasAnnotations()) {
         return Constants.NO_OFFSET;
       }
-      Integer offset = annotationDirectories.get(clazzToAnnotationDirectory.get(clazz));
-      assert offset != null;
+      int offset = annotationDirectories.getInt(clazzToAnnotationDirectory.get(clazz));
+      assert offset != NOT_KNOWN;
       return offset;
     }
 

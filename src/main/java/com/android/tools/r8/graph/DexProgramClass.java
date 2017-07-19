@@ -114,9 +114,8 @@ public class DexProgramClass extends DexClass implements Supplier<DexProgramClas
         || hasAnnotations(instanceFields);
   }
 
-  public boolean hasInternalizableAnnotation() {
-    return !annotations.isEmpty()
-        && !hasAnnotations(virtualMethods)
+  boolean hasOnlyInternalizableAnnotations() {
+    return !hasAnnotations(virtualMethods)
         && !hasAnnotations(directMethods)
         && !hasAnnotations(staticFields)
         && !hasAnnotations(instanceFields);
