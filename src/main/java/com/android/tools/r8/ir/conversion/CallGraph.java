@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Call graph representation.
@@ -82,16 +83,6 @@ public class CallGraph {
     }
 
     @Override
-    public int hashCode() {
-      return method.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      return this == obj;
-    }
-
-    @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("MethodNode for: ");
@@ -139,7 +130,6 @@ public class CallGraph {
     return (value != null) && value.contains(callee);
   }
 
-  private List<Node> leaves = null;
   private Set<DexEncodedMethod> singleCallSite = Sets.newIdentityHashSet();
   private Set<DexEncodedMethod> doubleCallSite = Sets.newIdentityHashSet();
 
@@ -159,7 +149,6 @@ public class CallGraph {
     graph.breakCycles();
     assert graph.breakCycles() == 0;  // This time the cycles should be gone.
     graph.fillCallSiteSets(appInfo);
-    graph.fillInitialLeaves();
     return graph;
   }
 
@@ -195,16 +184,6 @@ public class CallGraph {
     }
   }
 
-  private void fillInitialLeaves() {
-    assert leaves == null;
-    leaves = new ArrayList<>();
-    for (Node node : nodes.values()) {
-      if (node.isLeaf()) {
-        leaves.add(node);
-      }
-    }
-  }
-
   private static boolean allMethodsExists(DexApplication application, CallGraph graph) {
     for (DexProgramClass clazz : application.classes()) {
       clazz.forEachMethod( method -> { assert graph.nodes.get(method) != null; });
@@ -213,28 +192,10 @@ public class CallGraph {
   }
 
   /**
-   * Remove all leaves (nodes with an call (outgoing) degree of 0).
-   *
-   * @return List of {@link DexEncodedMethod} of the leaves removed.
-   */
-  private List<DexEncodedMethod> removeLeaves() {
-    List<DexEncodedMethod> result = new ArrayList<>();
-    List<Node> newLeaves = new ArrayList<>();
-    for (Node leaf : leaves) {
-      assert nodes.containsKey(leaf.method) && nodes.get(leaf.method).callees.isEmpty();
-      remove(leaf, newLeaves);
-      result.add(leaf.method);
-    }
-    leaves = newLeaves;
-    return result;
-  }
-
-  /**
-   * Pick the next set of leaves (nodes with an call (outgoing) degree of 0) if any.
+   * Extract the next set of leaves (nodes with an call (outgoing) degree of 0) if any.
    * <p>
-   * If the graph has no leaves then some cycles in the graph will be broken to create a set of
-   * leaves. See {@link #breakCycles} on how cycles are broken. This ensures that at least one
-   * leave is returned if the graph is not empty.
+   * All nodes in the graph are extracted if called repeatedly until null is returned.
+   * Please note that there are no cycles in this graph (see {@link #breakCycles}).
    * <p>
    *
    * @return  List of {@link DexEncodedMethod}.
@@ -243,13 +204,16 @@ public class CallGraph {
     if (isEmpty()) {
       return null;
     }
-    List<DexEncodedMethod> leaves = removeLeaves();
-    assert leaves.size() > 0;
-    leaves.forEach( leaf -> { assert !leaf.isProcessed(); });
-    return leaves;
+    // First identify all leaves before removing them from the graph.
+    List<Node> leaves = nodes.values().stream().filter(Node::isLeaf).collect(Collectors.toList());
+    leaves.forEach( leaf -> {
+      leaf.callers.forEach( caller -> caller.callees.remove(leaf));
+      nodes.remove(leaf.method);
+    });
+    return leaves.stream().map( leaf -> leaf.method).collect(Collectors.toList());
   }
 
-  private int traverse(Node node, HashSet<Node> stack, HashSet<Node> marked) {
+  private int traverse(Node node, Set<Node> stack, Set<Node> marked) {
     int numberOfCycles = 0;
     if (!marked.contains(node)) {
       assert !stack.contains(node);
@@ -268,7 +232,8 @@ public class CallGraph {
           // We have a cycle; break it by removing node->callee.
           toBeRemoved.add(callee);
           callee.callers.remove(node);
-          breakers.computeIfAbsent(node.method, ignore -> new HashSet<>()).add(callee.method);
+          breakers.computeIfAbsent(node.method,
+              ignore -> Sets.newIdentityHashSet()).add(callee.method);
         } else {
           numberOfCycles += traverse(callee, stack, marked);
         }
@@ -287,8 +252,8 @@ public class CallGraph {
     // Break cycles in this call graph by removing edges causing cycles.
     // The remove edges are stored in @breakers.
     int numberOfCycles = 0;
-    HashSet<Node> stack = new HashSet<>();
-    HashSet<Node> marked = new HashSet<>();
+    Set<Node> stack = Sets.newIdentityHashSet();
+    Set<Node> marked = Sets.newIdentityHashSet();
     for(Node node : nodes.values()) {
       numberOfCycles += traverse(node, stack, marked);
     }
@@ -309,18 +274,6 @@ public class CallGraph {
       caller.isSelfRecursive = true;
     }
     callee.invokeCount++;
-  }
-
-  private void remove(Node node, List<Node> leaves) {
-    assert node != null;
-    for (Node caller : node.callers) {
-      boolean removed = caller.callees.remove(node);
-      if (caller.isLeaf()) {
-        leaves.add(caller);
-      }
-      assert removed;
-    }
-    nodes.remove(node.method);
   }
 
   public boolean isEmpty() {
