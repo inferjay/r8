@@ -50,95 +50,95 @@ public class DexItemFactory {
   public static final DexType catchAllType = new DexType(new DexString("CATCH_ALL"));
   private static final Set<DexItem> internalSentinels = ImmutableSet.of(catchAllType);
 
-  public DexString booleanDescriptor = createString("Z");
-  public DexString byteDescriptor = createString("B");
-  public DexString charDescriptor = createString("C");
-  public DexString doubleDescriptor = createString("D");
-  public DexString floatDescriptor = createString("F");
-  public DexString intDescriptor = createString("I");
-  public DexString longDescriptor = createString("J");
-  public DexString shortDescriptor = createString("S");
-  public DexString voidDescriptor = createString("V");
+  public final DexString booleanDescriptor = createString("Z");
+  public final DexString byteDescriptor = createString("B");
+  public final DexString charDescriptor = createString("C");
+  public final DexString doubleDescriptor = createString("D");
+  public final DexString floatDescriptor = createString("F");
+  public final DexString intDescriptor = createString("I");
+  public final DexString longDescriptor = createString("J");
+  public final DexString shortDescriptor = createString("S");
+  public final DexString voidDescriptor = createString("V");
 
-  public DexString boxedBooleanDescriptor = createString("Ljava/lang/Boolean;");
-  public DexString boxedByteDescriptor = createString("Ljava/lang/Byte;");
-  public DexString boxedCharDescriptor = createString("Ljava/lang/Character;");
-  public DexString boxedDoubleDescriptor = createString("Ljava/lang/Double;");
-  public DexString boxedFloatDescriptor = createString("Ljava/lang/Float;");
-  public DexString boxedIntDescriptor = createString("Ljava/lang/Integer;");
-  public DexString boxedLongDescriptor = createString("Ljava/lang/Long;");
-  public DexString boxedShortDescriptor = createString("Ljava/lang/Short;");
-  public DexString boxedNumberDescriptor = createString("Ljava/lang/Number;");
+  public final DexString boxedBooleanDescriptor = createString("Ljava/lang/Boolean;");
+  public final DexString boxedByteDescriptor = createString("Ljava/lang/Byte;");
+  public final DexString boxedCharDescriptor = createString("Ljava/lang/Character;");
+  public final DexString boxedDoubleDescriptor = createString("Ljava/lang/Double;");
+  public final DexString boxedFloatDescriptor = createString("Ljava/lang/Float;");
+  public final DexString boxedIntDescriptor = createString("Ljava/lang/Integer;");
+  public final DexString boxedLongDescriptor = createString("Ljava/lang/Long;");
+  public final DexString boxedShortDescriptor = createString("Ljava/lang/Short;");
+  public final DexString boxedNumberDescriptor = createString("Ljava/lang/Number;");
 
-  public DexString unboxBooleanMethodName = createString("booleanValue");
-  public DexString unboxByteMethodName = createString("byteValue");
-  public DexString unboxCharMethodName = createString("charValue");
-  public DexString unboxShortMethodName = createString("shortValue");
-  public DexString unboxIntMethodName = createString("intValue");
-  public DexString unboxLongMethodName = createString("longValue");
-  public DexString unboxFloatMethodName = createString("floatValue");
-  public DexString unboxDoubleMethodName = createString("doubleValue");
+  public final DexString unboxBooleanMethodName = createString("booleanValue");
+  public final DexString unboxByteMethodName = createString("byteValue");
+  public final DexString unboxCharMethodName = createString("charValue");
+  public final DexString unboxShortMethodName = createString("shortValue");
+  public final DexString unboxIntMethodName = createString("intValue");
+  public final DexString unboxLongMethodName = createString("longValue");
+  public final DexString unboxFloatMethodName = createString("floatValue");
+  public final DexString unboxDoubleMethodName = createString("doubleValue");
 
-  public DexString valueOfMethodName = createString("valueOf");
+  public final DexString valueOfMethodName = createString("valueOf");
 
-  public DexString getClassMethodName = createString("getClass");
-  public DexString ordinalMethodName = createString("ordinal");
+  public final DexString getClassMethodName = createString("getClass");
+  public final DexString ordinalMethodName = createString("ordinal");
   public final DexString desiredAssertionStatusMethodName = createString("desiredAssertionStatus");
   public final DexString assertionsDisabled = createString("$assertionsDisabled");
 
-  public DexString stringDescriptor = createString("Ljava/lang/String;");
-  public DexString objectDescriptor = createString("Ljava/lang/Object;");
-  public DexString classDescriptor = createString("Ljava/lang/Class;");
-  public DexString enumDescriptor = createString("Ljava/lang/Enum;");
-  public DexString annotationDescriptor = createString("Ljava/lang/annotation/Annotation;");
-  public DexString throwableDescriptor = createString("Ljava/lang/Throwable;");
-  public DexString objectsDescriptor = createString("Ljava/util/Objects;");
+  public final DexString stringDescriptor = createString("Ljava/lang/String;");
+  public final DexString objectDescriptor = createString("Ljava/lang/Object;");
+  public final DexString classDescriptor = createString("Ljava/lang/Class;");
+  public final DexString enumDescriptor = createString("Ljava/lang/Enum;");
+  public final DexString annotationDescriptor = createString("Ljava/lang/annotation/Annotation;");
+  public final DexString throwableDescriptor = createString("Ljava/lang/Throwable;");
+  public final DexString objectsDescriptor = createString("Ljava/util/Objects;");
 
-  public DexString constructorMethodName = createString(Constants.INSTANCE_INITIALIZER_NAME);
-  public DexString classConstructorMethodName = createString(Constants.CLASS_INITIALIZER_NAME);
+  public final DexString constructorMethodName = createString(Constants.INSTANCE_INITIALIZER_NAME);
+  public final DexString classConstructorMethodName = createString(Constants.CLASS_INITIALIZER_NAME);
 
-  public DexString thisName = createString("this");
+  public final DexString thisName = createString("this");
 
-  private DexString charArrayDescriptor = createString("[C");
-  private DexType charArrayType = createType(charArrayDescriptor);
-  public DexString throwableArrayDescriptor = createString("[Ljava/lang/Throwable;");
+  private final DexString charArrayDescriptor = createString("[C");
+  private final DexType charArrayType = createType(charArrayDescriptor);
+  public final DexString throwableArrayDescriptor = createString("[Ljava/lang/Throwable;");
 
-  public DexType booleanType = createType(booleanDescriptor);
-  public DexType byteType = createType(byteDescriptor);
-  public DexType charType = createType(charDescriptor);
-  public DexType doubleType = createType(doubleDescriptor);
-  public DexType floatType = createType(floatDescriptor);
-  public DexType intType = createType(intDescriptor);
-  public DexType longType = createType(longDescriptor);
-  public DexType shortType = createType(shortDescriptor);
-  public DexType voidType = createType(voidDescriptor);
+  public final DexType booleanType = createType(booleanDescriptor);
+  public final DexType byteType = createType(byteDescriptor);
+  public final DexType charType = createType(charDescriptor);
+  public final DexType doubleType = createType(doubleDescriptor);
+  public final DexType floatType = createType(floatDescriptor);
+  public final DexType intType = createType(intDescriptor);
+  public final DexType longType = createType(longDescriptor);
+  public final DexType shortType = createType(shortDescriptor);
+  public final DexType voidType = createType(voidDescriptor);
 
-  public DexType boxedBooleanType = createType(boxedBooleanDescriptor);
-  public DexType boxedByteType = createType(boxedByteDescriptor);
-  public DexType boxedCharType = createType(boxedCharDescriptor);
-  public DexType boxedDoubleType = createType(boxedDoubleDescriptor);
-  public DexType boxedFloatType = createType(boxedFloatDescriptor);
-  public DexType boxedIntType = createType(boxedIntDescriptor);
-  public DexType boxedLongType = createType(boxedLongDescriptor);
-  public DexType boxedShortType = createType(boxedShortDescriptor);
-  public DexType boxedNumberType = createType(boxedNumberDescriptor);
+  public final DexType boxedBooleanType = createType(boxedBooleanDescriptor);
+  public final DexType boxedByteType = createType(boxedByteDescriptor);
+  public final DexType boxedCharType = createType(boxedCharDescriptor);
+  public final DexType boxedDoubleType = createType(boxedDoubleDescriptor);
+  public final DexType boxedFloatType = createType(boxedFloatDescriptor);
+  public final DexType boxedIntType = createType(boxedIntDescriptor);
+  public final DexType boxedLongType = createType(boxedLongDescriptor);
+  public final DexType boxedShortType = createType(boxedShortDescriptor);
+  public final DexType boxedNumberType = createType(boxedNumberDescriptor);
 
-  public DexType stringType = createType(stringDescriptor);
-  public DexType objectType = createType(objectDescriptor);
-  public DexType enumType = createType(enumDescriptor);
-  public DexType annotationType = createType(annotationDescriptor);
-  public DexType throwableType = createType(throwableDescriptor);
+  public final DexType stringType = createType(stringDescriptor);
+  public final DexType objectType = createType(objectDescriptor);
+  public final DexType enumType = createType(enumDescriptor);
+  public final DexType annotationType = createType(annotationDescriptor);
+  public final DexType throwableType = createType(throwableDescriptor);
 
-  public DexType stringBuilderType = createType("Ljava/lang/StringBuilder;");
-  public DexType stringBufferType = createType("Ljava/lang/StringBuffer;");
+  public final DexType stringBuilderType = createType("Ljava/lang/StringBuilder;");
+  public final DexType stringBufferType = createType("Ljava/lang/StringBuffer;");
 
-  public StringBuildingMethods stringBuilderMethods = new StringBuildingMethods(stringBuilderType);
-  public StringBuildingMethods stringBufferMethods = new StringBuildingMethods(stringBufferType);
-  public ObjectsMethods objectsMethods = new ObjectsMethods();
-  public ObjectMethods objectMethods = new ObjectMethods();
-  public LongMethods longMethods = new LongMethods();
-  public ThrowableMethods throwableMethods = new ThrowableMethods();
-  public ClassMethods classMethods = new ClassMethods();
+  public final StringBuildingMethods stringBuilderMethods = new StringBuildingMethods(stringBuilderType);
+  public final StringBuildingMethods stringBufferMethods = new StringBuildingMethods(stringBufferType);
+  public final ObjectsMethods objectsMethods = new ObjectsMethods();
+  public final ObjectMethods objectMethods = new ObjectMethods();
+  public final LongMethods longMethods = new LongMethods();
+  public final ThrowableMethods throwableMethods = new ThrowableMethods();
+  public final ClassMethods classMethods = new ClassMethods();
 
   // Dex system annotations.
   // See https://source.android.com/devices/tech/dalvik/dex-format.html#system-annotation
@@ -161,7 +161,7 @@ public class DexItemFactory {
 
   public class LongMethods {
 
-    public DexMethod compare;
+    public final DexMethod compare;
 
     private LongMethods() {
       compare = createMethod(boxedLongDescriptor,
@@ -184,11 +184,11 @@ public class DexItemFactory {
 
   public class ObjectMethods {
 
-    public DexMethod getClass;
+    public final DexMethod getClass;
 
     private ObjectMethods() {
-      getClass = createMethod(objectsDescriptor,
-          getClassMethodName, classDescriptor, new DexString[]{});
+      getClass = createMethod(objectsDescriptor, getClassMethodName, classDescriptor,
+          DexString.EMPTY_ARRAY);
     }
   }
 
@@ -208,34 +208,33 @@ public class DexItemFactory {
 
     private ClassMethods() {
       desiredAssertionStatus = createMethod(classDescriptor,
-          desiredAssertionStatusMethodName, booleanDescriptor, new DexString[]{});
+          desiredAssertionStatusMethodName, booleanDescriptor, DexString.EMPTY_ARRAY);
     }
   }
 
 
   public class StringBuildingMethods {
 
-    public DexMethod appendBoolean;
-    public DexMethod appendChar;
-    public DexMethod appendCharArray;
-    public DexMethod appendSubCharArray;
-    public DexMethod appendCharSequence;
-    public DexMethod appendSubCharSequence;
-    public DexMethod appendInt;
-    public DexMethod appendDouble;
-    public DexMethod appendFloat;
-    public DexMethod appendLong;
-    public DexMethod appendObject;
-    public DexMethod appendString;
-    public DexMethod appendStringBuffer;
-    public DexMethod toString;
+    public final DexMethod appendBoolean;
+    public final DexMethod appendChar;
+    public final DexMethod appendCharArray;
+    public final DexMethod appendSubCharArray;
+    public final DexMethod appendCharSequence;
+    public final DexMethod appendSubCharSequence;
+    public final DexMethod appendInt;
+    public final DexMethod appendDouble;
+    public final DexMethod appendFloat;
+    public final DexMethod appendLong;
+    public final DexMethod appendObject;
+    public final DexMethod appendString;
+    public final DexMethod appendStringBuffer;
+    public final DexMethod toString;
 
     private StringBuildingMethods(DexType receiver) {
       DexType sbufType = createType(createString("Ljava/lang/StringBuffer;"));
       DexType charSequenceType = createType(createString("Ljava/lang/CharSequence;"));
       DexString append = createString("append");
       DexString toStringMethodName = createString("toString");
-
 
       appendBoolean = createMethod(receiver, createProto(receiver, booleanType), append);
       appendChar = createMethod(receiver, createProto(receiver, charType), append);
@@ -282,7 +281,7 @@ public class DexItemFactory {
 
   synchronized private DexString canonicalizeString(String key) {
     assert key != null;
-    return strings.computeIfAbsent(key, k -> new DexString(k));
+    return strings.computeIfAbsent(key, DexString::new);
   }
 
   public DexString createString(int size, byte[] content) {
@@ -382,56 +381,31 @@ public class DexItemFactory {
 
   public AdvanceLine createAdvanceLine(int delta) {
     synchronized (advanceLines) {
-      AdvanceLine result = advanceLines.get(delta);
-      if (result == null) {
-        result = new AdvanceLine(delta);
-        advanceLines.put(delta, result);
-      }
-      return result;
+      return advanceLines.computeIfAbsent(delta, AdvanceLine::new);
     }
   }
 
   public AdvancePC createAdvancePC(int delta) {
     synchronized (advancePCs) {
-      AdvancePC result = advancePCs.get(delta);
-      if (result == null) {
-        result = new AdvancePC(delta);
-        advancePCs.put(delta, result);
-      }
-      return result;
+      return advancePCs.computeIfAbsent(delta, AdvancePC::new);
     }
   }
 
   public Default createDefault(int value) {
     synchronized (defaults) {
-      Default result = defaults.get(value);
-      if (result == null) {
-        result = new Default(value);
-        defaults.put(value, result);
-      }
-      return result;
+      return defaults.computeIfAbsent(value, Default::new);
     }
   }
 
   public EndLocal createEndLocal(int registerNum) {
     synchronized (endLocals) {
-      EndLocal result = endLocals.get(registerNum);
-      if (result == null) {
-        result = new EndLocal(registerNum);
-        endLocals.put(registerNum, result);
-      }
-      return result;
+      return endLocals.computeIfAbsent(registerNum, EndLocal::new);
     }
   }
 
   public RestartLocal createRestartLocal(int registerNum) {
     synchronized (restartLocals) {
-      RestartLocal result = restartLocals.get(registerNum);
-      if (result == null) {
-        result = new RestartLocal(registerNum);
-        restartLocals.put(registerNum, result);
-      }
-      return result;
+      return restartLocals.computeIfAbsent(registerNum, RestartLocal::new);
     }
   }
 
@@ -445,12 +419,7 @@ public class DexItemFactory {
 
   public SetFile createSetFile(DexString fileName) {
     synchronized (setFiles) {
-      SetFile result = setFiles.get(fileName);
-      if (result == null) {
-        result = new SetFile(fileName);
-        setFiles.put(fileName, result);
-      }
-      return result;
+      return setFiles.computeIfAbsent(fileName, SetFile::new);
     }
   }
 
