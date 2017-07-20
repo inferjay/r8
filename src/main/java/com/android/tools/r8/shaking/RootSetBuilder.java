@@ -3,6 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.shaking;
 
+import com.google.common.base.Equivalence.Wrapper;
+import com.google.common.collect.Sets;
+
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexAnnotationSet;
@@ -21,8 +24,7 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.shaking.ProguardTypeMatcher.MatchSpecificType;
 import com.android.tools.r8.utils.MethodSignatureEquivalence;
 import com.android.tools.r8.utils.ThreadUtils;
-import com.google.common.base.Equivalence.Wrapper;
-import com.google.common.collect.Sets;
+
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -246,8 +248,8 @@ public class RootSetBuilder {
       DexType onlyIfClassKept) {
     Set<Wrapper<DexMethod>> methodsMarked = new HashSet<>();
     while (clazz != null) {
-      markMethods(clazz.directMethods(), memberKeepRules, rule, methodsMarked, onlyIfClassKept);
-      markMethods(clazz.virtualMethods(), memberKeepRules, rule, methodsMarked, onlyIfClassKept);
+      clazz.forEachMethod(method ->
+          markMethod(method, memberKeepRules, rule, methodsMarked, onlyIfClassKept));
       clazz = application.definitionFor(clazz.superType);
     }
   }
@@ -255,8 +257,7 @@ public class RootSetBuilder {
   private void markMatchingFields(DexClass clazz,
       Collection<ProguardMemberRule> memberKeepRules, ProguardConfigurationRule rule,
       DexType onlyIfClassKept) {
-    markFields(clazz.staticFields(), memberKeepRules, rule, onlyIfClassKept);
-    markFields(clazz.instanceFields(), memberKeepRules, rule, onlyIfClassKept);
+    clazz.forEachField(field -> markField(field, memberKeepRules, rule, onlyIfClassKept));
   }
 
   public static void writeSeeds(Iterable<DexItem> seeds, PrintStream out) {
@@ -371,36 +372,32 @@ public class RootSetBuilder {
     return typeCache.computeIfAbsent(type, DexType::toSourceString);
   }
 
-  private void markMethods(DexEncodedMethod[] methods, Collection<ProguardMemberRule> rules,
+  private void markMethod(DexEncodedMethod method, Collection<ProguardMemberRule> rules,
       ProguardConfigurationRule context, Set<Wrapper<DexMethod>> methodsMarked,
       DexType onlyIfClassKept) {
-    for (DexEncodedMethod method : methods) {
-      if (methodsMarked.contains(MethodSignatureEquivalence.get().wrap(method.method))) {
-        continue;
-      }
-      for (ProguardMemberRule rule : rules) {
-        if (rule.matches(method, this)) {
-          if (Log.ENABLED) {
-            Log.verbose(getClass(), "Marking method `%s` due to `%s { %s }`.", method, context,
-                rule);
-          }
-          addItemToSets(method, context, rule, onlyIfClassKept);
+    if (methodsMarked.contains(MethodSignatureEquivalence.get().wrap(method.method))) {
+      return;
+    }
+    for (ProguardMemberRule rule : rules) {
+      if (rule.matches(method, this)) {
+        if (Log.ENABLED) {
+          Log.verbose(getClass(), "Marking method `%s` due to `%s { %s }`.", method, context,
+              rule);
         }
+        addItemToSets(method, context, rule, onlyIfClassKept);
       }
     }
   }
 
-  private void markFields(DexEncodedField[] fields, Collection<ProguardMemberRule> rules,
+  private void markField(DexEncodedField field, Collection<ProguardMemberRule> rules,
       ProguardConfigurationRule context, DexType onlyIfClassKept) {
-    for (DexEncodedField field : fields) {
-      for (ProguardMemberRule rule : rules) {
-        if (rule.matches(field, this)) {
-          if (Log.ENABLED) {
-            Log.verbose(getClass(), "Marking field `%s` due to `%s { %s }`.", field, context,
-                rule);
-          }
-          addItemToSets(field, context, rule, onlyIfClassKept);
+    for (ProguardMemberRule rule : rules) {
+      if (rule.matches(field, this)) {
+        if (Log.ENABLED) {
+          Log.verbose(getClass(), "Marking field `%s` due to `%s { %s }`.", field, context,
+              rule);
         }
+        addItemToSets(field, context, rule, onlyIfClassKept);
       }
     }
   }

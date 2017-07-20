@@ -193,16 +193,11 @@ public class DexApplication {
    */
   public void disassemble(Path outputDir, InternalOptions options) {
     for (DexProgramClass clazz : programClasses.getAllClasses()) {
-      for (DexEncodedMethod method : clazz.virtualMethods()) {
+      clazz.forEachMethod(method -> {
         if (options.methodMatchesFilter(method)) {
           disassemble(method, getProguardMap(), outputDir);
         }
-      }
-      for (DexEncodedMethod method : clazz.directMethods()) {
-        if (options.methodMatchesFilter(method)) {
-          disassemble(method, getProguardMap(), outputDir);
-        }
-      }
+      });
     }
   }
 

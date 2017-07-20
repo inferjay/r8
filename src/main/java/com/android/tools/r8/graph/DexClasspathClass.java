@@ -41,11 +41,6 @@ public class DexClasspathClass extends DexClass implements Supplier<DexClasspath
   }
 
   @Override
-  public DexClasspathClass asClasspathClass() {
-    return this;
-  }
-
-  @Override
   public DexClasspathClass get() {
     return this;
   }

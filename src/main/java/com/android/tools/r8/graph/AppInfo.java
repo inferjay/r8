@@ -42,19 +42,10 @@ public class AppInfo {
     Builder<Descriptor, KeyedDexItem> builder = ImmutableMap.builder();
     DexClass clazz = app.definitionFor(type);
     if (clazz != null) {
-      registerDefinitions(builder, clazz.directMethods());
-      registerDefinitions(builder, clazz.virtualMethods());
-      registerDefinitions(builder, clazz.instanceFields());
-      registerDefinitions(builder, clazz.staticFields());
+      clazz.forEachMethod(method -> builder.put(method.getKey(), method));
+      clazz.forEachField(field -> builder.put(field.getKey(), field));
     }
     return builder.build();
-  }
-
-  private void registerDefinitions(Builder<Descriptor, KeyedDexItem> builder,
-      KeyedDexItem<? extends Descriptor>[] items) {
-    for (KeyedDexItem<? extends Descriptor> item : items) {
-      builder.put(item.getKey(), item);
-    }
   }
 
   public Iterable<DexProgramClass> classes() {

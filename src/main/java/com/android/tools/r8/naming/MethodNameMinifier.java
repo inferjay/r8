@@ -3,6 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.naming;
 
+import com.google.common.base.Equivalence.Wrapper;
+import com.google.common.collect.Sets;
+
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -13,8 +16,7 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
 import com.android.tools.r8.utils.MethodSignatureEquivalence;
 import com.android.tools.r8.utils.Timing;
-import com.google.common.base.Equivalence.Wrapper;
-import com.google.common.collect.Sets;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -337,19 +339,16 @@ public class MethodNameMinifier {
                 : parent.createChild());
     if (holder != null) {
       boolean keepAll = holder.isLibraryClass() || holder.accessFlags.isAnnotation();
-      reserveNamesForMethods(holder.virtualMethods(), keepAll, state);
-      reserveNamesForMethods(holder.directMethods(), keepAll, state);
+      holder.forEachMethod(method -> reserveNamesForMethod(method, keepAll, state));
     }
     return state;
   }
 
-  private void reserveNamesForMethods(DexEncodedMethod[] methods,
+  private void reserveNamesForMethod(DexEncodedMethod method,
       boolean keepAll, NamingState<DexProto> state) {
-    for (DexEncodedMethod method : methods) {
-      if (keepAll || rootSet.noObfuscation.contains(method)) {
-        state.reserveName(method.method.name, method.method.proto);
-        globalState.reserveName(method.method.name, method.method.proto);
-      }
+    if (keepAll || rootSet.noObfuscation.contains(method)) {
+      state.reserveName(method.method.name, method.method.proto);
+      globalState.reserveName(method.method.name, method.method.proto);
     }
   }
 }

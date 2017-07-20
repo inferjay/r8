@@ -11,6 +11,7 @@ import com.android.tools.r8.errors.Unreachable;
 import com.google.common.base.MoreObjects;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.function.Consumer;
 
 public abstract class DexClass extends DexItem {
@@ -166,10 +167,6 @@ public abstract class DexClass extends DexItem {
 
   public boolean isClasspathClass() {
     return false;
-  }
-
-  public DexClasspathClass asClasspathClass() {
-    return null;
   }
 
   public boolean isLibraryClass() {

@@ -12,8 +12,8 @@ public abstract class ClassAndMemberPublicizer {
   public static DexApplication run(DexApplication application) {
     for (DexClass clazz : application.classes()) {
       clazz.accessFlags.promoteToPublic();
-      clazz.forEachMethod( method -> method.accessFlags.promoteNonPrivateToPublic());
-      clazz.forEachField( field -> field.accessFlags.promoteToPublic());
+      clazz.forEachMethod(method -> method.accessFlags.promoteNonPrivateToPublic());
+      clazz.forEachField(field -> field.accessFlags.promoteToPublic());
     }
     return application;
   }

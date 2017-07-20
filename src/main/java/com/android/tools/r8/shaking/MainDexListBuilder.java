@@ -150,8 +150,8 @@ public class MainDexListBuilder {
       addMainDexType(type);
       // Super and interfaces are live, no need to add them.
       traceAnnotationsDirectDendencies(clazz.annotations);
-      clazz.forEachField( field -> addMainDexType(field.field.type));
-      clazz.forEachMethod( method -> {
+      clazz.forEachField(field -> addMainDexType(field.field.type));
+      clazz.forEachMethod(method -> {
         traceMethodDirectDependencies(method.method);
         method.registerReachableDefinitions(codeDirectReferenceCollector);
       });

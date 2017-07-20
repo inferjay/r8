@@ -17,8 +17,10 @@ import com.android.tools.r8.naming.MemberNaming;
 import com.android.tools.r8.naming.MemberNaming.Range;
 import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.utils.InternalOptions;
+
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
+
 import java.util.List;
 
 public class DebugStripper {
@@ -162,16 +164,6 @@ public class DebugStripper {
     processCode(method, naming, nameCounts);
   }
 
-  private void processMethods(DexEncodedMethod[] methods, ClassNaming naming,
-      Reference2IntMap<DexString> nameCounts) {
-    if (methods == null) {
-      return;
-    }
-    for (DexEncodedMethod method : methods) {
-      processMethod(method, naming, nameCounts);
-    }
-  }
-
   public void processClass(DexProgramClass clazz) {
     if (!clazz.hasMethodsOrFields()) {
       return;
@@ -179,20 +171,16 @@ public class DebugStripper {
     String name = descriptorToName(clazz.type.toDescriptorString());
     ClassNaming naming = classNameMapper == null ? null : classNameMapper.getClassNaming(name);
     Reference2IntMap<DexString> nameCounts = new Reference2IntOpenHashMap<>();
-    setIntialNameCounts(nameCounts, clazz.directMethods());
-    setIntialNameCounts(nameCounts, clazz.virtualMethods());
-    processMethods(clazz.directMethods(), naming, nameCounts);
-    processMethods(clazz.virtualMethods(), naming, nameCounts);
+    clazz.forEachMethod(method -> setIntialNameCounts(nameCounts, method));
+    clazz.forEachMethod(method -> processMethod(method, naming, nameCounts));
   }
 
   private void setIntialNameCounts(Reference2IntMap<DexString> nameCounts,
-      DexEncodedMethod[] methods) {
-    for (DexEncodedMethod method : methods) {
-      if (nameCounts.containsKey(method.method.name)) {
-        nameCounts.put(method.method.name, USED_MORE_THAN_ONCE);
-      } else {
-        nameCounts.put(method.method.name, USED_ONCE);
-      }
+      DexEncodedMethod method) {
+    if (nameCounts.containsKey(method.method.name)) {
+      nameCounts.put(method.method.name, USED_MORE_THAN_ONCE);
+    } else {
+      nameCounts.put(method.method.name, USED_ONCE);
     }
   }
 }

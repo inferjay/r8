@@ -6,6 +6,8 @@ package com.android.tools.r8.ir.conversion;
 import static com.android.tools.r8.ir.desugar.InterfaceMethodRewriter.Flavor.ExcludeDexResources;
 import static com.android.tools.r8.ir.desugar.InterfaceMethodRewriter.Flavor.IncludeAllResources;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
@@ -38,7 +40,6 @@ import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -229,25 +230,19 @@ public class IRConverter {
       ExecutorService executor) throws ExecutionException {
     List<Future<?>> futures = new ArrayList<>();
     for (DexProgramClass clazz : classes) {
-      futures.add(executor.submit(() -> {
-        convertMethodsToDex(clazz.directMethods());
-        convertMethodsToDex(clazz.virtualMethods());
-      }));
+      futures.add(executor.submit(() -> clazz.forEachMethod(this::convertMethodToDex)));
     }
     ThreadUtils.awaitFutures(futures);
   }
 
-  private void convertMethodsToDex(DexEncodedMethod[] methods) {
-    for (int i = 0; i < methods.length; i++) {
-      DexEncodedMethod method = methods[i];
-      if (method.getCode() != null) {
-        boolean matchesMethodFilter = options.methodMatchesFilter(method);
-        if (matchesMethodFilter) {
-          if (method.getCode().isJarCode()) {
-            rewriteCode(method, ignoreOptimizationFeedback, Outliner::noProcessing);
-          }
-          updateHighestSortingStrings(method);
+  private void convertMethodToDex(DexEncodedMethod method) {
+    if (method.getCode() != null) {
+      boolean matchesMethodFilter = options.methodMatchesFilter(method);
+      if (matchesMethodFilter) {
+        if (method.getCode().isJarCode()) {
+          rewriteCode(method, ignoreOptimizationFeedback, Outliner::noProcessing);
         }
+        updateHighestSortingStrings(method);
       }
     }
   }

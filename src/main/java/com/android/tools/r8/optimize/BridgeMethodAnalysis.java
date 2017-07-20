@@ -12,6 +12,7 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.optimize.InvokeSingleTargetExtractor.InvokeKind;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -28,35 +29,32 @@ public class BridgeMethodAnalysis {
 
   public GraphLense run() {
     for (DexClass clazz : appInfo.classes()) {
-      identifyBridgeMethods(clazz.virtualMethods());
-      identifyBridgeMethods(clazz.directMethods());
+      clazz.forEachMethod(this::identifyBridgeMethod);
     }
     return new BridgeLense(lense, bridgeTargetToBridgeMap);
   }
 
-  private void identifyBridgeMethods(DexEncodedMethod[] dexEncodedMethods) {
-    for (DexEncodedMethod method : dexEncodedMethods) {
-      if (method.accessFlags.isBridge()) {
-        InvokeSingleTargetExtractor targetExtractor = new InvokeSingleTargetExtractor();
-        method.getCode().registerReachableDefinitions(targetExtractor);
-        DexMethod target = targetExtractor.getTarget();
-        InvokeKind kind = targetExtractor.getKind();
-        if (target != null &&
-            target.proto.parameters.values.length == method.method.proto.parameters.values.length) {
-          assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
-          target = lense.lookupMethod(target, method);
-          if (kind == InvokeKind.STATIC) {
-            assert method.accessFlags.isStatic();
-            DexEncodedMethod targetMethod = appInfo.lookupStaticTarget(target);
-            if (targetMethod != null) {
-              addForwarding(method, targetMethod);
-            }
-          } else if (kind == InvokeKind.VIRTUAL) {
-            // TODO(herhut): Add support for bridges with multiple targets.
-            DexEncodedMethod targetMethod = appInfo.lookupSingleVirtualTarget(target);
-            if (targetMethod != null) {
-              addForwarding(method, targetMethod);
-            }
+  private void identifyBridgeMethod(DexEncodedMethod method) {
+    if (method.accessFlags.isBridge()) {
+      InvokeSingleTargetExtractor targetExtractor = new InvokeSingleTargetExtractor();
+      method.getCode().registerReachableDefinitions(targetExtractor);
+      DexMethod target = targetExtractor.getTarget();
+      InvokeKind kind = targetExtractor.getKind();
+      if (target != null &&
+          target.proto.parameters.values.length == method.method.proto.parameters.values.length) {
+        assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
+        target = lense.lookupMethod(target, method);
+        if (kind == InvokeKind.STATIC) {
+          assert method.accessFlags.isStatic();
+          DexEncodedMethod targetMethod = appInfo.lookupStaticTarget(target);
+          if (targetMethod != null) {
+            addForwarding(method, targetMethod);
+          }
+        } else if (kind == InvokeKind.VIRTUAL) {
+          // TODO(herhut): Add support for bridges with multiple targets.
+          DexEncodedMethod targetMethod = appInfo.lookupSingleVirtualTarget(target);
+          if (targetMethod != null) {
+            addForwarding(method, targetMethod);
           }
         }
       }

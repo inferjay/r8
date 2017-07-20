@@ -186,7 +186,7 @@ public class CallGraph {
 
   private static boolean allMethodsExists(DexApplication application, CallGraph graph) {
     for (DexProgramClass clazz : application.classes()) {
-      clazz.forEachMethod( method -> { assert graph.nodes.get(method) != null; });
+      clazz.forEachMethod(method -> { assert graph.nodes.get(method) != null; });
     }
     return true;
   }

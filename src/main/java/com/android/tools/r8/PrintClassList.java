@@ -19,6 +19,7 @@ import com.android.tools.r8.utils.AndroidApp.Builder;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.Timing;
+
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -46,39 +47,32 @@ public class PrintClassList {
     for (DexProgramClass clazz : application.classes()) {
       System.out.print(maybeDeobfuscateType(map, clazz.type));
       System.out.println();
-      printMethods(clazz.directMethods(), map);
-      printMethods(clazz.virtualMethods(), map);
-      printFields(clazz.staticFields(), map);
-      printFields(clazz.instanceFields(), map);
+      clazz.forEachMethod(method -> printMethod(method, map));
+      clazz.forEachField(field -> printField(field, map));
     }
     executorService.shutdown();
   }
 
-  private static void printMethods(DexEncodedMethod[] methods, ClassNameMapper map) {
-    for (DexEncodedMethod encodedMethod : methods) {
-      DexMethod method = encodedMethod.method;
-
-      if (map != null) {
-        System.out.println(map.originalNameOf(method));
-      } else {
-        // Detour via Signature to get the same formatting.
-        MethodSignature signature = MethodSignature.fromDexMethod(method);
-        System.out.println(method.holder.toSourceString() + " " + signature);
-      }
+  private static void printMethod(DexEncodedMethod encodedMethod, ClassNameMapper map) {
+    DexMethod method = encodedMethod.method;
+    if (map != null) {
+      System.out.println(map.originalNameOf(method));
+    } else {
+      // Detour via Signature to get the same formatting.
+      MethodSignature signature = MethodSignature.fromDexMethod(method);
+      System.out.println(method.holder.toSourceString() + " " + signature);
     }
   }
 
-  private static void printFields(DexEncodedField[] fields, ClassNameMapper map) {
-    for (DexEncodedField encodedField : fields) {
-      DexField field = encodedField.field;
-      if (map != null) {
-        System.out.println(map.originalNameOf(field));
-      } else {
-        // Detour via Signature to get the same formatting.
-        FieldSignature signature = new FieldSignature(field.name.toSourceString(),
-            field.type.toSourceString());
-        System.out.println(field.clazz.toSourceString() + " " + signature);
-      }
+  private static void printField(DexEncodedField encodedField, ClassNameMapper map) {
+    DexField field = encodedField.field;
+    if (map != null) {
+      System.out.println(map.originalNameOf(field));
+    } else {
+      // Detour via Signature to get the same formatting.
+      FieldSignature signature = new FieldSignature(field.name.toSourceString(),
+          field.type.toSourceString());
+      System.out.println(field.clazz.toSourceString() + " " + signature);
     }
   }
 

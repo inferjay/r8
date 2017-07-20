@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.optimize;
 
+import com.google.common.collect.Sets;
+
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexClass;
@@ -11,7 +13,7 @@ import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.optimize.InvokeSingleTargetExtractor.InvokeKind;
-import com.google.common.collect.Sets;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -27,27 +29,25 @@ public class VisibilityBridgeRemover {
     this.application = application;
   }
 
-  private void identifyBridgeMethods(DexEncodedMethod[] dexEncodedMethods) {
-    for (DexEncodedMethod method : dexEncodedMethods) {
-      if (method.accessFlags.isBridge()) {
-        InvokeSingleTargetExtractor targetExtractor = new InvokeSingleTargetExtractor();
-        method.getCode().registerReachableDefinitions(targetExtractor);
-        DexMethod target = targetExtractor.getTarget();
-        InvokeKind kind = targetExtractor.getKind();
-        if (target != null &&
-            target.proto == method.method.proto) {
-          assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
-          if (kind == InvokeKind.SUPER) {
-            // This is a visibility forward, so check for the direct target.
-            DexEncodedMethod targetMethod
-                = appInfo.lookupVirtualDefinition(target.getHolder(), target);
-            if (targetMethod != null && targetMethod.accessFlags.isPublic()) {
-              if (Log.ENABLED) {
-                Log.info(getClass(), "Removing visibility forwarding %s -> %s", method.method,
-                    targetMethod.method);
-              }
-              unneededVisibilityBridges.add(method);
+  private void identifyBridgeMethod(DexEncodedMethod method) {
+    if (method.accessFlags.isBridge()) {
+      InvokeSingleTargetExtractor targetExtractor = new InvokeSingleTargetExtractor();
+      method.getCode().registerReachableDefinitions(targetExtractor);
+      DexMethod target = targetExtractor.getTarget();
+      InvokeKind kind = targetExtractor.getKind();
+      if (target != null &&
+          target.proto == method.method.proto) {
+        assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
+        if (kind == InvokeKind.SUPER) {
+          // This is a visibility forward, so check for the direct target.
+          DexEncodedMethod targetMethod
+              = appInfo.lookupVirtualDefinition(target.getHolder(), target);
+          if (targetMethod != null && targetMethod.accessFlags.isPublic()) {
+            if (Log.ENABLED) {
+              Log.info(getClass(), "Removing visibility forwarding %s -> %s", method.method,
+                  targetMethod.method);
             }
+            unneededVisibilityBridges.add(method);
           }
         }
       }
@@ -76,8 +76,7 @@ public class VisibilityBridgeRemover {
 
   public DexApplication run() {
     for (DexClass clazz : appInfo.classes()) {
-      identifyBridgeMethods(clazz.virtualMethods());
-      identifyBridgeMethods(clazz.directMethods());
+      clazz.forEachMethod(this::identifyBridgeMethod);
     }
     if (!unneededVisibilityBridges.isEmpty()) {
       removeUnneededVisibilityBridges();

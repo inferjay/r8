@@ -5,6 +5,8 @@ package com.android.tools.r8.dex;
 
 import static com.android.tools.r8.utils.LebUtils.sizeAsUleb128;
 
+import com.google.common.collect.Sets;
+
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
@@ -49,11 +51,12 @@ import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LebUtils;
-import com.google.common.collect.Sets;
+
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -153,17 +156,14 @@ public class FileWriter {
     return this;
   }
 
-  private void rewriteCodeWithJumboStrings(IRConverter converter, DexEncodedMethod[] methods) {
-    for (int i = 0; i < methods.length; i++) {
-      DexEncodedMethod method = methods[i];
-      if (method.getCode() == null) {
-        continue;
-      }
-      DexCode code = method.getCode().asDexCode();
-      if (code.highestSortingString != null) {
-        if (mapping.getOffsetFor(code.highestSortingString) > Constants.MAX_NON_JUMBO_INDEX) {
-          converter.processJumboStrings(method, mapping.getFirstJumboString());
-        }
+  private void rewriteCodeWithJumboStrings(IRConverter converter, DexEncodedMethod method) {
+    if (method.getCode() == null) {
+      return;
+    }
+    DexCode code = method.getCode().asDexCode();
+    if (code.highestSortingString != null) {
+      if (mapping.getOffsetFor(code.highestSortingString) > Constants.MAX_NON_JUMBO_INDEX) {
+        converter.processJumboStrings(method, mapping.getFirstJumboString());
       }
     }
   }
@@ -181,8 +181,7 @@ public class FileWriter {
     // At least one method needs a jumbo string.
     IRConverter converter = new IRConverter(application, appInfo, options, false);
     for (DexProgramClass clazz : classes) {
-      rewriteCodeWithJumboStrings(converter, clazz.directMethods());
-      rewriteCodeWithJumboStrings(converter, clazz.virtualMethods());
+      clazz.forEachMethod(method -> rewriteCodeWithJumboStrings(converter, method));
     }
     return this;
   }
@@ -275,56 +274,53 @@ public class FileWriter {
   private void checkInterfaceMethods() {
     for (DexProgramClass clazz : mapping.getClasses()) {
       if (clazz.isInterface()) {
-        checkInterfaceMethods(clazz.directMethods());
-        checkInterfaceMethods(clazz.virtualMethods());
+        clazz.forEachMethod(this::checkInterfaceMethod);
       }
     }
   }
 
-  // Ensures interface methods comply with requirements imposed by Android runtime:
+  // Ensures interface method comply with requirements imposed by Android runtime:
   //  -- in pre-N Android versions interfaces may only have class
   //     initializer and public abstract methods.
   //  -- starting with N interfaces may also have public or private
   //     static methods, as well as public non-abstract (default)
   //     and private instance methods.
-  private void checkInterfaceMethods(DexEncodedMethod[] methods) {
-    for (DexEncodedMethod method : methods) {
-      if (application.dexItemFactory.isClassConstructor(method.method)) {
-        continue; // Class constructor is always OK.
-      }
-      if (method.accessFlags.isStatic()) {
-        if (!options.canUseDefaultAndStaticInterfaceMethods()) {
-          throw new CompilationError("Static interface methods are only supported "
-              + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
-              + method.method.toSourceString());
-        }
-
-      } else {
-        if (method.accessFlags.isConstructor()) {
-          throw new CompilationError(
-              "Interface must not have constructors: " + method.method.toSourceString());
-        }
-        if (!method.accessFlags.isAbstract() && !method.accessFlags.isPrivate() &&
-            !options.canUseDefaultAndStaticInterfaceMethods()) {
-          throw new CompilationError("Default interface methods are only supported "
-              + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
-              + method.method.toSourceString());
-        }
-      }
-
-      if (method.accessFlags.isPrivate()) {
-        if (options.canUsePrivateInterfaceMethods()) {
-          continue;
-        }
-        throw new CompilationError("Private interface methods are only supported "
+  private void checkInterfaceMethod(DexEncodedMethod method) {
+    if (application.dexItemFactory.isClassConstructor(method.method)) {
+      return; // Class constructor is always OK.
+    }
+    if (method.accessFlags.isStatic()) {
+      if (!options.canUseDefaultAndStaticInterfaceMethods()) {
+        throw new CompilationError("Static interface methods are only supported "
             + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
             + method.method.toSourceString());
       }
 
-      if (!method.accessFlags.isPublic()) {
-        throw new CompilationError("Interface methods must not be "
-            + "protected or package private: " + method.method.toSourceString());
+    } else {
+      if (method.accessFlags.isConstructor()) {
+        throw new CompilationError(
+            "Interface must not have constructors: " + method.method.toSourceString());
       }
+      if (!method.accessFlags.isAbstract() && !method.accessFlags.isPrivate() &&
+          !options.canUseDefaultAndStaticInterfaceMethods()) {
+        throw new CompilationError("Default interface methods are only supported "
+            + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
+            + method.method.toSourceString());
+      }
+    }
+
+    if (method.accessFlags.isPrivate()) {
+      if (options.canUsePrivateInterfaceMethods()) {
+        return;
+      }
+      throw new CompilationError("Private interface methods are only supported "
+          + "starting with Android N (--min-api " + Constants.ANDROID_N_API + "): "
+          + method.method.toSourceString());
+    }
+
+    if (!method.accessFlags.isPublic()) {
+      throw new CompilationError("Interface methods must not be "
+          + "protected or package private: " + method.method.toSourceString());
     }
   }
 
@@ -332,34 +328,30 @@ public class FileWriter {
       DexApplication application) {
     Map<DexCode, String> codeToSignatureMap = new IdentityHashMap<>();
     for (DexProgramClass clazz : mapping.getClasses()) {
-      addSignaturesFromMethods(clazz.directMethods(), codeToSignatureMap,
-          application.getProguardMap());
-      addSignaturesFromMethods(clazz.virtualMethods(), codeToSignatureMap,
-          application.getProguardMap());
+      clazz.forEachMethod(method ->
+          addSignaturesFromMethod(method, codeToSignatureMap, application.getProguardMap()));
     }
     DexCode[] codesArray = codes.toArray(new DexCode[codes.size()]);
     Arrays.sort(codesArray, Comparator.comparing(codeToSignatureMap::get));
     return Arrays.asList(codesArray);
   }
 
-  private static void addSignaturesFromMethods(DexEncodedMethod[] methods,
+  private static void addSignaturesFromMethod(DexEncodedMethod method,
       Map<DexCode, String> codeToSignatureMap,
       ClassNameMapper proguardMap) {
-    for (DexEncodedMethod method : methods) {
-      if (method.getCode() == null) {
-        assert method.accessFlags.isAbstract() || method.accessFlags.isNative();
+    if (method.getCode() == null) {
+      assert method.accessFlags.isAbstract() || method.accessFlags.isNative();
+    } else {
+      Signature signature;
+      String originalClassName;
+      if (proguardMap != null) {
+        signature = proguardMap.originalSignatureOf(method.method);
+        originalClassName = proguardMap.originalNameOf(method.method.holder);
       } else {
-        Signature signature;
-        String originalClassName;
-        if (proguardMap != null) {
-          signature = proguardMap.originalSignatureOf(method.method);
-          originalClassName = proguardMap.originalNameOf(method.method.holder);
-        } else {
-          signature = MethodSignature.fromDexMethod(method.method);
-          originalClassName = method.method.holder.toSourceString();
-        }
-        codeToSignatureMap.put(method.getCode().asDexCode(), originalClassName + signature);
+        signature = MethodSignature.fromDexMethod(method.method);
+        originalClassName = method.method.holder.toSourceString();
       }
+      codeToSignatureMap.put(method.getCode().asDexCode(), originalClassName + signature);
     }
   }
 
