@@ -176,7 +176,7 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
     List<BasicBlock> blocks = code.blocks;
     assert blocksIterator == null || peekPrevious(blocksIterator) == block;
 
-    int blockNumber = blocks.size();
+    int blockNumber = code.getHighestBlockNumber() + 1;
     BasicBlock newBlock;
 
     // Don't allow splitting after the last instruction.
