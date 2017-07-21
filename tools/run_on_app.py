@@ -19,16 +19,15 @@ import youtube_data
 
 TYPES = ['dex', 'deploy', 'proguarded']
 APPS = ['gmscore', 'youtube', 'gmail']
+COMPILERS = ['d8', 'r8']
 
-def ParseOptions():
+def ParseOptions(argv):
   result = optparse.OptionParser()
   result.add_option('--compiler',
                     help='',
-                    default='r8',
-                    choices=['d8', 'r8'])
+                    choices=COMPILERS)
   result.add_option('--app',
                     help='',
-                    default='gmscore',
                     choices=APPS)
   result.add_option('--type',
                     help='Default for R8: deploy, for D8: proguarded',
@@ -87,7 +86,7 @@ def ParseOptions():
                     metavar='BENCHMARKNAME',
                     help='Print the sizes of individual dex segments as ' +
                         '\'<BENCHMARKNAME>-<segment>(CodeSize): <bytes>\'')
-  return result.parse_args()
+  return result.parse_args(argv)
 
 # Most apps have the -printmapping and -printseeds in the Proguard
 # configuration. However we don't want to write these files in these
@@ -100,9 +99,9 @@ def GenerateAdditionalProguardConfiguration(temp, outdir):
     f.write('-printseeds ' + os.path.join(outdir, 'proguard.seeds') + "\n")
     return os.path.abspath(f.name)
 
-def main():
+def main(argv):
   app_provided_pg_conf = False;
-  (options, args) = ParseOptions()
+  (options, args) = ParseOptions(argv)
   outdir = options.out
   data = None
   if options.app == 'gmscore':
@@ -115,7 +114,11 @@ def main():
     options.version = options.version or '170604.16'
     data = gmail_data
   else:
-    raise 'Unexpected'
+    raise Exception("You need to specify '--app={}'".format('|'.join(APPS)))
+
+  if options.compiler not in COMPILERS:
+    raise Exception("You need to specify '--compiler={}'"
+        .format('|'.join(COMPILERS)))
 
   if not options.version in data.VERSIONS.keys():
     print('No version {} for application {}'
@@ -217,4 +220,4 @@ def main():
     utils.print_dexsegments(options.print_dexsegments, dex_files)
 
 if __name__ == '__main__':
-  sys.exit(main())
+  sys.exit(main(sys.argv[1:]))
