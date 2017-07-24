@@ -195,7 +195,7 @@ public class JarSourceCode implements SourceCode {
       JarApplicationReader application) {
     DebugLocalInfo info = new DebugLocalInfo(
         application.getString(node.name),
-        application.getType(Type.getType(node.desc)),
+        application.getTypeFromDescriptor(node.desc),
         node.signature == null ? null : application.getString(node.signature));
     DebugLocalInfo canonical = canonicalLocalVariables.putIfAbsent(info, info);
     return canonical != null ? canonical : info;
