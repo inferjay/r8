@@ -4,6 +4,7 @@
 package com.android.tools.r8.utils;
 
 import static com.android.tools.r8.ToolHelper.EXAMPLES_BUILD_DIR;
+import static com.android.tools.r8.utils.FileUtils.JAR_EXTENSION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -48,8 +49,6 @@ public class D8CommandTest {
   private void verifyEmptyCommand(D8Command command) {
     assertEquals(0, ToolHelper.getApp(command).getDexProgramResources().size());
     assertEquals(0, ToolHelper.getApp(command).getClassProgramResources().size());
-    assertEquals(0, ToolHelper.getApp(command).getDexLibraryResources().size());
-    assertEquals(0, ToolHelper.getApp(command).getClassLibraryResources().size());
     assertFalse(ToolHelper.getApp(command).hasMainDexList());
     assertFalse(ToolHelper.getApp(command).hasProguardMap());
     assertFalse(ToolHelper.getApp(command).hasProguardSeeds());
@@ -161,6 +160,40 @@ public class D8CommandTest {
     thrown.expect(CompilationException.class);
     Path invalidType = temp.getRoot().toPath().resolve("an-invalid-output-file-type.foobar");
     parse("--output", invalidType.toString());
+  }
+
+  @Test
+  public void folderLibAndClasspath() throws Throwable {
+    Path inputFile =
+        Paths.get(ToolHelper.EXAMPLES_ANDROID_N_BUILD_DIR, "interfacemethods" + JAR_EXTENSION);
+    Path tmpClassesDir = temp.newFolder().toPath();
+    ZipUtils.unzip(inputFile.toString(), tmpClassesDir.toFile());
+    D8Command command = parse("--lib", tmpClassesDir.toString(), "--classpath",
+        tmpClassesDir.toString());
+    AndroidApp inputApp = ToolHelper.getApp(command);
+    assertEquals(1, inputApp.getClasspathResourceProviders().size());
+    assertEquals(tmpClassesDir,
+        ((DirectoryClassFileProvider) inputApp.getClasspathResourceProviders().get(0)).getRoot());
+    assertEquals(1, inputApp.getLibraryResourceProviders().size());
+    assertEquals(tmpClassesDir,
+        ((DirectoryClassFileProvider) inputApp.getLibraryResourceProviders().get(0)).getRoot());
+  }
+
+  @Test
+  public void classFolderProgram() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path inputFile =
+        Paths.get(ToolHelper.EXAMPLES_ANDROID_N_BUILD_DIR, "interfacemethods" + JAR_EXTENSION);
+    Path tmpClassesDir = temp.newFolder().toPath();
+    ZipUtils.unzip(inputFile.toString(), tmpClassesDir.toFile());
+    parse(tmpClassesDir.toString());
+  }
+
+  @Test
+  public void emptyFolderProgram() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path tmpClassesDir = temp.newFolder().toPath();
+    parse(tmpClassesDir.toString());
   }
 
   @Test

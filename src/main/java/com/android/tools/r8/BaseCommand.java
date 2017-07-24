@@ -131,15 +131,9 @@ abstract class BaseCommand {
       return self();
     }
 
-    /** Add classpath file resources. */
-    public B addClasspathFiles(Path... files) throws IOException {
-      app.addClasspathFiles(files);
-      return self();
-    }
-
-    /** Add classpath file resources. */
-    public B addClasspathFiles(Collection<Path> files) throws IOException {
-      app.addClasspathFiles(files);
+    /** Add library file resource provider. */
+    public B addLibraryResourceProvider(ClassFileResourceProvider provider) {
+      getAppBuilder().addLibraryResourceProvider(provider);
       return self();
     }
 

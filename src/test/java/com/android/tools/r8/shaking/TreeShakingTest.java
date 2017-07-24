@@ -57,10 +57,8 @@ import org.junit.runners.Parameterized.Parameters;
 public class TreeShakingTest {
 
   private static final String ANDROID_JAR = ToolHelper.getDefaultAndroidJar();
-  private static final List<String> JAR_LIBRARIES = ImmutableList
-      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "shakinglib.jar");
-  private static final List<String> DEX_LIBRARIES = ImmutableList
-      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "shakinglib/classes.dex");
+  private static final List<Path> JAR_LIBRARIES = ListUtils.map(ImmutableList
+      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "shakinglib.jar"), Paths::get);
   private static final String EMPTY_FLAGS = "src/test/proguard/valid/empty.flags";
   private static Set<String> IGNORED = ImmutableSet.of(
       // there's no point in running those without obfuscation
@@ -116,7 +114,6 @@ public class TreeShakingTest {
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     // Generate R8 processed version without library option.
     Path out = temp.getRoot().toPath();
-    List<String> libs = kind == Frontend.DEX ? DEX_LIBRARIES : JAR_LIBRARIES;
     boolean inline = programFile.contains("inlining");
 
     R8Command command =
@@ -124,7 +121,7 @@ public class TreeShakingTest {
             .setOutputPath(out)
             .addProgramFiles(Paths.get(programFile))
             .addProguardConfigurationFiles(ListUtils.map(keepRulesFiles, Paths::get))
-            .addLibraryFiles(ListUtils.map(libs, Paths::get))
+            .addLibraryFiles(JAR_LIBRARIES)
             .setMinification(minify)
             .build();
     ToolHelper.runR8(command, options -> {

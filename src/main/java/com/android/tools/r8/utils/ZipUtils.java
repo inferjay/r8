@@ -3,11 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.utils;
 
+import com.android.tools.r8.errors.CompilationError;
 import com.google.common.io.ByteStreams;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -35,11 +37,18 @@ public class ZipUtils {
 
   public static List<File> unzip(String zipFile, File outDirectory, Predicate<ZipEntry> filter)
       throws IOException {
+    final Path outDirectoryPath = outDirectory.toPath();
     final List<File> outFiles = new ArrayList<>();
       iter(zipFile, (entry, input) -> {
         String name = entry.getName();
-        if (filter.test(entry)) {
-          File outFile = outDirectory.toPath().resolve(name).toFile();
+        if (!entry.isDirectory() && filter.test(entry)) {
+          if (name.contains("..")) {
+            // Protect against malicious archives.
+            throw new CompilationError("Invalid entry name \"" + name + "\"");
+          }
+          Path outPath = outDirectoryPath.resolve(name);
+          File outFile = outPath.toFile();
+          outFile.getParentFile().mkdirs();
           FileOutputStream output = new FileOutputStream(outFile);
           ByteStreams.copy(input, output);
           outFiles.add(outFile);

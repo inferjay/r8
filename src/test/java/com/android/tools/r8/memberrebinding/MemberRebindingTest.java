@@ -40,10 +40,8 @@ import org.junit.runners.Parameterized.Parameters;
 public class MemberRebindingTest {
 
   private static final String ANDROID_JAR = ToolHelper.getDefaultAndroidJar();
-  private static final List<String> JAR_LIBRARIES = ImmutableList
-      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "memberrebindinglib.jar");
-  private static final List<String> DEX_LIBRARIES = ImmutableList
-      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "memberrebindinglib/classes.dex");
+  private static final List<Path> JAR_LIBRARIES = ListUtils.map(ImmutableList
+      .of(ANDROID_JAR, ToolHelper.EXAMPLES_BUILD_DIR + "memberrebindinglib.jar"), Paths::get);
 
   private enum Frontend {
     DEX, JAR;
@@ -82,14 +80,13 @@ public class MemberRebindingTest {
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     // Generate R8 processed version without library option.
     String out = temp.getRoot().getCanonicalPath();
-    List<String> libs = kind == Frontend.DEX ? DEX_LIBRARIES : JAR_LIBRARIES;
     // NOTE: It is important to turn off inlining to ensure
     // dex inspection of invokes is predictable.
     ToolHelper.runR8(
         R8Command.builder()
             .setOutputPath(Paths.get(out))
             .addProgramFiles(programFile)
-            .addLibraryFiles(ListUtils.map(libs, Paths::get))
+            .addLibraryFiles(JAR_LIBRARIES)
             .setMinApiLevel(minApiLevel)
             .build(),
         options -> options.inlineAccessors = false);

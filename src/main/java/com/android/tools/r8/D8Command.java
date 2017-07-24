@@ -3,19 +3,16 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8;
 
-import static com.android.tools.r8.utils.FileUtils.isArchive;
-
+import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.android.tools.r8.utils.OutputMode;
-import com.android.tools.r8.utils.PreloadedClassFileProvider;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -46,45 +43,18 @@ public class D8Command extends BaseCommand {
 
     /** Add classpath file resources. */
     public Builder addClasspathFiles(Path... files) throws IOException {
-      return addClasspathFiles(Arrays.asList(files));
+      getAppBuilder().addClasspathFiles(files);
+      return this;
     }
 
     /** Add classpath file resources. */
     public Builder addClasspathFiles(Collection<Path> files) throws IOException {
-      for (Path file : files) {
-        if (isArchive(file)) {
-          addClasspathResourceProvider(PreloadedClassFileProvider.fromArchive(file));
-        } else {
-          super.addClasspathFiles(file);
-        }
-      }
-      return this;
-    }
-
-    /** Add library file resources. */
-    public Builder addLibraryFiles(Path... files) throws IOException {
-      return addLibraryFiles(Arrays.asList(files));
-    }
-
-    /** Add library file resources. */
-    public Builder addLibraryFiles(Collection<Path> files) throws IOException {
-      for (Path file : files) {
-        if (isArchive(file)) {
-          addLibraryResourceProvider(PreloadedClassFileProvider.fromArchive(file));
-        } else {
-          super.addLibraryFiles(file);
-        }
-      }
+      getAppBuilder().addClasspathFiles(files);
       return this;
     }
 
     public Builder addClasspathResourceProvider(ClassFileResourceProvider provider) {
       getAppBuilder().addClasspathResourceProvider(provider);
-      return this;
-    }
-
-    public Builder addLibraryResourceProvider(ClassFileResourceProvider provider) {
-      getAppBuilder().addLibraryResourceProvider(provider);
       return this;
     }
 
@@ -136,49 +106,53 @@ public class D8Command extends BaseCommand {
     CompilationMode modeSet = null;
     Path outputPath = null;
     Builder builder = builder();
-    for (int i = 0; i < args.length; i++) {
-      String arg = args[i].trim();
-      if (arg.length() == 0) {
-        continue;
-      } else if (arg.equals("--help")) {
-        builder.setPrintHelp(true);
-      } else if (arg.equals("--version")) {
-        builder.setPrintVersion(true);
-      } else if (arg.equals("--debug")) {
-        if (modeSet == CompilationMode.RELEASE) {
-          throw new CompilationException("Cannot compile in both --debug and --release mode.");
+    try {
+      for (int i = 0; i < args.length; i++) {
+        String arg = args[i].trim();
+        if (arg.length() == 0) {
+          continue;
+        } else if (arg.equals("--help")) {
+          builder.setPrintHelp(true);
+        } else if (arg.equals("--version")) {
+          builder.setPrintVersion(true);
+        } else if (arg.equals("--debug")) {
+          if (modeSet == CompilationMode.RELEASE) {
+            throw new CompilationException("Cannot compile in both --debug and --release mode.");
+          }
+          builder.setMode(CompilationMode.DEBUG);
+          modeSet = CompilationMode.DEBUG;
+        } else if (arg.equals("--release")) {
+          if (modeSet == CompilationMode.DEBUG) {
+            throw new CompilationException("Cannot compile in both --debug and --release mode.");
+          }
+          builder.setMode(CompilationMode.RELEASE);
+          modeSet = CompilationMode.RELEASE;
+        } else if (arg.equals("--file-per-class")) {
+          builder.setOutputMode(OutputMode.FilePerClass);
+        } else if (arg.equals("--output")) {
+          String output = args[++i];
+          if (outputPath != null) {
+            throw new CompilationException(
+                "Cannot output both to '" + outputPath.toString() + "' and '" + output + "'");
+          }
+          outputPath = Paths.get(output);
+        } else if (arg.equals("--lib")) {
+          builder.addLibraryFiles(Paths.get(args[++i]));
+        } else if (arg.equals("--classpath")) {
+          builder.addClasspathFiles(Paths.get(args[++i]));
+        } else if (arg.equals("--min-api")) {
+          builder.setMinApiLevel(Integer.valueOf(args[++i]));
+        } else {
+          if (arg.startsWith("--")) {
+            throw new CompilationException("Unknown option: " + arg);
+          }
+          builder.addProgramFiles(Paths.get(arg));
         }
-        builder.setMode(CompilationMode.DEBUG);
-        modeSet = CompilationMode.DEBUG;
-      } else if (arg.equals("--release")) {
-        if (modeSet == CompilationMode.DEBUG) {
-          throw new CompilationException("Cannot compile in both --debug and --release mode.");
-        }
-        builder.setMode(CompilationMode.RELEASE);
-        modeSet = CompilationMode.RELEASE;
-      } else if (arg.equals("--file-per-class")) {
-        builder.setOutputMode(OutputMode.FilePerClass);
-      } else if (arg.equals("--output")) {
-        String output = args[++i];
-        if (outputPath != null) {
-          throw new CompilationException(
-              "Cannot output both to '" + outputPath.toString() + "' and '" + output + "'");
-        }
-        outputPath = Paths.get(output);
-      } else if (arg.equals("--lib")) {
-        builder.addLibraryFiles(Paths.get(args[++i]));
-      } else if (arg.equals("--classpath")) {
-        builder.addClasspathFiles(Paths.get(args[++i]));
-      } else if (arg.equals("--min-api")) {
-        builder.setMinApiLevel(Integer.valueOf(args[++i]));
-      } else {
-        if (arg.startsWith("--")) {
-          throw new CompilationException("Unknown option: " + arg);
-        }
-        builder.addProgramFiles(Paths.get(arg));
       }
+      return builder.setOutputPath(outputPath);
+    } catch (CompilationError e) {
+      throw new CompilationException(e.getMessage(), e);
     }
-    return builder.setOutputPath(outputPath);
   }
 
   private D8Command(

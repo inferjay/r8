@@ -455,7 +455,7 @@ public class ToolHelper {
         throws ProguardRuleParserException, ExecutionException, IOException {
    // TODO(zerny): Should we really be adding the android library in ToolHelper?
     AndroidApp app = command.getInputApp();
-    if (app.getClassLibraryResources().isEmpty()) {
+    if (app.getLibraryResourceProviders().isEmpty()) {
       app =
           AndroidApp.builder(app)
               .addLibraryFiles(Paths.get(getAndroidJar(command.getMinApiLevel())))

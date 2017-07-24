@@ -126,6 +126,9 @@ public class DexApplication {
   }
 
   public DexClass definitionFor(DexType type) {
+    if (type == null) {
+      return null;
+    }
     DexClass clazz = programClasses.get(type);
     if (clazz == null && classpathClasses != null) {
       clazz = classpathClasses.get(type);

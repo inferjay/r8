@@ -213,11 +213,7 @@ public class ApplicationReader {
 
     void readSources() throws IOException, ExecutionException {
       readDexSources(inputApp.getDexProgramResources(), PROGRAM, programClasses);
-      readDexSources(inputApp.getDexClasspathResources(), CLASSPATH, classpathClasses);
-      readDexSources(inputApp.getDexLibraryResources(), LIBRARY, libraryClasses);
       readClassSources(inputApp.getClassProgramResources(), PROGRAM, programClasses);
-      readClassSources(inputApp.getClassClasspathResources(), CLASSPATH, classpathClasses);
-      readClassSources(inputApp.getClassLibraryResources(), LIBRARY, libraryClasses);
     }
 
     private <T extends DexClass> ClassProvider<T> buildClassProvider(ClassKind classKind,

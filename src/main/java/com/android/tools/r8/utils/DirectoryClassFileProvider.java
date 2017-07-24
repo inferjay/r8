@@ -69,6 +69,10 @@ public final class DirectoryClassFileProvider implements ClassFileResourceProvid
     return new DirectoryClassFileProvider(dir.toAbsolutePath());
   }
 
+  public Path getRoot() {
+    return root;
+  }
+
   @Override
   public String toString() {
     return "directory(" + root + ")";
