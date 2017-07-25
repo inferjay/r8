@@ -172,11 +172,11 @@ public class D8CommandTest {
         tmpClassesDir.toString());
     AndroidApp inputApp = ToolHelper.getApp(command);
     assertEquals(1, inputApp.getClasspathResourceProviders().size());
-    assertEquals(tmpClassesDir,
-        ((DirectoryClassFileProvider) inputApp.getClasspathResourceProviders().get(0)).getRoot());
+    assertTrue(Files.isSameFile(tmpClassesDir,
+        ((DirectoryClassFileProvider) inputApp.getClasspathResourceProviders().get(0)).getRoot()));
     assertEquals(1, inputApp.getLibraryResourceProviders().size());
-    assertEquals(tmpClassesDir,
-        ((DirectoryClassFileProvider) inputApp.getLibraryResourceProviders().get(0)).getRoot());
+    assertTrue(Files.isSameFile(tmpClassesDir,
+        ((DirectoryClassFileProvider) inputApp.getLibraryResourceProviders().get(0)).getRoot()));
   }
 
   @Test
