@@ -6,10 +6,14 @@ import utils.Utils
 
 apply plugin: 'java'
 apply plugin: 'idea'
-apply plugin: 'jacoco'
 apply plugin: 'com.google.protobuf'
 
 apply from: 'copyAdditionalJctfCommonFiles.gradle'
+
+
+if (project.hasProperty('with_code_coverage')) {
+    apply plugin: 'jacoco'
+}
 
 repositories {
     mavenCentral()

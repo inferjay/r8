@@ -58,6 +58,9 @@ def ParseOptions():
   result.add_option('--disable_assertions',
       help="Disable assertions when running tests.",
       default=False, action='store_true')
+  result.add_option('--with_code_coverage',
+      help="Enable code coverage with Jacoco.",
+      default=False, action='store_true')
 
   return result.parse_args()
 
@@ -71,10 +74,12 @@ def archive_failures():
 
 def Main():
   (options, args) = ParseOptions()
-  gradle_args = ['cleanTest', 'test']
   if len(args) > 1:
     print("test.py takes at most one argument, the pattern for tests to run")
     return -1
+
+  gradle_args = []
+  # Set all necessary Gradle properties and options first.
   if options.verbose:
     gradle_args.append('-Pprint_test_stdout')
   if options.no_internal:
@@ -95,9 +100,8 @@ def Main():
     gradle_args.append('-Pjctf_compile_only')
   if options.disable_assertions:
     gradle_args.append('-Pdisable_assertions')
-  if len(args) > 0:
-    gradle_args.append('--tests')
-    gradle_args.append(args[0])
+  if options.with_code_coverage:
+    gradle_args.append('-Pwith_code_coverage')
   if os.name == 'nt':
     # temporary hack
     gradle_args.append('-Pno_internal')
@@ -107,6 +111,19 @@ def Main():
     gradle_args.append('jctfCommonJar')
     gradle_args.append('-x')
     gradle_args.append('jctfTestsClasses')
+
+  # Add Gradle tasks
+  gradle_args.append('cleanTest')
+  gradle_args.append('test')
+  if len(args) > 0:
+    # Test filtering. Must always follow the 'test' task.
+    gradle_args.append('--tests')
+    gradle_args.append(args[0])
+  if options.with_code_coverage:
+    # Create Jacoco report after tests.
+    gradle_args.append('jacocoTestReport')
+
+  # Now run tests on selected runtime(s).
   vms_to_test = [options.dex_vm] if options.dex_vm != "all" else ALL_ART_VMS
   for art_vm in vms_to_test:
     return_code = gradle.RunGradle(gradle_args + ['-Pdex_vm=%s' % art_vm],
