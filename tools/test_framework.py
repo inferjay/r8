@@ -59,6 +59,7 @@ def parse_arguments():
   return parser.parse_args()
 
 def Main():
+  utils.check_java_version()
   args = parse_arguments()
 
   with utils.TempDir() as temp_dir:

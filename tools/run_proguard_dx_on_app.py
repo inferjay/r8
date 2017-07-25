@@ -56,6 +56,7 @@ def parse_arguments(argv):
   return parser.parse_args(argv)
 
 def Main(argv):
+  utils.check_java_version()
   options = parse_arguments(argv)
 
   outdir = options.out

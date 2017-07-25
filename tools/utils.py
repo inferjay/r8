@@ -170,3 +170,18 @@ def print_dexsegments(prefix, dex_files):
   for segment_name, size in getDexSegmentSizes(dex_files).items():
     print('{}-{}(CodeSize): {}'
         .format(prefix, segment_name, size))
+
+# ensure that java version is 1.8.*-internal,
+# as opposed to e.g. 1.7* or 1.8.*-google-v7
+def check_java_version():
+  cmd= ['java', '-version']
+  output = subprocess.check_output(cmd, stderr = subprocess.STDOUT)
+  m = re.search('openjdk version "([^"]*)"', output)
+  if m is None:
+    raise Exception("Can't check java version: no version string in output"
+        " of 'java -version': '{}'".format(output))
+  version = m.groups(0)[0]
+  m = re.search('1[.]8[.].*-internal', version)
+  if m is None:
+    raise Exception("Incorrect java version, expected: '1.8.*-internal',"
+        " actual: {}".format(version))

@@ -100,6 +100,7 @@ def GenerateAdditionalProguardConfiguration(temp, outdir):
     return os.path.abspath(f.name)
 
 def main(argv):
+  utils.check_java_version()
   app_provided_pg_conf = False;
   (options, args) = ParseOptions(argv)
   outdir = options.out
