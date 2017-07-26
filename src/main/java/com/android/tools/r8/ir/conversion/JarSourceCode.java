@@ -892,15 +892,6 @@ public class JarSourceCode implements SourceCode {
     }
   }
 
-  static Type getArrayElementType(Type array) {
-    if (array == JarState.NULL_TYPE) {
-      return null;
-    }
-    String desc = array.getDescriptor();
-    assert desc.charAt(0) == '[';
-    return Type.getType(desc.substring(1));
-  }
-
   private static Type makeArrayType(Type elementType) {
     return Type.getObjectType("[" + elementType.getDescriptor());
   }
@@ -1153,8 +1144,7 @@ public class JarSourceCode implements SourceCode {
       case Opcodes.CALOAD:
       case Opcodes.SALOAD: {
         state.pop();
-        Slot array = state.pop(JarState.ARRAY_TYPE);
-        Type elementType = getArrayElementType(array.type);
+        Type elementType = state.pop(JarState.ARRAY_TYPE).getArrayElementType();
         if (elementType == null) {
           // We propagate the null type, which will then get resolved to an
           // actual type if we have a non-null type on another flow edge.
@@ -1860,7 +1850,7 @@ public class JarSourceCode implements SourceCode {
       case Opcodes.SALOAD: {
         Slot index = state.pop(Type.INT_TYPE);
         Slot array = state.pop(JarState.ARRAY_TYPE);
-        Type elementType = getArrayElementType(array.type);
+        Type elementType = array.getArrayElementType();
         if (elementType == null) {
           elementType = getArrayElementTypeForOpcode(opcode);
         }
@@ -1880,7 +1870,7 @@ public class JarSourceCode implements SourceCode {
         Slot value = state.pop();
         Slot index = state.pop(Type.INT_TYPE);
         Slot array = state.pop(JarState.ARRAY_TYPE);
-        Type elementType = getArrayElementType(array.type);
+        Type elementType = array.getArrayElementType();
         if (elementType == null) {
           elementType = getArrayElementTypeForOpcode(opcode);
         }
