@@ -84,7 +84,7 @@ import java.util.Set;
  * TODO(herhut): Currently, we do not minify members of annotation interfaces, as this would require
  * parsing and minification of the string arguments to annotations.
  */
-public class MethodNameMinifier {
+class MethodNameMinifier {
 
   private final AppInfoWithSubtyping appInfo;
   private final RootSet rootSet;
@@ -93,7 +93,7 @@ public class MethodNameMinifier {
   private MethodSignatureEquivalence equivalence = MethodSignatureEquivalence.get();
   private final List<String> dictionary;
 
-  public MethodNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet,
+  MethodNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet,
       List<String> dictionary) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
@@ -101,7 +101,7 @@ public class MethodNameMinifier {
     this.globalState = NamingState.createRoot(appInfo.dexItemFactory, dictionary);
   }
 
-  public Map<DexMethod, DexString> computeRenaming(Timing timing) {
+  Map<DexMethod, DexString> computeRenaming(Timing timing) {
     // Phase 1: Reserve all the names that need to be kept and allocate linked state in the
     //          library part.
     timing.begin("Phase 1");
@@ -198,10 +198,8 @@ public class MethodNameMinifier {
       DexClass clazz = appInfo.definitionFor(iface);
       if (clazz != null) {
         Set<NamingState<DexProto>> collectedStates = getReachableStates(iface, frontierMap);
-        addStatesToGlobalMapForMethods(clazz.directMethods(), collectedStates, globalStateMap,
-            sourceMethodsMap, originStates, iface);
-        addStatesToGlobalMapForMethods(clazz.virtualMethods(), collectedStates, globalStateMap,
-            sourceMethodsMap, originStates, iface);
+        clazz.forEachMethod(method -> addStatesToGlobalMapForMethod(
+            method, collectedStates, globalStateMap, sourceMethodsMap, originStates, iface));
       }
     });
     timing.end();
@@ -237,7 +235,6 @@ public class MethodNameMinifier {
 
 
   private void collectSubInterfaces(DexType iface, Set<DexType> interfaces) {
-    DexClass clazz = appInfo.definitionFor(iface);
     iface.forAllExtendsSubtypes(subtype -> {
       assert subtype.isInterface();
       if (interfaces.add(subtype)) {
@@ -246,19 +243,17 @@ public class MethodNameMinifier {
     });
   }
 
-  private void addStatesToGlobalMapForMethods(
-      DexEncodedMethod[] methods, Set<NamingState<DexProto>> collectedStates,
+  private void addStatesToGlobalMapForMethod(
+      DexEncodedMethod method, Set<NamingState<DexProto>> collectedStates,
       Map<Wrapper<DexMethod>, Set<NamingState<DexProto>>> globalStateMap,
       Map<Wrapper<DexMethod>, Set<DexMethod>> sourceMethodsMap,
       Map<Wrapper<DexMethod>, NamingState<DexProto>> originStates, DexType originInterface) {
-    for (DexEncodedMethod method : methods) {
-      Wrapper<DexMethod> key = equivalence.wrap(method.method);
-      Set<NamingState<DexProto>> stateSet = globalStateMap
-          .computeIfAbsent(key, k -> new HashSet<>());
-      stateSet.addAll(collectedStates);
-      sourceMethodsMap.computeIfAbsent(key, k -> new HashSet<>()).add(method.method);
-      originStates.putIfAbsent(key, states.get(originInterface));
-    }
+    Wrapper<DexMethod> key = equivalence.wrap(method.method);
+    Set<NamingState<DexProto>> stateSet =
+        globalStateMap.computeIfAbsent(key, k -> new HashSet<>());
+    stateSet.addAll(collectedStates);
+    sourceMethodsMap.computeIfAbsent(key, k -> new HashSet<>()).add(method.method);
+    originStates.putIfAbsent(key, states.get(originInterface));
   }
 
   private void assignNameForInterfaceMethodInAllStates(DexMethod method,
