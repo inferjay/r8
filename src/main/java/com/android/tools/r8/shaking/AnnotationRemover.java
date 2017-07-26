@@ -21,17 +21,15 @@ import java.util.function.Predicate;
 public class AnnotationRemover {
 
   private final AppInfoWithLiveness appInfo;
-  private final boolean minificationEnabled;
   private final AttributeRemovalOptions keep;
 
   public AnnotationRemover(AppInfoWithLiveness appInfo, InternalOptions options) {
-    this(appInfo, !options.skipMinification, options.attributeRemoval);
+    this(appInfo, options.attributeRemoval);
   }
 
-  public AnnotationRemover(AppInfoWithLiveness appInfo, boolean minificationEnabled,
+  public AnnotationRemover(AppInfoWithLiveness appInfo,
       AttributeRemovalOptions keep) {
     this.appInfo = appInfo;
-    this.minificationEnabled = minificationEnabled;
     this.keep = keep;
   }
 
@@ -104,7 +102,7 @@ public class AnnotationRemover {
   }
 
   public void run() {
-    keep.ensureValid(minificationEnabled);
+    keep.ensureValid();
     for (DexProgramClass clazz : appInfo.classes()) {
       clazz.annotations = stripAnnotations(clazz.annotations, this::filterAnnotations);
       clazz.forEachMethod(this::processMethod);
