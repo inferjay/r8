@@ -5,11 +5,17 @@ package com.android.tools.r8.naming;
 
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexClass;
+import com.android.tools.r8.graph.DexEncodedField;
+import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexValue;
+import com.android.tools.r8.graph.DexValue.DexValueArray;
+import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.graph.DexValue.DexValueType;
+import com.android.tools.r8.naming.signature.GenericSignatureAction;
+import com.android.tools.r8.naming.signature.GenericSignatureParser;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
 import com.android.tools.r8.utils.DescriptorUtils;
@@ -22,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class ClassNameMinifier {
 
@@ -34,6 +41,11 @@ public class ClassNameMinifier {
   private final Map<String, ClassNamingState> states = new HashMap<>();
   private final List<String> dictionary;
   private final boolean keepInnerClassStructure;
+
+  private GenericSignatureRewriter genericSignatureRewriter = new GenericSignatureRewriter();
+
+  private GenericSignatureParser<DexType> genericSignatureParser =
+      new GenericSignatureParser<>(genericSignatureRewriter);
 
   public ClassNameMinifier(AppInfoWithLiveness appInfo, RootSet rootSet, String packagePrefix,
       List<String> dictionary, boolean keepInnerClassStructure) {
@@ -59,9 +71,56 @@ public class ClassNameMinifier {
         renaming.put(clazz.type, renamed);
       }
     }
+
+    renameTypesInGenericSignatures();
+
     appInfo.dexItemFactory.forAllTypes(this::renameArrayTypeIfNeeded);
 
     return Collections.unmodifiableMap(renaming);
+  }
+
+  private void renameTypesInGenericSignatures() {
+    for (DexClass clazz : appInfo.classes()) {
+      rewriteGenericSignatures(clazz.annotations.annotations,
+          genericSignatureParser::parseClassSignature);
+      for (DexEncodedField field : clazz.staticFields) {
+        rewriteGenericSignatures(field.annotations.annotations,
+            genericSignatureParser::parseFieldSignature);
+      }
+      for (DexEncodedField field : clazz.instanceFields) {
+        rewriteGenericSignatures(field.annotations.annotations,
+            genericSignatureParser::parseFieldSignature);
+      }
+      for (DexEncodedMethod method : clazz.directMethods) {
+        rewriteGenericSignatures(method.annotations.annotations,
+            genericSignatureParser::parseMethodSignature);
+      }
+      for (DexEncodedMethod method : clazz.virtualMethods) {
+        rewriteGenericSignatures(method.annotations.annotations,
+            genericSignatureParser::parseMethodSignature);
+      }
+    }
+  }
+
+  private void rewriteGenericSignatures(DexAnnotation[] annotations, Consumer<String> parser) {
+    for (int i = 0; i < annotations.length; i++) {
+      DexAnnotation annotation = annotations[i];
+      if (DexAnnotation.isSignatureAnnotation(annotation, appInfo.dexItemFactory)) {
+        parser.accept(getSignatureFromAnnotation(annotation));
+        annotations[i] = DexAnnotation.createSignatureAnnotation(
+            genericSignatureRewriter.getRenamedSignature(),
+            appInfo.dexItemFactory);
+      }
+    }
+  }
+
+  private static String getSignatureFromAnnotation(DexAnnotation signatureAnnotation) {
+    DexValueArray elements = (DexValueArray) signatureAnnotation.annotation.elements[0].value;
+    StringBuilder signature = new StringBuilder();
+    for (DexValue element : elements.getValues()) {
+      signature.append(((DexValueString) element).value.toString());
+    }
+    return signature.toString();
   }
 
   /**
@@ -207,6 +266,65 @@ public class ClassNameMinifier {
         candidate = appInfo.dexItemFactory.createString(nextSuggestedName());
       } while (usedTypeNames.contains(candidate));
       return candidate;
+    }
+  }
+
+  private class GenericSignatureRewriter implements GenericSignatureAction<DexType> {
+
+    private StringBuilder renamedSignature;
+
+    public String getRenamedSignature() {
+      return renamedSignature.toString();
+    }
+
+    @Override
+    public void parsedSymbol(char symbol) {
+      renamedSignature.append(symbol);
+    }
+
+    @Override
+    public void parsedIdentifier(String identifier) {
+      renamedSignature.append(identifier);
+    }
+
+    @Override
+    public DexType parsedTypeName(String name) {
+      DexType type = appInfo.dexItemFactory.createType(
+          DescriptorUtils.getDescriptorFromClassBinaryName(name));
+      DexString renamedDescriptor = renaming.getOrDefault(type, type.descriptor);
+      renamedSignature.append(DescriptorUtils.getClassBinaryNameFromDescriptor(
+          renamedDescriptor.toString()));
+      return type;
+    }
+
+    @Override
+    public DexType parsedInnerTypeName(DexType enclosingType, String name) {
+      assert enclosingType.isClassType();
+      String enclosingDescriptor = enclosingType.toDescriptorString();
+      DexType type =
+          appInfo.dexItemFactory.createType(
+              DescriptorUtils.getDescriptorFromClassBinaryName(
+                  DescriptorUtils.getClassBinaryNameFromDescriptor(enclosingDescriptor)
+                  + '$' + name));
+      String enclosingRenamedBinaryName =
+          DescriptorUtils.getClassBinaryNameFromDescriptor(renaming.getOrDefault(enclosingType,
+              enclosingType.descriptor).toString());
+      String renamed = DescriptorUtils.getClassBinaryNameFromDescriptor(
+          renaming.getOrDefault(type, type.descriptor).toString());
+      assert renamed.startsWith(enclosingRenamedBinaryName + '$');
+      String outName = renamed.substring(enclosingRenamedBinaryName.length() + 1);
+      renamedSignature.append(outName);
+      return type;
+    }
+
+    @Override
+    public void start() {
+      renamedSignature = new StringBuilder();
+    }
+
+    @Override
+    public void stop() {
+      // nothing to do
     }
   }
 }

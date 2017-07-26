@@ -237,10 +237,6 @@ public class R8 {
           appInfo = appInfo.withLiveness().prunedCopyFrom(application);
           new AbstractMethodRemover(appInfo).run();
           new AnnotationRemover(appInfo.withLiveness(), options).run();
-        } else if (!options.skipMinification) {
-          // TODO(38188583): Ensure signatures are removed when minifying.
-          new AnnotationRemover(appInfo.withLiveness(), true,
-              AttributeRemovalOptions.filterOnlySignatures());
         }
       } finally {
         timing.end();

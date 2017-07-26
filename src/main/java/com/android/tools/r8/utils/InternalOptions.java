@@ -7,14 +7,12 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
-import com.android.tools.r8.ir.conversion.CallGraph;
 import com.android.tools.r8.shaking.ProguardConfigurationRule;
 import com.android.tools.r8.shaking.ProguardTypeMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class InternalOptions {
@@ -249,7 +247,7 @@ public class InternalOptions {
       annotationDefault = update(annotationDefault, ANNOTATION_DEFAULT, patterns);
     }
 
-    public void ensureValid(boolean isMinifying) {
+    public void ensureValid() {
       if (innerClasses && !enclosingMethod) {
         throw new CompilationError("Attribute InnerClasses requires EnclosingMethod attribute. "
             + "Check -keepattributes directive.");
@@ -259,10 +257,6 @@ public class InternalOptions {
       } else if (signature && !innerClasses) {
         throw new CompilationError("Attribute Signature requires InnerClasses attribute. Check "
             + "-keepattributes directive.");
-      } else if (signature && isMinifying) {
-        // TODO(38188583): Allow this once we can minify signatures.
-        throw new CompilationError("Attribute Signature cannot be kept when minifying. "
-            + "Check -keepattributes directive.");
       }
     }
   }

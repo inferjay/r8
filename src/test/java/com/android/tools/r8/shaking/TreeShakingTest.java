@@ -69,7 +69,12 @@ public class TreeShakingTest {
       "shaking16:keep-rules-2.txt:DEX:false",
       "shaking16:keep-rules-2.txt:JAR:false",
       "shaking15:keep-rules.txt:DEX:false",
-      "shaking15:keep-rules.txt:JAR:false"
+      "shaking15:keep-rules.txt:JAR:false",
+      "minifygeneric:keep-rules.txt:DEX:false",
+      "minifygeneric:keep-rules.txt:JAR:false",
+      "minifygenericwithinner:keep-rules.txt:DEX:false",
+      "minifygenericwithinner:keep-rules.txt:JAR:false"
+
   );
   private final boolean minify;
 
@@ -534,6 +539,8 @@ public class TreeShakingTest {
             "shaking16",
             "inlining",
             "minification",
+            "minifygeneric",
+            "minifygenericwithinner",
             "assumenosideeffects1",
             "assumenosideeffects2",
             "assumenosideeffects3",

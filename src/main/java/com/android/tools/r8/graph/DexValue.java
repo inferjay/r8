@@ -593,6 +593,10 @@ public abstract class DexValue extends DexItem {
       this.values = values;
     }
 
+    public DexValue[] getValues() {
+      return values;
+    }
+
     @Override
     public void collectIndexedItems(IndexedItemCollection indexedItems) {
       collectAll(indexedItems, values);

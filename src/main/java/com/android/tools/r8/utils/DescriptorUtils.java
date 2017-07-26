@@ -148,6 +148,18 @@ public class DescriptorUtils {
     return classDescriptor.substring(1, classDescriptor.length() - 1);
   }
 
+
+  /**
+   * Convert a class binary name to a descriptor.
+   *
+   * @param typeBinaryName class binary name i.e. "java/lang/Object"
+   * @return a class descriptor i.e. "Ljava/lang/Object;"
+   */
+  public static String getDescriptorFromClassBinaryName(String typeBinaryName) {
+    return ('L' + typeBinaryName + ';');
+  }
+
+
   /**
    * Get class name from its binary name.
    *
