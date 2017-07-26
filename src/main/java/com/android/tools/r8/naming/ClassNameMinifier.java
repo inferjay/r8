@@ -31,7 +31,7 @@ public class ClassNameMinifier {
   private final Set<DexString> usedTypeNames = Sets.newIdentityHashSet();
 
   private final Map<DexType, DexString> renaming = Maps.newIdentityHashMap();
-  private final Map<String, NamingState> states = new HashMap<>();
+  private final Map<String, ClassNamingState> states = new HashMap<>();
   private final List<String> dictionary;
   private final boolean keepInnerClassStructure;
 
@@ -47,13 +47,13 @@ public class ClassNameMinifier {
   public Map<DexType, DexString> computeRenaming() {
     Iterable<DexProgramClass> classes = appInfo.classes();
     // Collect names we have to keep.
-    for (DexClass clazz : appInfo.classes()) {
+    for (DexClass clazz : classes) {
       if (rootSet.noObfuscation.contains(clazz)) {
         assert !renaming.containsKey(clazz.type);
         registerClassAsUsed(clazz.type);
       }
     }
-    for (DexClass clazz : appInfo.classes()) {
+    for (DexClass clazz : classes) {
       if (!renaming.containsKey(clazz.type)) {
         DexString renamed = computeName(clazz);
         renaming.put(clazz.type, renamed);
@@ -105,7 +105,7 @@ public class ClassNameMinifier {
   }
 
   private DexString computeName(DexClass clazz) {
-    NamingState state = null;
+    ClassNamingState state = null;
     if (keepInnerClassStructure) {
       // When keeping the nesting structure of inner classes, we have to insert the name
       // of the outer class for the $ prefix.
@@ -129,11 +129,11 @@ public class ClassNameMinifier {
     }
   }
 
-  private NamingState getStateFor(String packageName) {
-    return states.computeIfAbsent(packageName, NamingState::new);
+  private ClassNamingState getStateFor(String packageName) {
+    return states.computeIfAbsent(packageName, ClassNamingState::new);
   }
 
-  private NamingState getStateForOuterClass(DexType outer) {
+  private ClassNamingState getStateForOuterClass(DexType outer) {
     String prefix = DescriptorUtils
         .getClassBinaryNameFromDescriptor(outer.toDescriptorString());
     return states.computeIfAbsent(prefix, k -> {
@@ -150,7 +150,7 @@ public class ClassNameMinifier {
         }
       }
       String binaryName = DescriptorUtils.getClassBinaryNameFromDescriptor(renamed.toString());
-      return new NamingState(binaryName, "$");
+      return new ClassNamingState(binaryName, "$");
     });
   }
 
@@ -171,18 +171,18 @@ public class ClassNameMinifier {
     }
   }
 
-  private class NamingState {
+  private class ClassNamingState {
 
     private final char[] packagePrefix;
     private final String separator;
     private int typeCounter = 1;
     private Iterator<String> dictionaryIterator;
 
-    NamingState(String packageName) {
+    ClassNamingState(String packageName) {
       this(packageName, "/");
     }
 
-    NamingState(String packageName, String separator) {
+    ClassNamingState(String packageName, String separator) {
       this.packagePrefix = ("L" + packageName + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
       this.separator = separator;
