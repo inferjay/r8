@@ -31,7 +31,6 @@ import java.util.concurrent.Executors;
 public class Bisect {
 
   private final BisectOptions options;
-  private final DexItemFactory factory = new DexItemFactory();
   private final Timing timing = new Timing("bisect");
 
   public interface Command {

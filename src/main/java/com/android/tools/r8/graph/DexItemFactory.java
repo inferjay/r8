@@ -228,7 +228,6 @@ public class DexItemFactory {
     public final DexMethod appendObject;
     public final DexMethod appendString;
     public final DexMethod appendStringBuffer;
-    public final DexMethod toString;
 
     private StringBuildingMethods(DexType receiver) {
       DexType sbufType = createType(createString("Ljava/lang/StringBuffer;"));
@@ -251,7 +250,6 @@ public class DexItemFactory {
       appendObject = createMethod(receiver, createProto(receiver, objectType), append);
       appendString = createMethod(receiver, createProto(receiver, stringType), append);
       appendStringBuffer = createMethod(receiver, createProto(receiver, sbufType), append);
-      toString = createMethod(receiver, createProto(stringType), toStringMethodName);
     }
 
     public void forEachAppendMethod(Consumer<DexMethod> consumer) {

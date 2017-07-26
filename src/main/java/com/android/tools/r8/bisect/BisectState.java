@@ -142,7 +142,6 @@ public class BisectState {
   }
 
   private final String signature;
-  private final DexApplication goodApp;
   private final DexApplication badApp;
   private final List<DexProgramClass> sortedGoodClasses;
   private final Map<DexType, Integer> indexMap;
@@ -154,7 +153,6 @@ public class BisectState {
   private Range nextRange = null;
 
   public BisectState(DexApplication goodApp, DexApplication badApp, File stateFile) {
-    this.goodApp = goodApp;
     this.badApp = badApp;
     this.stateFile = stateFile;
     signature = makeSignature(goodApp);

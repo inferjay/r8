@@ -26,7 +26,6 @@ public class Constants {
 
   public static final int DEX_MAGIC_SIZE = 8;
 
-  public static final int HEADER_SIZE = 0x70;
   public static final int MAGIC_OFFSET = 0;
   public static final int CHECKSUM_OFFSET = MAGIC_OFFSET + DEX_MAGIC_SIZE;
   public static final int SIGNATURE_OFFSET = CHECKSUM_OFFSET + 4;

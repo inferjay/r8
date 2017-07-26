@@ -174,7 +174,6 @@ public class ClassNameMinifier {
   private class ClassNamingState {
 
     private final char[] packagePrefix;
-    private final String separator;
     private int typeCounter = 1;
     private Iterator<String> dictionaryIterator;
 
@@ -185,7 +184,6 @@ public class ClassNameMinifier {
     ClassNamingState(String packageName, String separator) {
       this.packagePrefix = ("L" + packageName + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
-      this.separator = separator;
       this.dictionaryIterator = dictionary.iterator();
     }
 

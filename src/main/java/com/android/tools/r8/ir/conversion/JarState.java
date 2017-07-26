@@ -37,9 +37,6 @@ public class JarState {
   // Type representative for the null value (non-existent but works for tracking the types here).
   public static final Type NULL_TYPE = Type.getObjectType("<null>");
 
-  // Type representative for an address type (used by JSR/RET).
-  public static final Type ADDR_TYPE = Type.getObjectType("<address>");
-
   // Typed mapping from a local slot or stack slot to a virtual register.
   public static class Slot {
     public final int register;

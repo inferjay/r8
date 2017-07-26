@@ -588,7 +588,7 @@ public class DexBuilder {
           assert i == handlerGroup.getGuards().size() - 1;
           catchAllOffset = targetOffset;
         } else {
-          pairs.add(new TypeAddrPair(type, targetOffset, -1));
+          pairs.add(new TypeAddrPair(type, targetOffset));
         }
       }
       TypeAddrPair[] pairsArray = pairs.toArray(new TypeAddrPair[pairs.size()]);

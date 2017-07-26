@@ -771,8 +771,7 @@ public class DexFileReader {
           for (int j = 0; j < realHsize; j++) {
             int typeIdx = file.getUleb128();
             int addr = file.getUleb128();
-            pairs[j] = new TypeAddrPair(indexedItems.getType(typeIdx), addr,
-                encodedCatchHandlerOffset);
+            pairs[j] = new TypeAddrPair(indexedItems.getType(typeIdx), addr);
           }
           int catchAllAddr = -1;
           if (hsize <= 0) {

@@ -428,12 +428,10 @@ public class DexCode extends Code {
 
       public final DexType type;
       public final /* offset */ int addr;
-      public final /* offset to the start of an encoded_catch_handler. */ int offset;
 
-      public TypeAddrPair(DexType type, int addr, int offset) {
+      public TypeAddrPair(DexType type, int addr) {
         this.type = type;
         this.addr = addr;
-        this.offset = offset;
       }
 
       public void collectIndexedItems(IndexedItemCollection indexedItems) {

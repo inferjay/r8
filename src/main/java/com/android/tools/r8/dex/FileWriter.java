@@ -234,7 +234,7 @@ public class FileWriter {
     layout.setEndOfFile(dest.position());
 
     // Now that we have all mixedSectionOffsets, lets write the indexed items.
-    dest.moveTo(Constants.HEADER_SIZE);
+    dest.moveTo(Constants.TYPE_HEADER_ITEM_SIZE);
     writeFixedSectionItems(mapping.getStrings(), layout.stringIdsOffset, this::writeStringItem);
     writeFixedSectionItems(mapping.getTypes(), layout.typeIdsOffset, this::writeTypeItem);
     writeFixedSectionItems(mapping.getProtos(), layout.protoIdsOffset, this::writeProtoItem);
@@ -790,7 +790,7 @@ public class FileWriter {
     // Leave out checksum and signature for now.
     dest.moveTo(Constants.FILE_SIZE_OFFSET);
     dest.putInt(layout.getEndOfFile());
-    dest.putInt(Constants.HEADER_SIZE);
+    dest.putInt(Constants.TYPE_HEADER_ITEM_SIZE);
     dest.putInt(Constants.ENDIAN_CONSTANT);
     dest.putInt(0);
     dest.putInt(0);
@@ -897,7 +897,7 @@ public class FileWriter {
     static Layout from(ObjectToOffsetMapping mapping) {
       int offset = 0;
       return new Layout(
-          offset = Constants.HEADER_SIZE,
+          offset = Constants.TYPE_HEADER_ITEM_SIZE,
           offset += mapping.getStrings().length * Constants.TYPE_STRING_ID_ITEM_SIZE,
           offset += mapping.getTypes().length * Constants.TYPE_TYPE_ID_ITEM_SIZE,
           offset += mapping.getProtos().length * Constants.TYPE_PROTO_ID_ITEM_SIZE,

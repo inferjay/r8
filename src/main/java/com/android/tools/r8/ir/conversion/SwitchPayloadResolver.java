@@ -19,14 +19,12 @@ public class SwitchPayloadResolver {
 
     public final static int NO_SIZE = -1;
     public int userOffset;
-    public int fallthroughOffset;
     public int[] absoluteTargets = null;
     public int[] keys = null;
     public int size = NO_SIZE;
 
-    public PayloadData(int userOffset, int fallthroughOffset) {
+    public PayloadData(int userOffset) {
       this.userOffset = userOffset;
-      this.fallthroughOffset = fallthroughOffset;
     }
   }
 
@@ -36,7 +34,7 @@ public class SwitchPayloadResolver {
   public void addPayloadUser(Instruction dex) {
     int offset = dex.getOffset();
     int payloadOffset = offset + dex.getPayloadOffset();
-    payloadToData.put(payloadOffset, new PayloadData(offset, offset + dex.getSize()));
+    payloadToData.put(payloadOffset, new PayloadData(offset));
     if (unresolvedPayload.containsKey(payloadOffset)) {
       SwitchPayload payload = unresolvedPayload.remove(payloadOffset);
       resolve(payload);

@@ -11,7 +11,6 @@ import java.util.List;
 
 public class DominatorTree {
 
-  IRCode code;
   private BasicBlock[] sorted;
   private BasicBlock[] doms;
 
@@ -21,7 +20,6 @@ public class DominatorTree {
 
   // TODO(sgjesse) Get rid of this constructor and blocksToIgnore.
   DominatorTree(IRCode code, List<BasicBlock> blocksToIgnore) {
-    this.code = code;
     this.sorted = code.topologicallySortedBlocks(blocksToIgnore);
     numberBlocks();
     build();
