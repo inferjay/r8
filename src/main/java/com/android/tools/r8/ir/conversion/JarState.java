@@ -366,9 +366,7 @@ public class JarState {
     Snapshot snapshot = targetStates.get(offset);
     assert snapshot != null;
     assert locals.length == snapshot.locals.length;
-    for (int i = 0; i < locals.length; i++) {
-      locals[i] = snapshot.locals[i];
-    }
+    System.arraycopy(snapshot.locals, 0, locals, 0, locals.length);
     stack.clear();
     stack.addAll(snapshot.stack);
     topOfStack = startOfStack + 2 * stack.size();

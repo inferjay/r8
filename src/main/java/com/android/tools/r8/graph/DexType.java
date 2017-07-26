@@ -364,9 +364,8 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
     int leadingSquareBrackets = getNumberOfLeadingSquareBrackets();
     byte[] content = new byte[newBase.descriptor.content.length + leadingSquareBrackets];
     Arrays.fill(content, 0, leadingSquareBrackets, (byte) '[');
-    for (int i = 0; i < newBase.descriptor.content.length; i++) {
-      content[leadingSquareBrackets + i] = newBase.descriptor.content[i];
-    }
+    System.arraycopy(newBase.descriptor.content, 0, content, leadingSquareBrackets,
+        newBase.descriptor.content.length);
     DexString newDesc = dexItemFactory
         .createString(newBase.descriptor.size + leadingSquareBrackets, content);
     return dexItemFactory.createType(newDesc);
