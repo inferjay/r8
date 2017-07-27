@@ -15,7 +15,6 @@ import com.android.tools.r8.utils.StringUtils.BraceType;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -143,7 +142,7 @@ public class BasicBlock {
   public void removeSuccessor(BasicBlock block) {
     int index = successors.indexOf(block);
     assert index >= 0 : "removeSuccessor did not find the successor to remove";
-    removeSuccessorsByIndex(Arrays.asList(index));
+    removeSuccessorsByIndex(Collections.singletonList(index));
   }
 
   public void removePredecessor(BasicBlock block) {
@@ -469,7 +468,7 @@ public class BasicBlock {
     successor.predecessors.add(this);
   }
 
-  private boolean allPredecessorsDominated(BasicBlock block, DominatorTree dominator) {
+  private static boolean allPredecessorsDominated(BasicBlock block, DominatorTree dominator) {
     for (BasicBlock pred : block.predecessors) {
       if (!dominator.dominatedBy(pred, block)) {
         return false;
@@ -478,7 +477,7 @@ public class BasicBlock {
     return true;
   }
 
-  private boolean blocksClean(List<BasicBlock> blocks) {
+  private static boolean blocksClean(List<BasicBlock> blocks) {
     blocks.forEach((b) -> {
       assert b.predecessors.size() == 0;
       assert b.successors.size() == 0;
@@ -591,7 +590,7 @@ public class BasicBlock {
   // The proper incoming register for a catch successor (that is otherwise shadowed by the out-value
   // of a throwing instruction) is stored at the negative register-index in the definitions map.
   // (See readCurrentDefinition/writeCurrentDefinition/updateCurrentDefinition).
-  private int onThrowValueRegister(int register) {
+  private static int onThrowValueRegister(int register) {
     return -(register + 1);
   }
 
@@ -713,16 +712,16 @@ public class BasicBlock {
     return incompletePhis.keySet();
   }
 
-  private void appendBasicBlockList(
+  private static void appendBasicBlockList(
       StringBuilder builder, List<BasicBlock> list, Function<BasicBlock, String> postfix) {
     if (list.size() > 0) {
       for (BasicBlock block : list) {
         builder.append(block.number >= 0 ? block.number : "<unknown>");
         builder.append(postfix.apply(block));
-        builder.append(" ");
+        builder.append(' ');
       }
     } else {
-      builder.append("-");
+      builder.append('-');
     }
   }
 
@@ -748,7 +747,7 @@ public class BasicBlock {
     builder.append(number);
     builder.append(" (");
     builder.append(System.identityHashCode(this));
-    builder.append(")");
+    builder.append(')');
     builder.append(", pred-counts: " + predecessors.size());
     if (unfilledPredecessorsCount > 0) {
       builder.append(" (" + unfilledPredecessorsCount + " unfilled)");
@@ -756,10 +755,10 @@ public class BasicBlock {
     builder.append(", succ-count: " + successors.size());
     builder.append(", filled: " + isFilled());
     builder.append(", sealed: " + isSealed());
-    builder.append("\n");
+    builder.append('\n');
     builder.append("predecessors: ");
     appendBasicBlockList(builder, predecessors, b -> "");
-    builder.append("\n");
+    builder.append('\n');
     builder.append("successors: ");
     appendBasicBlockList(builder, successors, this::predecessorPostfix);
     if (successors.size() > 0) {
@@ -771,14 +770,14 @@ public class BasicBlock {
       }
       builder.append(" try/catch successors)");
     }
-    builder.append("\n");
+    builder.append('\n');
     if (phis != null && phis.size() > 0) {
       for (Phi phi : phis) {
         builder.append(phi.printPhi());
         if (incompletePhis.values().contains(phi)) {
           builder.append(" (incomplete)");
         }
-        builder.append("\n");
+        builder.append('\n');
       }
     } else {
       builder.append("no phis\n");
@@ -786,13 +785,13 @@ public class BasicBlock {
     if (localsAtEntry != null) {
       builder.append("locals: ");
       StringUtils.append(builder, localsAtEntry.int2ReferenceEntrySet(), ", ", BraceType.NONE);
-      builder.append("\n");
+      builder.append('\n');
     }
     for (Instruction instruction : instructions) {
       StringUtils.appendLeftPadded(builder, Integer.toString(instruction.getNumber()), 6);
       builder.append(": ");
       StringUtils.appendRightPadded(builder, instruction.toString(), 20);
-      builder.append("\n");
+      builder.append('\n');
     }
     return builder.toString();
   }
@@ -1036,7 +1035,7 @@ public class BasicBlock {
     newBlock.setNumber(blockNumber);
 
     // Copy all successors including catch handlers to the new block, and update predecessors.
-    successors.forEach(newBlock.successors::add);
+    newBlock.successors.addAll(successors);
     for (BasicBlock successor : newBlock.getSuccessors()) {
       successor.replacePredecessor(this, newBlock);
     }
