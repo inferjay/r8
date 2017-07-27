@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public class ClassNameMinifier {
+class ClassNameMinifier {
 
   private final AppInfoWithLiveness appInfo;
   private final RootSet rootSet;
@@ -47,7 +47,7 @@ public class ClassNameMinifier {
   private GenericSignatureParser<DexType> genericSignatureParser =
       new GenericSignatureParser<>(genericSignatureRewriter);
 
-  public ClassNameMinifier(AppInfoWithLiveness appInfo, RootSet rootSet, String packagePrefix,
+  ClassNameMinifier(AppInfoWithLiveness appInfo, RootSet rootSet, String packagePrefix,
       List<String> dictionary, boolean keepInnerClassStructure) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
@@ -56,7 +56,7 @@ public class ClassNameMinifier {
     this.keepInnerClassStructure = keepInnerClassStructure;
   }
 
-  public Map<DexType, DexString> computeRenaming() {
+  Map<DexType, DexString> computeRenaming() {
     Iterable<DexProgramClass> classes = appInfo.classes();
     // Collect names we have to keep.
     for (DexClass clazz : classes) {
@@ -83,22 +83,10 @@ public class ClassNameMinifier {
     for (DexClass clazz : appInfo.classes()) {
       rewriteGenericSignatures(clazz.annotations.annotations,
           genericSignatureParser::parseClassSignature);
-      for (DexEncodedField field : clazz.staticFields) {
-        rewriteGenericSignatures(field.annotations.annotations,
-            genericSignatureParser::parseFieldSignature);
-      }
-      for (DexEncodedField field : clazz.instanceFields) {
-        rewriteGenericSignatures(field.annotations.annotations,
-            genericSignatureParser::parseFieldSignature);
-      }
-      for (DexEncodedMethod method : clazz.directMethods) {
-        rewriteGenericSignatures(method.annotations.annotations,
-            genericSignatureParser::parseMethodSignature);
-      }
-      for (DexEncodedMethod method : clazz.virtualMethods) {
-        rewriteGenericSignatures(method.annotations.annotations,
-            genericSignatureParser::parseMethodSignature);
-      }
+      clazz.forEachField(field -> rewriteGenericSignatures(
+          field.annotations.annotations, genericSignatureParser::parseFieldSignature));
+      clazz.forEachMethod(method -> rewriteGenericSignatures(
+          method.annotations.annotations, genericSignatureParser::parseMethodSignature));
     }
   }
 

@@ -14,7 +14,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FieldNameMinifier {
+class FieldNameMinifier {
 
   private final AppInfoWithSubtyping appInfo;
   private final RootSet rootSet;
@@ -22,7 +22,7 @@ public class FieldNameMinifier {
   private final List<String> dictionary;
   private final Map<DexType, NamingState<DexType>> states = new IdentityHashMap<>();
 
-  public FieldNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet, List<String> dictionary) {
+  FieldNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet, List<String> dictionary) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
     this.dictionary = dictionary;
@@ -50,18 +50,17 @@ public class FieldNameMinifier {
       return;
     }
     NamingState<DexType> newState = states.computeIfAbsent(type, t -> state.createChild());
-    reserveFieldNames(newState, holder.instanceFields(), holder.isLibraryClass());
-    reserveFieldNames(newState, holder.staticFields(), holder.isLibraryClass());
+    holder.forEachField(field -> reserveFieldName(field, newState, holder.isLibraryClass()));
     type.forAllExtendsSubtypes(subtype -> reserveNamesInSubtypes(subtype, newState));
   }
 
-  private void reserveFieldNames(NamingState<DexType> state, DexEncodedField[] fields,
+  private void reserveFieldName(
+      DexEncodedField encodedField,
+      NamingState<DexType> state,
       boolean isLibrary) {
-    for (DexEncodedField encodedField : fields) {
-      if (isLibrary || rootSet.noObfuscation.contains(encodedField)) {
-        DexField field = encodedField.field;
-        state.reserveName(field.name, field.type);
-      }
+    if (isLibrary || rootSet.noObfuscation.contains(encodedField)) {
+      DexField field = encodedField.field;
+      state.reserveName(field.name, field.type);
     }
   }
 
@@ -72,17 +71,14 @@ public class FieldNameMinifier {
     }
     NamingState<DexType> state = states.get(clazz.type);
     assert state != null;
-    renameFields(clazz.instanceFields(), state);
-    renameFields(clazz.staticFields(), state);
+    clazz.forEachField(field -> renameField(field, state));
     type.forAllExtendsSubtypes(this::renameFieldsInSubtypes);
   }
 
-  private void renameFields(DexEncodedField[] fields, NamingState<DexType> state) {
-    for (DexEncodedField encodedField : fields) {
-      DexField field = encodedField.field;
-      if (!state.isReserved(field.name, field.type)) {
-        renaming.put(field, state.assignNewNameFor(field.name, field.type, false));
-      }
+  private void renameField(DexEncodedField encodedField, NamingState<DexType> state) {
+    DexField field = encodedField.field;
+    if (!state.isReserved(field.name, field.type)) {
+      renaming.put(field, state.assignNewNameFor(field.name, field.type, false));
     }
   }
 }
