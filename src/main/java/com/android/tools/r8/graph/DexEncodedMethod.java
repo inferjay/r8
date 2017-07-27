@@ -376,7 +376,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
   public void registerReachableDefinitions(UseRegistry registry) {
     if (code != null) {
       if (Log.ENABLED) {
-        Log.verbose((Class) getClass(), "Registering definitions reachable from `%s`.", method);
+        Log.verbose(getClass(), "Registering definitions reachable from `%s`.", method);
       }
       code.registerReachableDefinitions(registry);
     }

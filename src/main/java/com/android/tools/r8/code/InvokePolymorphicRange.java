@@ -39,7 +39,7 @@ public class InvokePolymorphicRange extends Format4rcc {
   }
 
   public DexMethod getMethod() {
-    return (DexMethod) BBBB;
+    return BBBB;
   }
 
   @Override
