@@ -500,6 +500,7 @@ public class SmaliTestBase {
           Executors.newSingleThreadExecutor(),
           application,
           appInfo,
+          null,
           NamingLens.getIdentityLens(),
           null,
           null,

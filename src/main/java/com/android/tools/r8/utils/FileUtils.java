@@ -4,11 +4,16 @@
 package com.android.tools.r8.utils;
 
 import com.android.tools.r8.CompilationException;
+import com.google.common.io.Closer;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -79,10 +84,27 @@ public class FileUtils {
       if (!isJarOrZip  && !(Files.exists(path) && Files.isDirectory(path))) {
         throw new CompilationException(
             "Invalid output: "
-                + path +
-                "\nOutput must be a .zip or .jar archive or an existing directory");
+                + path
+                + "\nOutput must be a .zip or .jar archive or an existing directory");
       }
     }
     return path;
   }
+
+  public static OutputStream openPathWithDefault(
+      Closer closer,
+      Path file,
+      PrintStream defaultOutput,
+      OpenOption... openOptions)
+      throws IOException {
+    OutputStream mapOut;
+    if (file == null) {
+      mapOut = defaultOutput;
+    } else {
+      mapOut = Files.newOutputStream(file, openOptions);
+      closer.register(mapOut);
+    }
+    return mapOut;
+  }
+
 }

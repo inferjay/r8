@@ -173,10 +173,11 @@ public final class D8 {
 
       CompilationResult output =
           new CompilationResult(
-              new ApplicationWriter(app, appInfo, options, NamingLens.getIdentityLens(), null)
-                .write(null, executor),
-                app,
-                appInfo);
+              new ApplicationWriter(
+                  app, appInfo, options, null, NamingLens.getIdentityLens(), null)
+                  .write(null, executor),
+              app,
+              appInfo);
 
       options.printWarnings();
       return output;

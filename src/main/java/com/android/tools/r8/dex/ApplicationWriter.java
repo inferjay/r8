@@ -42,6 +42,7 @@ public class ApplicationWriter {
 
   public final DexApplication application;
   public final AppInfo appInfo;
+  public final byte[] deadCode;
   public final NamingLens namingLens;
   public final byte[] proguardSeedsData;
   public final InternalOptions options;
@@ -107,6 +108,7 @@ public class ApplicationWriter {
       DexApplication application,
       AppInfo appInfo,
       InternalOptions options,
+      byte[] deadCode,
       NamingLens namingLens,
       byte[] proguardSeedsData) {
     assert application != null;
@@ -114,6 +116,7 @@ public class ApplicationWriter {
     this.appInfo = appInfo;
     assert options != null;
     this.options = options;
+    this.deadCode = deadCode;
     this.namingLens = namingLens;
     this.proguardSeedsData = proguardSeedsData;
   }
@@ -170,6 +173,9 @@ public class ApplicationWriter {
         }
       } catch (InterruptedException e) {
         throw new RuntimeException("Interrupted while waiting for future.", e);
+      }
+      if (deadCode != null) {
+        builder.setDeadCode(deadCode);
       }
       // Write the proguard map file after writing the dex files, as the map writer traverses
       // the DexProgramClass structures, which are destructively updated during dex file writing.
