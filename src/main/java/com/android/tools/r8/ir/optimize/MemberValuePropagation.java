@@ -37,7 +37,7 @@ public class MemberValuePropagation {
     ASSUME_VALUES
   }
 
-  private class ProguardMemberRuleLookup {
+  private static class ProguardMemberRuleLookup {
 
     final RuleType type;
     final ProguardMemberRule rule;

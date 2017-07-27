@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  */
 public class CallGraph {
 
-  private class Node {
+  private static class Node {
 
     public final DexEncodedMethod method;
     private int invokeCount = 0;
