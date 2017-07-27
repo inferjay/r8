@@ -52,6 +52,7 @@ public class AndroidApp {
   private final ImmutableList<Resource> programResources;
   private final ImmutableList<ClassFileResourceProvider> classpathResourceProviders;
   private final ImmutableList<ClassFileResourceProvider> libraryResourceProviders;
+  private final Resource deadCode;
   private final Resource proguardMap;
   private final Resource proguardSeeds;
   private final Resource packageDistribution;
@@ -62,6 +63,7 @@ public class AndroidApp {
       ImmutableList<Resource> programResources,
       ImmutableList<ClassFileResourceProvider> classpathResourceProviders,
       ImmutableList<ClassFileResourceProvider> libraryResourceProviders,
+      Resource deadCode,
       Resource proguardMap,
       Resource proguardSeeds,
       Resource packageDistribution,
@@ -69,6 +71,7 @@ public class AndroidApp {
     this.programResources = programResources;
     this.classpathResourceProviders = classpathResourceProviders;
     this.libraryResourceProviders = libraryResourceProviders;
+    this.deadCode = deadCode;
     this.proguardMap = proguardMap;
     this.proguardSeeds = proguardSeeds;
     this.packageDistribution = packageDistribution;
@@ -166,6 +169,20 @@ public class AndroidApp {
       }
     }
     return out;
+  }
+
+  /**
+   * True if the dead-code resource exists.
+   */
+  public boolean hasDeadCode() {
+    return deadCode != null;
+  }
+
+  /**
+   * Get the input stream of the dead-code resource if exists.
+   */
+  public InputStream getDeadCode(Closer closer) throws IOException {
+    return deadCode == null ? null : deadCode.getStream(closer);
   }
 
   /**
@@ -337,6 +354,12 @@ public class AndroidApp {
     out.write(ByteStreams.toByteArray(input));
   }
 
+  public void writeDeadCode(Closer closer, OutputStream out) throws IOException {
+    InputStream input = getDeadCode(closer);
+    assert input != null;
+    out.write(ByteStreams.toByteArray(input));
+  }
+
   /**
    * Builder interface for constructing an AndroidApp.
    */
@@ -345,6 +368,7 @@ public class AndroidApp {
     private final List<Resource> programResources = new ArrayList<>();
     private final List<ClassFileResourceProvider> classpathResourceProviders = new ArrayList<>();
     private final List<ClassFileResourceProvider> libraryResourceProviders = new ArrayList<>();
+    private Resource deadCode;
     private Resource proguardMap;
     private Resource proguardSeeds;
     private Resource packageDistribution;
@@ -359,6 +383,7 @@ public class AndroidApp {
       programResources.addAll(app.programResources);
       classpathResourceProviders.addAll(app.classpathResourceProviders);
       libraryResourceProviders.addAll(app.libraryResourceProviders);
+      deadCode = app.deadCode;
       proguardMap = app.proguardMap;
       proguardSeeds = app.proguardSeeds;
       packageDistribution = app.packageDistribution;
@@ -499,6 +524,14 @@ public class AndroidApp {
     }
 
     /**
+     * Set dead-code data.
+     */
+    public Builder setDeadCode(byte[] content) {
+      deadCode = content == null ? null : Resource.fromBytes(null, content);
+      return this;
+    }
+
+    /**
      * Set proguard-map file.
      */
     public Builder setProguardMapFile(Path file) {
@@ -561,6 +594,7 @@ public class AndroidApp {
           ImmutableList.copyOf(programResources),
           ImmutableList.copyOf(classpathResourceProviders),
           ImmutableList.copyOf(libraryResourceProviders),
+          deadCode,
           proguardMap,
           proguardSeeds,
           packageDistribution,

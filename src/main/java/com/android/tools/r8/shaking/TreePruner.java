@@ -13,6 +13,7 @@ import com.android.tools.r8.graph.PresortedComparable;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -22,25 +23,27 @@ public class TreePruner {
   private DexApplication application;
   private final AppInfoWithLiveness appInfo;
   private final InternalOptions options;
+  private UsagePrinter usagePrinter;
 
   public TreePruner(
       DexApplication application, AppInfoWithLiveness appInfo, InternalOptions options) {
     this.application = application;
     this.appInfo = appInfo;
     this.options = options;
+    this.usagePrinter = options.printUsage ? new UsagePrinter() : UsagePrinter.DONT_PRINT;
   }
 
-  public DexApplication run() {
+  public DexApplication run() throws IOException {
     application.timing.begin("Pruning application...");
     if (options.debugKeepRules && !options.skipMinification) {
       System.out.println(
-          "NOTE: Debugging keep rules on a minified build might yield broken builds, as\n" +
-              "      minifcation also depends on the used keep rules. We recommend using\n" +
-              "      --skip-minification.");
+          "NOTE: Debugging keep rules on a minified build might yield broken builds, as\n"
+              + "      minification also depends on the used keep rules. We recommend using\n"
+              + "      --skip-minification.");
     }
     DexApplication result;
     try {
-      result = removeUnused(application).build();
+      result = removeUnused(application).appendDeadCode(usagePrinter.toByteArray()).build();
     } finally {
       application.timing.end();
     }
@@ -60,6 +63,7 @@ public class TreePruner {
         if (Log.ENABLED) {
           Log.debug(getClass(), "Removing class: " + clazz);
         }
+        usagePrinter.printUnusedClass(clazz);
       } else {
         newClasses.add(clazz);
         if (!appInfo.instantiatedTypes.contains(clazz.type) &&
@@ -78,10 +82,12 @@ public class TreePruner {
         }
         // The class is used and must be kept. Remove the unused fields and methods from
         // the class.
+        usagePrinter.visiting(clazz);
         clazz.directMethods = reachableMethods(clazz.directMethods(), clazz);
         clazz.virtualMethods = reachableMethods(clazz.virtualMethods(), clazz);
         clazz.instanceFields = reachableFields(clazz.instanceFields());
         clazz.staticFields = reachableFields(clazz.staticFields());
+        usagePrinter.visited();
       }
     }
     return newClasses;
@@ -122,18 +128,18 @@ public class TreePruner {
       reachableMethods.add(methods[i]);
     }
     for (int i = firstUnreachable; i < methods.length; i++) {
+      DexEncodedMethod method = methods[i];
       if (appInfo.liveMethods.contains(methods[i].getKey())) {
-        reachableMethods.add(methods[i]);
-      } else if (options.debugKeepRules && isDefaultConstructor(methods[i])) {
+        reachableMethods.add(method);
+      } else if (options.debugKeepRules && isDefaultConstructor(method)) {
         // Keep the method but rewrite its body, if it has one.
         reachableMethods.add(methods[i].accessFlags.isAbstract()
-            ? methods[i]
-            : methods[i].toMethodThatLogsError(application.dexItemFactory));
-      } else if (appInfo.targetedMethods.contains(methods[i].getKey())) {
+            ? method
+            : method.toMethodThatLogsError(application.dexItemFactory));
+      } else if (appInfo.targetedMethods.contains(method.getKey())) {
         if (Log.ENABLED) {
-          Log.debug(getClass(), "Making method %s abstract.", methods[i].method);
+          Log.debug(getClass(), "Making method %s abstract.", method.method);
         }
-        DexEncodedMethod method = methods[i];
         // Final classes cannot be abstract, so we have to keep the method in that case.
         // Also some other kinds of methods cannot be abstract, so keep them around.
         boolean allowAbstract = clazz.accessFlags.isAbstract()
@@ -144,10 +150,13 @@ public class TreePruner {
         // By construction, private and static methods cannot be reachable but non-live.
         assert !method.accessFlags.isPrivate() && !method.accessFlags.isStatic();
         reachableMethods.add(allowAbstract
-            ? methods[i].toAbstractMethod()
-            : methods[i].toEmptyThrowingMethod());
-      } else if (Log.ENABLED) {
-        Log.debug(getClass(), "Removing method %s.", methods[i].method);
+            ? method.toAbstractMethod()
+            : method.toEmptyThrowingMethod());
+      } else {
+        if (Log.ENABLED) {
+          Log.debug(getClass(), "Removing method %s.", method.method);
+        }
+        usagePrinter.printUnusedMethod(method);
       }
     }
     return reachableMethods.toArray(new DexEncodedMethod[reachableMethods.size()]);
@@ -155,21 +164,27 @@ public class TreePruner {
 
   private DexEncodedField[] reachableFields(DexEncodedField[] fields) {
     int firstUnreachable = firstUnreachableIndex(fields, appInfo.liveFields);
+    // Return the original array if all fields are used.
     if (firstUnreachable == -1) {
       return fields;
     }
     if (Log.ENABLED) {
       Log.debug(getClass(), "Removing field: " + fields[firstUnreachable]);
     }
+    usagePrinter.printUnusedField(fields[firstUnreachable]);
     ArrayList<DexEncodedField> reachableFields = new ArrayList<>(fields.length);
     for (int i = 0; i < firstUnreachable; i++) {
       reachableFields.add(fields[i]);
     }
     for (int i = firstUnreachable + 1; i < fields.length; i++) {
-      if (appInfo.liveFields.contains(fields[i].getKey())) {
-        reachableFields.add(fields[i]);
-      } else if (Log.ENABLED) {
-        Log.debug(getClass(), "Removing field: " + fields[i]);
+      DexEncodedField field = fields[i];
+      if (appInfo.liveFields.contains(field.getKey())) {
+        reachableFields.add(field);
+      } else {
+        if (Log.ENABLED) {
+          Log.debug(getClass(), "Removing field: " + field);
+        }
+        usagePrinter.printUnusedField(field);
       }
     }
     return reachableFields.toArray(new DexEncodedField[reachableFields.size()]);

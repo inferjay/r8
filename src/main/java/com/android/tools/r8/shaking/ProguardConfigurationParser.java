@@ -159,8 +159,6 @@ public class ProguardConfigurationParser {
         if (isOptionalArgumentGiven()) {
           configurationBuilder.setPrintUsageFile(parseFileName());
         }
-        // TODO(b/36799826): once fully implemented, no longer necessary to warn.
-        System.out.println("WARNING: Ignoring option: -printusage");
       } else if (acceptString("verbose")) {
         configurationBuilder.setVerbose(true);
       } else if (acceptString("ignorewarnings")) {

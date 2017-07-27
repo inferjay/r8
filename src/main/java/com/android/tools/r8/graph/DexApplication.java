@@ -15,6 +15,7 @@ import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Bytes;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -38,6 +39,7 @@ public class DexApplication {
   private LibraryClassCollection libraryClasses;
 
   public final ImmutableSet<DexType> mainDexList;
+  public final byte[] deadCode;
 
   private final ClassNameMapper proguardMap;
 
@@ -55,6 +57,7 @@ public class DexApplication {
       ClasspathClassCollection classpathClasses,
       LibraryClassCollection libraryClasses,
       ImmutableSet<DexType> mainDexList,
+      byte[] deadCode,
       DexItemFactory dexItemFactory,
       DexString highestSortingString,
       Timing timing) {
@@ -64,6 +67,7 @@ public class DexApplication {
     this.classpathClasses = classpathClasses;
     this.libraryClasses = libraryClasses;
     this.mainDexList = mainDexList;
+    this.deadCode = deadCode;
     this.dexItemFactory = dexItemFactory;
     this.highestSortingString = highestSortingString;
     this.timing = timing;
@@ -305,16 +309,18 @@ public class DexApplication {
     private LibraryClassCollection libraryClasses;
 
     public final DexItemFactory dexItemFactory;
-    public ClassNameMapper proguardMap;
+    ClassNameMapper proguardMap;
     private final Timing timing;
 
-    public DexString highestSortingString;
+    DexString highestSortingString;
+    private byte[] deadCode;
     private final Set<DexType> mainDexList = Sets.newIdentityHashSet();
 
     public Builder(DexItemFactory dexItemFactory, Timing timing) {
       this.programClasses = new ArrayList<>();
       this.dexItemFactory = dexItemFactory;
       this.timing = timing;
+      this.deadCode = null;
       this.classpathClasses = null;
       this.libraryClasses = null;
     }
@@ -328,6 +334,7 @@ public class DexApplication {
       highestSortingString = application.highestSortingString;
       dexItemFactory = application.dexItemFactory;
       mainDexList.addAll(application.mainDexList);
+      deadCode = application.deadCode;
     }
 
     public synchronized Builder setProguardMap(ClassNameMapper proguardMap) {
@@ -340,6 +347,19 @@ public class DexApplication {
       assert newProgramClasses != null;
       this.programClasses.clear();
       this.programClasses.addAll(newProgramClasses);
+      return this;
+    }
+
+    public Builder appendDeadCode(byte[] deadCodeAtAnotherRound) {
+      if (deadCodeAtAnotherRound == null) {
+        return this;
+      }
+      if (this.deadCode == null) {
+        this.deadCode = deadCodeAtAnotherRound;
+        return this;
+      }
+      // Concatenate existing byte[] and the given byte[].
+      this.deadCode = Bytes.concat(this.deadCode, deadCodeAtAnotherRound);
       return this;
     }
 
@@ -389,6 +409,7 @@ public class DexApplication {
           classpathClasses,
           libraryClasses,
           ImmutableSet.copyOf(mainDexList),
+          deadCode,
           dexItemFactory,
           highestSortingString,
           timing);

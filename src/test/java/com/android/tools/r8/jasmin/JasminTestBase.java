@@ -85,6 +85,7 @@ public class JasminTestBase {
             Executors.newSingleThreadExecutor(),
             app,
             info,
+            null,
             NamingLens.getIdentityLens(),
             null,
             null,

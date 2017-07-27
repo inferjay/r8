@@ -720,7 +720,7 @@ public class TreeShakingTest {
     }
   }
 
-  private static <T> T getTestOptionalParameter(
+  static <T> T getTestOptionalParameter(
       Map<String, T> specifications, Set<String> usedSpecifications, String test,
       String keepName) {
     T parameter = specifications.get(test);
