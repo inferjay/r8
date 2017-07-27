@@ -56,7 +56,7 @@ public abstract class Format4rcc extends Base4Format {
       return false;
     }
     Format4rcc o = (Format4rcc) other;
-    return o.AA == AA && o.CCCC == CCCC && o.BBBB.equals(BBBB) & o.HHHH.equals(HHHH);
+    return o.AA == AA && o.CCCC == CCCC && o.BBBB.equals(BBBB) && o.HHHH.equals(HHHH);
   }
 
   public String toString(ClassNameMapper naming) {

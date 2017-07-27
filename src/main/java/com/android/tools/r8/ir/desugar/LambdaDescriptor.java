@@ -162,7 +162,7 @@ final class LambdaDescriptor {
     boolean staticTarget = implHandle.type.isInvokeStatic();
     boolean instanceTarget = implHandle.type.isInvokeInstance();
     boolean initTarget = implHandle.type.isInvokeConstructor();
-    assert instanceTarget || staticTarget | initTarget;
+    assert instanceTarget || staticTarget || initTarget;
 
     if (targetMethod == null) {
       // The target cannot be a private method, since otherwise it
