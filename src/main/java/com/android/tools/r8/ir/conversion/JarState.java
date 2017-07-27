@@ -16,6 +16,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LocalVariableNode;
@@ -389,13 +390,14 @@ public class JarState {
         }
       }
       // TODO(zerny): Precompute and sort the local ranges.
-      for (LocalVariableNode node : localVariables.keySet()) {
+      for (Entry<LocalVariableNode, DebugLocalInfo> entry : localVariables.entrySet()) {
+        LocalVariableNode node = entry.getKey();
         int startOffset = source.getOffset(node.start);
         int endOffset = source.getOffset(node.end);
         if (startOffset <= target && target < endOffset) {
           int register = getLocalRegister(node.index, Type.getType(node.desc));
           Local local = locals[register];
-          locals[register] = new Local(local.slot, localVariables.get(node));
+          locals[register] = new Local(local.slot, entry.getValue());
         }
       }
     }

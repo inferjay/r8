@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Builder to construct a "per position" representation of the debug information.
@@ -160,8 +161,9 @@ public class DexDebugEntryBuilder {
 
   private ImmutableMap<Integer, DebugLocalInfo> getLocals() {
     ImmutableMap.Builder<Integer, DebugLocalInfo> builder = ImmutableMap.builder();
-    for (Integer register : locals.keySet()) {
-      LocalEntry entry = locals.get(register);
+    for (Entry<Integer, LocalEntry> mapEntry : locals.entrySet()) {
+      Integer register = mapEntry.getKey();
+      LocalEntry entry = mapEntry.getValue();
       if (entry.current != null) {
         builder.put(register, entry.current);
       }
