@@ -15,7 +15,6 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import java.util.Arrays;
 
 public class InstanceGet extends FieldInstruction {
 

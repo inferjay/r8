@@ -10,8 +10,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-import static java.util.Arrays.stream;
-
 public final class D8Logger {
 
   private static final int STATUS_ERROR = 1;

@@ -8,7 +8,6 @@ import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexItem;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
-import java.util.Arrays;
 import java.util.Set;
 
 public class DiscardedChecker {

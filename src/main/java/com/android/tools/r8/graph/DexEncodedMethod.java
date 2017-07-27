@@ -14,10 +14,8 @@ import com.android.tools.r8.code.ConstStringJumbo;
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.code.InvokeDirect;
 import com.android.tools.r8.code.InvokeStatic;
-import com.android.tools.r8.code.InvokeSuper;
 import com.android.tools.r8.code.NewInstance;
 import com.android.tools.r8.code.Throw;
-import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.ir.code.IRCode;
@@ -33,7 +31,6 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.naming.MemberNaming.Signature;
-import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
 
 public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
