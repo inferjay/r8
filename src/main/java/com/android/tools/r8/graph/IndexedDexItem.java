@@ -30,7 +30,7 @@ public abstract class IndexedDexItem extends CanonicalizedDexItem implements Pre
    * as many entries in the index as there are files (we only expand when we need to). If we lookup
    * the value of an entry that is out of bounds it is equivalent to {@link #UNASSOCIATED_VALUE}
    *
-   * <p>This field is initialized on first write in {@link #updateVirtualFileData(int, int)}}. It
+   * <p>This field is initialized on first write in {@link #updateVirtualFileData(int)}}. It
    * is assumed that multiple files are processed concurrently and thus the allocation of the
    * array is synchronized. However, for any a given file id, sequential access is assumed.
    */
@@ -106,7 +106,7 @@ public abstract class IndexedDexItem extends CanonicalizedDexItem implements Pre
    * Assigns an actual index for this item in the given file.
    *
    * <p>May only be used after this item has been assigned to the file using {@link
-   * #assignToVirtualFile(int, int)}.
+   * #assignToVirtualFile(int)}.
    */
   public void assignVirtualFileIndex(int virtualFileId, int index) {
     assert virtualFileIndexes != null;

@@ -45,7 +45,7 @@ public interface InstructionListIterator extends ListIterator<Instruction> {
   /**
    * Continue to call {@link #next} while {@code predicate} tests {@code false}.
    *
-   * @returns the instruction that matched the predicate or {@code null} if all instructions fails
+   * @return the instruction that matched the predicate or {@code null} if all instructions fails
    * the predicate test
    */
   default Instruction nextUntil(Predicate<Instruction> predicate) {
@@ -168,7 +168,7 @@ public interface InstructionListIterator extends ListIterator<Instruction> {
       List<BasicBlock> blocksToRemove, DexType downcast);
 
   /**
-   * See {@link #inlineInvoke(IRCode, IRCode, ListIterator<BasicBlock>, List<BasicBlock>, DexType)}.
+   * See {@link #inlineInvoke(IRCode, IRCode, ListIterator, List, DexType)}.
    */
   default BasicBlock inlineInvoke(IRCode code, IRCode inlinee) {
     List<BasicBlock> blocksToRemove = new ArrayList<>();
