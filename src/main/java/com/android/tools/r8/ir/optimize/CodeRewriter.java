@@ -1126,7 +1126,7 @@ public class CodeRewriter {
     }
   }
 
-  private class ExpressionEquivalence extends Equivalence<Instruction> {
+  private static class ExpressionEquivalence extends Equivalence<Instruction> {
 
     @Override
     protected boolean doEquivalent(Instruction a, Instruction b) {
