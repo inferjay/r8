@@ -464,7 +464,7 @@ final class LambdaMainMethodSourceCode extends SynthesizedLambdaSourceCode {
   private int addPrimitiveBoxing(int register, DexType primitiveType, DexType boxType) {
     // Generate factory method fo boxing.
     DexItemFactory factory = factory();
-    DexProto proto = factory.createProto(boxType, new DexType[]{primitiveType});
+    DexProto proto = factory.createProto(boxType, primitiveType);
     DexMethod method = factory.createMethod(boxType, proto, factory.valueOfMethodName);
 
     MoveType moveType = MoveType.fromDexType(primitiveType);

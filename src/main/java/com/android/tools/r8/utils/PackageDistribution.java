@@ -154,7 +154,7 @@ public class PackageDistribution {
   }
 
   public int maxReferencedIndex() {
-    return map.values().stream().max(Integer::compare).orElseGet(() -> 0);
+    return map.values().stream().max(Integer::compare).orElse(0);
   }
 
   public Set<String> getFiles() {

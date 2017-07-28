@@ -1457,8 +1457,7 @@ public class CodeRewriter {
     DexType javaLangSystemType = dexItemFactory.createType("Ljava/lang/System;");
     DexType javaIoPrintStreamType = dexItemFactory.createType("Ljava/io/PrintStream;");
 
-    DexProto proto = dexItemFactory.createProto(
-        dexItemFactory.voidType, new DexType[]{dexItemFactory.objectType});
+    DexProto proto = dexItemFactory.createProto(dexItemFactory.voidType, dexItemFactory.objectType);
     DexMethod print = dexItemFactory.createMethod(javaIoPrintStreamType, proto, "print");
     DexMethod printLn = dexItemFactory.createMethod(javaIoPrintStreamType, proto, "println");
 
