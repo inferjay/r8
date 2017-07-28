@@ -1171,7 +1171,7 @@ public class BasicBlock {
    * this method should only be called from either {@link #moveCatchHandlers} or
    * {@link #copyCatchHandlers} which know how to handle phis.
    *
-   * @returns the catch successors that are reused in both blocks after appending.
+   * @return the catch successors that are reused in both blocks after appending.
    */
   private List<BasicBlock> appendCatchHandlers(BasicBlock fromBlock) {
     assert fromBlock.hasCatchHandlers();
