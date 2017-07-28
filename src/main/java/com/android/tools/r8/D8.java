@@ -17,7 +17,10 @@ import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
@@ -203,9 +206,11 @@ public final class D8 {
       if (options.printCfgFile == null || options.printCfgFile.isEmpty()) {
         System.out.print(printer.toString());
       } else {
-        java.io.FileWriter writer = new java.io.FileWriter(options.printCfgFile);
-        writer.write(printer.toString());
-        writer.close();
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+            new FileOutputStream(options.printCfgFile),
+            StandardCharsets.UTF_8)) {
+          writer.write(printer.toString());
+        }
       }
     }
     return application;

@@ -45,9 +45,12 @@ import com.android.tools.r8.utils.Timing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -125,9 +128,11 @@ public class R8 {
       if (options.printCfgFile == null || options.printCfgFile.isEmpty()) {
         System.out.print(printer.toString());
       } else {
-        java.io.FileWriter writer = new java.io.FileWriter(options.printCfgFile);
-        writer.write(printer.toString());
-        writer.close();
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+            new FileOutputStream(options.printCfgFile),
+            StandardCharsets.UTF_8)) {
+          writer.write(printer.toString());
+        }
       }
     }
     return application;
