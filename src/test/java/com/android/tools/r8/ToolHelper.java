@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
@@ -485,6 +486,14 @@ public class ToolHelper {
             .setOutputPath(Paths.get(out))
             .setIgnoreMissingClasses(true)
             .build());
+  }
+
+  public static DexApplication optimizeWithR8(
+      DexApplication application,
+      AppInfoWithSubtyping appInfo,
+      InternalOptions options)
+      throws ProguardRuleParserException, ExecutionException, IOException {
+    return R8.optimize(application, appInfo, options);
   }
 
   public static AndroidApp runD8(AndroidApp app) throws CompilationException, IOException {
