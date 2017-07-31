@@ -131,6 +131,6 @@ public class JasminTestBase {
 
   protected static DexApplication process(DexApplication app, InternalOptions options)
       throws IOException, ProguardRuleParserException, ExecutionException {
-    return new R8(options).optimize(app, new AppInfoWithSubtyping(app));
+    return ToolHelper.optimizeWithR8(app, new AppInfoWithSubtyping(app), options);
   }
 }

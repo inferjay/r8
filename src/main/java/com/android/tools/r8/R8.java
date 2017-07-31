@@ -65,8 +65,7 @@ public class R8 {
   private final Timing timing = new Timing("R8");
   private final InternalOptions options;
 
-  // TODO(zerny): Refactor tests to go through testing methods and make this private.
-  public R8(InternalOptions options) {
+  private R8(InternalOptions options) {
     this.options = options;
     options.itemFactory.resetSortedIndices();
   }
@@ -88,14 +87,25 @@ public class R8 {
     }
   }
 
-  public DexApplication optimize(DexApplication application, AppInfoWithSubtyping appInfo)
+  static DexApplication optimize(
+      DexApplication application,
+      AppInfoWithSubtyping appInfo,
+      InternalOptions options)
+      throws ProguardRuleParserException, ExecutionException, IOException {
+    return new R8(options).optimize(application, appInfo);
+  }
+
+  private DexApplication optimize(DexApplication application, AppInfoWithSubtyping appInfo)
       throws IOException, ProguardRuleParserException, ExecutionException {
     return optimize(application, appInfo, GraphLense.getIdentityLense(),
         Executors.newSingleThreadExecutor());
   }
 
-  public DexApplication optimize(DexApplication application, AppInfoWithSubtyping appInfo,
-      GraphLense graphLense, ExecutorService executorService)
+  private DexApplication optimize(
+      DexApplication application,
+      AppInfoWithSubtyping appInfo,
+      GraphLense graphLense,
+      ExecutorService executorService)
       throws IOException, ProguardRuleParserException, ExecutionException {
     final CfgPrinter printer = options.printCfg ? new CfgPrinter() : null;
 
@@ -181,7 +191,7 @@ public class R8 {
     }
   }
 
-  static CompilationResult runForTesting(
+  private static CompilationResult runForTesting(
       AndroidApp app,
       InternalOptions options,
       ExecutorService executor)

@@ -8,6 +8,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.R8;
+import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.code.Const;
 import com.android.tools.r8.code.Const4;
 import com.android.tools.r8.code.ConstHigh16;
@@ -284,7 +285,7 @@ public class SwitchRewritingTest extends SmaliTestBase {
         "    return");
 
     DexApplication app = builder.read();
-    app = new R8(new InternalOptions()).optimize(app, new AppInfoWithSubtyping(app));
+    app = ToolHelper.optimizeWithR8(app, new AppInfoWithSubtyping(app), new InternalOptions());
 
     MethodSignature signature = new MethodSignature("Test", "test", "int", ImmutableList.of("int"));
     DexEncodedMethod method = getMethod(app, signature);
@@ -344,7 +345,7 @@ public class SwitchRewritingTest extends SmaliTestBase {
         "    return");
 
     DexApplication app = builder.read();
-    app = new R8(new InternalOptions()).optimize(app, new AppInfoWithSubtyping(app));
+    app = ToolHelper.optimizeWithR8(app, new AppInfoWithSubtyping(app), new InternalOptions());
 
     MethodSignature signature = new MethodSignature("Test", "test", "int", ImmutableList.of("int"));
     DexEncodedMethod method = getMethod(app, signature);
@@ -417,7 +418,7 @@ public class SwitchRewritingTest extends SmaliTestBase {
         "    return");
 
     DexApplication app = builder.read();
-    app = new R8(new InternalOptions()).optimize(app, new AppInfoWithSubtyping(app));
+    app = ToolHelper.optimizeWithR8(app, new AppInfoWithSubtyping(app), new InternalOptions());
 
     MethodSignature signature = new MethodSignature("Test", "test", "int", ImmutableList.of("int"));
     DexEncodedMethod method = getMethod(app, signature);

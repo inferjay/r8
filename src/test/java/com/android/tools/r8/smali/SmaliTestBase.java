@@ -385,8 +385,7 @@ public class SmaliTestBase {
 
   protected DexApplication processApplication(DexApplication application, InternalOptions options) {
     try {
-      R8 r8 = new R8(options);
-      return r8.optimize(application, new AppInfoWithSubtyping(application));
+      return ToolHelper.optimizeWithR8(application, new AppInfoWithSubtyping(application), options);
     } catch (IOException | ProguardRuleParserException | ExecutionException e) {
       throw new RuntimeException(e);
     }
