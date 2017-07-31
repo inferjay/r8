@@ -34,7 +34,7 @@ public class R8GMSCoreTreeShakeJarVerificationTest extends GMSCoreCompilationTes
     int bytes = 0;
     try (Closer closer = Closer.create()) {
       for (Resource dex : app.getDexProgramResources()) {
-        bytes += ByteStreams.toByteArray(dex.getStream(closer)).length;
+        bytes += ByteStreams.toByteArray(closer.register(dex.getStream())).length;
       }
     }
     assertTrue("Expected max size of " + maxSize + ", got " + bytes, bytes < maxSize);

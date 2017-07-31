@@ -183,7 +183,7 @@ public class ApplicationReader {
         List<DexFileReader> fileReaders = new ArrayList<>(dexSources.size());
         int computedMinApiLevel = options.minApiLevel;
         for (Resource input : dexSources) {
-          DexFile file = new DexFile(input.getStream(closer));
+          DexFile file = new DexFile(closer.register(input.getStream()));
           computedMinApiLevel = verifyOrComputeMinApiLevel(computedMinApiLevel, file);
           fileReaders.add(new DexFileReader(file, classKind, itemFactory));
         }
@@ -207,7 +207,7 @@ public class ApplicationReader {
       JarClassFileReader reader = new JarClassFileReader(
           application, classKind.bridgeConsumer(classes::add));
       for (Resource input : classSources) {
-        reader.read(DEFAULT_DEX_FILENAME, classKind, input.getStream(closer));
+        reader.read(DEFAULT_DEX_FILENAME, classKind, closer.register(input.getStream()));
       }
     }
 

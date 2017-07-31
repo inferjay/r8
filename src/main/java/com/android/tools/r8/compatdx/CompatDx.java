@@ -472,8 +472,7 @@ public class CompatDx {
                 + "Reduce the input-program size or run with --multi-dex enabled");
       }
       if (isDexFile(output)) {
-        try (Closer closer = Closer.create()) {
-          InputStream stream = result.getDexResources().get(0).getStream(closer);
+        try (InputStream stream = result.getDexResources().get(0).getStream()) {
           Files.copy(stream, output, StandardCopyOption.REPLACE_EXISTING);
         }
         return;
@@ -544,7 +543,7 @@ public class CompatDx {
         // Add dex files.
         List<Resource> dexProgramSources = output.getDexResources();
         for (int i = 0; i < dexProgramSources.size(); i++) {
-          addEntry(getDexFileName(i), dexProgramSources.get(i).getStream(closer), out);
+          addEntry(getDexFileName(i), closer.register(dexProgramSources.get(i).getStream()), out);
         }
       }
     }

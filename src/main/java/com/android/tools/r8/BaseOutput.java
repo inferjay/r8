@@ -8,6 +8,7 @@ import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 abstract class BaseOutput {
 
@@ -39,9 +40,9 @@ abstract class BaseOutput {
    *   resources.get(N - 1) ~=~ classesN.dex (where N > 0).
    * </pre>
    *
-   * @return list of compiled DEX resources.
+   * @return an immutable list of compiled DEX resources.
    */
-  public ImmutableList<Resource> getDexResources() {
+  public List<Resource> getDexResources() {
     return ImmutableList.copyOf(app.getDexProgramResources());
   }
 

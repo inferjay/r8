@@ -110,7 +110,7 @@ public class DexSegments {
     Map<String, Integer> result = new HashMap<>();
     try (Closer closer = Closer.create()) {
       for (Resource resource : app.getDexProgramResources()) {
-        for (Segment segment: DexFileReader.parseMapFrom(resource.getStream(closer))) {
+        for (Segment segment: DexFileReader.parseMapFrom(closer.register(resource.getStream()))) {
           int value = result.computeIfAbsent(segment.typeName(), (key) -> 0);
           result.put(segment.typeName(), value + segment.size());
         }
