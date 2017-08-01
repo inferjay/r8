@@ -7,6 +7,7 @@ package com.android.tools.r8.regress.b63935662;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.TestBase;
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.utils.AndroidApp;
 import java.nio.file.Path;
@@ -16,6 +17,9 @@ import org.junit.Test;
 public class Regress63935662 extends TestBase {
 
   void run(AndroidApp app, Class mainClass) throws Exception {
+    if (!ToolHelper.getDexVm().isNewerThan(DexVm.ART_6_0_1)) {
+      return;
+    }
     Path proguardConfig = writeTextToTempFile(keepMainProguardConfiguration(mainClass, true, false));
     R8Command command =
         ToolHelper.prepareR8CommandBuilder(app)
