@@ -14,10 +14,8 @@ import com.android.tools.r8.code.ConstStringJumbo;
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.code.InvokeDirect;
 import com.android.tools.r8.code.InvokeStatic;
-import com.android.tools.r8.code.InvokeSuper;
 import com.android.tools.r8.code.NewInstance;
 import com.android.tools.r8.code.Throw;
-import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.ir.code.IRCode;
@@ -33,7 +31,6 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
 import com.android.tools.r8.naming.MemberNaming.Signature;
-import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
 
 public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
@@ -147,7 +144,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
   public void setCode(
       IRCode ir, RegisterAllocator registerAllocator, DexItemFactory dexItemFactory) {
     final DexBuilder builder = new DexBuilder(ir, registerAllocator, dexItemFactory);
-    code = builder.build(method.proto.parameters.values.length);
+    code = builder.build(method.getArity());
   }
 
   // Replaces the dex code in the method by setting code to result of compiling the IR.
@@ -155,7 +152,7 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
       DexItemFactory dexItemFactory, DexString firstJumboString) {
     final DexBuilder builder =
         new DexBuilder(ir, registerAllocator, dexItemFactory, firstJumboString);
-    code = builder.build(method.proto.parameters.values.length);
+    code = builder.build(method.getArity());
   }
 
   public String toString() {

@@ -459,8 +459,7 @@ final class LambdaClass {
           DexCode dexCode = newMethod.getCode().asDexCode();
           dexCode.setDebugInfo(dexCode.debugInfoWithAdditionalFirstParameter(null));
           assert (dexCode.getDebugInfo() == null)
-              || (callTarget.proto.parameters.values.length
-              == dexCode.getDebugInfo().parameters.length);
+              || (callTarget.getArity() == dexCode.getDebugInfo().parameters.length);
           directMethods[i] = newMethod;
           return true;
         }

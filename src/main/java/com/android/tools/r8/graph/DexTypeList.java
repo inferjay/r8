@@ -58,6 +58,10 @@ public class DexTypeList extends DexItem implements Comparable<DexTypeList> {
     return values.length == 0;
   }
 
+  public int size() {
+    return values.length;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();

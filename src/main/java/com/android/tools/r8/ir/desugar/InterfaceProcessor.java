@@ -62,8 +62,7 @@ final class InterfaceProcessor {
         // TODO(ager): Should we give the new first parameter an actual name? Maybe 'this'?
         dexCode.setDebugInfo(dexCode.debugInfoWithAdditionalFirstParameter(null));
         assert (dexCode.getDebugInfo() == null)
-            || (companionMethod.proto.parameters.values.length
-                == dexCode.getDebugInfo().parameters.length);
+            || (companionMethod.getArity() == dexCode.getDebugInfo().parameters.length);
 
         companionMethods.add(new DexEncodedMethod(companionMethod,
             newFlags, virtual.annotations, virtual.parameterAnnotations, code));

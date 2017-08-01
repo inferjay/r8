@@ -571,7 +571,7 @@ public class SimpleClassMerger {
       for (DexMethod method : invokes) {
         Int2IntMap positionsMap = seenPositions.get(method.name);
         if (positionsMap != null) {
-          int arity = method.proto.parameters.values.length;
+          int arity = method.getArity();
           int previous = positionsMap.get(arity);
           if (previous != NOT_FOUND) {
             assert previous != 0;

@@ -271,7 +271,7 @@ public class MemberNaming {
     }
 
     public static MethodSignature fromDexMethod(DexMethod method) {
-      String[] paramNames = new String[method.proto.parameters.values.length];
+      String[] paramNames = new String[method.getArity()];
       DexType[] values = method.proto.parameters.values;
       for (int i = 0; i < values.length; i++) {
         paramNames[i] = values[i].toSourceString();
