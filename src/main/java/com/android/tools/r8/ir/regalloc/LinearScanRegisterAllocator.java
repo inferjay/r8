@@ -28,7 +28,6 @@ import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Multisets;
@@ -288,7 +287,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
 
     for (BasicBlock block : blocks) {
-      boolean blockEntry = true;
+      block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
       ListIterator<Instruction> instructionIterator = block.listIterator();
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
@@ -307,8 +306,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           }
         }
         while (nextStartingRange != null && nextStartingRange.start <= index) {
-          // If the full range is between the two debug positions ignore it.
-          if (nextStartingRange.end > index) {
+          // If the range is live at this index open it.
+          if (index < nextStartingRange.end) {
             openRanges.add(nextStartingRange);
             assert !currentLocals.containsKey(nextStartingRange.register);
             currentLocals.put(nextStartingRange.register, nextStartingRange.local);
@@ -317,10 +316,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           }
           nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
         }
-        if (blockEntry) {
-          blockEntry = false;
-          block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
-        } else if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
+        if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
           DebugLocalsChange change = createLocalsChange(ending, starting);
           if (change != null) {
             if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
@@ -366,18 +362,6 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     // block, any exits directly targeting that.
     return instruction != block.exit()
         || (instruction.isGoto() && instruction.asGoto().getTarget() == code.getNormalExitBlock());
-  }
-
-  private boolean verifyLocalsEqual(
-      ImmutableMap<Integer, DebugLocalInfo> a, Map<Integer, DebugLocalInfo> b) {
-    int size = 0;
-    for (Map.Entry<Integer, DebugLocalInfo> entry : b.entrySet()) {
-      if (entry.getValue() != null) {
-        assert a.get(entry.getKey()) == entry.getValue();
-        ++size;
-      }
-    }
-    return a.size() == size;
   }
 
   private void clearState() {

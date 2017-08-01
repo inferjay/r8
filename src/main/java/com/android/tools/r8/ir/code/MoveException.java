@@ -9,12 +9,22 @@ import com.android.tools.r8.utils.InternalOptions;
 
 public class MoveException extends Instruction {
 
+  private DebugPosition position = null;
+
   public MoveException(Value dest) {
     super(dest);
   }
 
   public Value dest() {
     return outValue;
+  }
+
+  public DebugPosition getPosition() {
+    return position;
+  }
+
+  public void setPosition(DebugPosition position) {
+    this.position = position;
   }
 
   @Override
