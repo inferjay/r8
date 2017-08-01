@@ -49,6 +49,8 @@ public class InternalOptions {
 
   public List<String> methodsFilter = ImmutableList.of();
   public int minApiLevel = Constants.DEFAULT_ANDROID_API;
+  // Skipping min_api check and compiling an intermediate result intended for later merging.
+  public boolean intermediate = false;
   public List<String> logArgumentsFilter = ImmutableList.of();
 
   // Defines interface method rewriter behavior.
@@ -279,16 +281,20 @@ public class InternalOptions {
     return minApiLevel >= Constants.ANDROID_N_API;
   }
 
+  public boolean canUsePrivateInterfaceMethods() {
+    return minApiLevel >= Constants.ANDROID_N_API;
+  }
+
+  public boolean canUseMultidex() {
+    return intermediate || minApiLevel >= Constants.ANDROID_L_API;
+  }
+
   public boolean canUseLongCompareAndObjectsNonNull() {
     return minApiLevel >= Constants.ANDROID_K_API;
   }
 
   public boolean canUseSuppressedExceptions() {
     return minApiLevel >= Constants.ANDROID_K_API;
-  }
-
-  public boolean canUsePrivateInterfaceMethods() {
-    return minApiLevel >= Constants.ANDROID_N_API;
   }
 
   // APIs for accessing parameter names annotations are not available before Android O, thus does
