@@ -294,7 +294,7 @@ public abstract class D8IncrementalRunExamplesAndroidOTest
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     byte[] buffer = new byte[16384];
     try (Closer closer = Closer.create()) {
-      InputStream stream = resource.getStream(closer);
+      InputStream stream = closer.register(resource.getStream());
       int read;
       while ((read = stream.read(buffer, 0, buffer.length)) != -1) {
         output.write(buffer, 0, read);

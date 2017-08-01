@@ -62,8 +62,8 @@ public class R8GMSCoreDeterministicTest extends GMSCoreCompilationTestBase {
       List<Resource> files2 = app2.getDexProgramResources();
       assertEquals(files1.size(), files2.size());
       for (int index = 0; index < files1.size(); index++) {
-        InputStream file1 = files1.get(index).getStream(closer);
-        InputStream file2 = files2.get(index).getStream(closer);
+        InputStream file1 = closer.register(files1.get(index).getStream());
+        InputStream file2 = closer.register(files2.get(index).getStream());
         byte[] bytes1 = ByteStreams.toByteArray(file1);
         byte[] bytes2 = ByteStreams.toByteArray(file2);
         assertArrayEquals("File index " + index, bytes1, bytes2);

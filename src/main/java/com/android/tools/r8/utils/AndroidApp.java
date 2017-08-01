@@ -182,7 +182,7 @@ public class AndroidApp {
    * Get the input stream of the dead-code resource if exists.
    */
   public InputStream getDeadCode(Closer closer) throws IOException {
-    return deadCode == null ? null : deadCode.getStream(closer);
+    return deadCode == null ? null : closer.register(deadCode.getStream());
   }
 
   /**
@@ -196,7 +196,7 @@ public class AndroidApp {
    * Get the input stream of the proguard-map resource if it exists.
    */
   public InputStream getProguardMap(Closer closer) throws IOException {
-    return proguardMap == null ? null : proguardMap.getStream(closer);
+    return proguardMap == null ? null : closer.register(proguardMap.getStream());
   }
 
   /**
@@ -210,7 +210,7 @@ public class AndroidApp {
    * Get the input stream of the proguard-seeds resource if it exists.
    */
   public InputStream getProguardSeeds(Closer closer) throws IOException {
-    return proguardSeeds == null ? null : proguardSeeds.getStream(closer);
+    return proguardSeeds == null ? null : closer.register(proguardSeeds.getStream());
   }
 
   /**
@@ -224,7 +224,7 @@ public class AndroidApp {
    * Get the input stream of the package distribution resource if it exists.
    */
   public InputStream getPackageDistribution(Closer closer) throws IOException {
-    return packageDistribution == null ? null : packageDistribution.getStream(closer);
+    return packageDistribution == null ? null : closer.register(packageDistribution.getStream());
   }
 
   /**
@@ -238,7 +238,7 @@ public class AndroidApp {
    * Get the input stream of the main dex list resource if it exists.
    */
   public InputStream getMainDexList(Closer closer) throws IOException {
-    return mainDexList == null ? null : mainDexList.getStream(closer);
+    return mainDexList == null ? null : closer.register(mainDexList.getStream());
   }
 
   /**
@@ -271,7 +271,7 @@ public class AndroidApp {
         if (!Files.exists(filePath.getParent())) {
           Files.createDirectories(filePath.getParent());
         }
-        Files.copy(dexProgramSources.get(i).getStream(closer), filePath, options);
+        Files.copy(closer.register(dexProgramSources.get(i).getStream()), filePath, options);
       }
     }
   }
@@ -307,7 +307,7 @@ public class AndroidApp {
       List<Resource> dexProgramSources = getDexProgramResources();
       for (int i = 0; i < dexProgramSources.size(); i++) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ByteStreams.copy(dexProgramSources.get(i).getStream(closer), out);
+        ByteStreams.copy(closer.register(dexProgramSources.get(i).getStream()), out);
         dex.add(out.toByteArray());
       }
       // TODO(sgjesse): Add Proguard map and seeds.
@@ -326,7 +326,8 @@ public class AndroidApp {
         List<Resource> dexProgramSources = getDexProgramResources();
         for (int i = 0; i < dexProgramSources.size(); i++) {
           ZipEntry zipEntry = new ZipEntry(outputMode.getOutputPath(dexProgramSources.get(i), i));
-          byte[] bytes = ByteStreams.toByteArray(dexProgramSources.get(i).getStream(closer));
+          byte[] bytes =
+              ByteStreams.toByteArray(closer.register(dexProgramSources.get(i).getStream()));
           zipEntry.setSize(bytes.length);
           out.putNextEntry(zipEntry);
           out.write(bytes);

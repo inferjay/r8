@@ -4,7 +4,6 @@
 
 package com.android.tools.r8;
 
-import com.google.common.io.Closer;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -48,7 +47,7 @@ public abstract class Resource {
   public abstract Set<String> getClassDescriptors();
 
   /** Get the resource as a stream. */
-  public abstract InputStream getStream(Closer closer) throws IOException;
+  public abstract InputStream getStream() throws IOException;
 
   /** File based application resource. */
   private static class FileResource extends Resource {
@@ -66,8 +65,8 @@ public abstract class Resource {
     }
 
     @Override
-    public InputStream getStream(Closer closer) throws IOException {
-      return closer.register(new FileInputStream(file.toFile()));
+    public InputStream getStream() throws IOException {
+      return new FileInputStream(file.toFile());
     }
   }
 
@@ -89,8 +88,7 @@ public abstract class Resource {
     }
 
     @Override
-    public InputStream getStream(Closer closer) throws IOException {
-      // Note: closing a byte-array input stream is a no-op.
+    public InputStream getStream() throws IOException {
       return new ByteArrayInputStream(bytes);
     }
   }
