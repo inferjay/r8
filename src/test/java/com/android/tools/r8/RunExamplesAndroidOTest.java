@@ -61,18 +61,16 @@ public abstract class RunExamplesAndroidOTest<B> {
     }
 
     TestRunner withClassCheck(Consumer<FoundClassSubject> check) {
-      withDexCheck(inspector -> inspector.forAllClasses(check));
-      return this;
+      return withDexCheck(inspector -> inspector.forAllClasses(check));
     }
 
     TestRunner withMethodCheck(Consumer<FoundMethodSubject> check) {
-      withClassCheck(clazz -> clazz.forAllMethods(check));
-      return this;
+      return withClassCheck(clazz -> clazz.forAllMethods(check));
     }
 
-    <T extends InstructionSubject> TestRunner
-    withInstructionCheck(Predicate<InstructionSubject> filter, Consumer<T> check) {
-      withMethodCheck(method -> {
+    <T extends InstructionSubject> TestRunner withInstructionCheck(
+        Predicate<InstructionSubject> filter, Consumer<T> check) {
+      return withMethodCheck(method -> {
         if (method.isAbstract()) {
           return;
         }
@@ -81,7 +79,6 @@ public abstract class RunExamplesAndroidOTest<B> {
           check.accept(iterator.next());
         }
       });
-      return this;
     }
 
     TestRunner withOptionConsumer(Consumer<InternalOptions> consumer) {
@@ -267,7 +264,7 @@ public abstract class RunExamplesAndroidOTest<B> {
   @Test
   public void paramNames() throws Throwable {
     test("paramnames", "paramnames", "ParameterNames")
-        .withMinApiLevel(26)
+        .withMinApiLevel(ANDROID_O_API)
         .withOptionConsumer((internalOptions) -> internalOptions.allowParameterName = true)
         .run();
   }
