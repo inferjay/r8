@@ -4,6 +4,7 @@
 
 package com.android.tools.r8.maindexlist;
 
+import static com.android.tools.r8.dex.Constants.ANDROID_I_API;
 import static com.android.tools.r8.utils.FileUtils.JAR_EXTENSION;
 import static com.android.tools.r8.utils.FileUtils.ZIP_EXTENSION;
 
@@ -44,7 +45,7 @@ public class MainDexTracingTest {
         EXAMPLE_BUILD_DIR,
         Paths.get(EXAMPLE_SRC_DIR, "multidex", "main-dex-rules.txt"),
         Paths.get(EXAMPLE_SRC_DIR, "multidex001", "ref-list-1.txt"),
-        14);
+        ANDROID_I_API);
   }
 
   @Test
@@ -55,7 +56,7 @@ public class MainDexTracingTest {
         EXAMPLE_BUILD_DIR,
         Paths.get(EXAMPLE_SRC_DIR, "multidex001", "main-dex-rules-2.txt"),
         Paths.get(EXAMPLE_SRC_DIR, "multidex001", "ref-list-2.txt"),
-        14);
+        ANDROID_I_API);
   }
 
   @Test
@@ -66,7 +67,7 @@ public class MainDexTracingTest {
         EXAMPLE_BUILD_DIR,
         Paths.get(EXAMPLE_SRC_DIR, "multidex", "main-dex-rules.txt"),
         Paths.get(EXAMPLE_SRC_DIR, "multidex002", "ref-list-1.txt"),
-        14);
+        ANDROID_I_API);
   }
 
   @Test
@@ -77,7 +78,7 @@ public class MainDexTracingTest {
         EXAMPLE_BUILD_DIR,
         Paths.get(EXAMPLE_SRC_DIR, "multidex", "main-dex-rules.txt"),
         Paths.get(EXAMPLE_SRC_DIR, "multidex003", "ref-list-1.txt"),
-        14);
+        ANDROID_I_API);
   }
 
   @Test
@@ -88,7 +89,7 @@ public class MainDexTracingTest {
         EXAMPLE_O_BUILD_DIR,
         Paths.get(EXAMPLE_SRC_DIR, "multidex", "main-dex-rules.txt"),
         Paths.get(EXAMPLE_O_SRC_DIR, "multidex004", "ref-list-1.txt"),
-        14);
+        ANDROID_I_API);
   }
 
   private void doTest(
@@ -137,9 +138,9 @@ public class MainDexTracingTest {
       CompilationResult result = ToolHelper.runR8WithFullResult(command, optionsConsumer);
       List<String> resultMainDexList =
           result.dexApplication.mainDexList.stream()
-          .filter(dexType -> isApplicationClass(dexType, result) != null)
-          .map(dexType -> dexType.descriptor.toString())
-          .collect(Collectors.toList());
+              .filter(dexType -> isApplicationClass(dexType, result))
+              .map(dexType -> dexType.descriptor.toString())
+              .collect(Collectors.toList());
       Collections.sort(resultMainDexList);
       String[] refList = new String(Files.readAllBytes(
           expectedMainDexList), StandardCharsets.UTF_8).split("\n");
@@ -161,7 +162,7 @@ public class MainDexTracingTest {
     }
   }
 
-  private Object isApplicationClass(DexType dexType, CompilationResult result) {
+  private boolean isApplicationClass(DexType dexType, CompilationResult result) {
     DexClass clazz = result.appInfo.definitionFor(dexType);
     return clazz != null && clazz.isProgramClass();
   }

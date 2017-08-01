@@ -57,7 +57,7 @@ public class ToolHelper {
   public static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
   private static final String ANDROID_JAR_PATTERN = "third_party/android_jar/lib-v%d/android.jar";
-  private static final int DEFAULT_MIN_SDK = 14;
+  private static final int DEFAULT_MIN_SDK = Constants.ANDROID_I_API;
 
   public enum DexVm {
     ART_4_4_4("4.4.4"),
