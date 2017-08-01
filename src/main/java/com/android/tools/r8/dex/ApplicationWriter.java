@@ -135,9 +135,9 @@ public class ApplicationWriter {
         assert packageDistribution == null :
             "Cannot combine package distribution definition with file-per-class option.";
         distributor = new FilePerClassDistributor(this);
-      } else if (options.minApiLevel < Constants.ANDROID_L_API
-            && options.mainDexKeepRules.isEmpty()
-            && application.mainDexList.isEmpty()) {
+      } else if (!options.canUseMultidex()
+          && options.mainDexKeepRules.isEmpty()
+          && application.mainDexList.isEmpty()) {
         if (packageDistribution != null) {
           throw new CompilationError("Cannot apply package distribution. Multidex is not"
               + " supported with API level " + options.minApiLevel +"."

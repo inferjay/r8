@@ -50,7 +50,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder setTreeShaking(boolean useTreeShaking) {
       treeShaking = Optional.of(useTreeShaking);
-      return this;
+      return self();
     }
 
     /**
@@ -58,7 +58,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder setMinification(boolean useMinification) {
       minification = Optional.of(useMinification);
-      return this;
+      return self();
     }
 
     /**
@@ -66,7 +66,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder addMainDexRules(Path... paths) {
       Collections.addAll(mainDexRules, paths);
-      return this;
+      return self();
     }
 
     /**
@@ -74,7 +74,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder addMainDexRules(List<Path> paths) {
       mainDexRules.addAll(paths);
-      return this;
+      return self();
     }
 
     /**
@@ -85,14 +85,14 @@ public class R8Command extends BaseCommand {
      */
     public Builder setMinimalMainDex(boolean value) {
       minimalMainDex = value;
-      return this;
+      return self();
     }
     /**
      * Add proguard configuration file resources.
      */
     public Builder addProguardConfigurationFiles(Path... paths) {
       Collections.addAll(proguardConfigFiles, paths);
-      return this;
+      return self();
     }
 
     /**
@@ -100,7 +100,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder addProguardConfigurationFiles(List<Path> paths) {
       proguardConfigFiles.addAll(paths);
-      return this;
+      return self();
     }
 
     /**
@@ -108,7 +108,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder setProguardMapFile(Path path) {
       getAppBuilder().setProguardMapFile(path);
-      return this;
+      return self();
     }
 
     /**
@@ -116,7 +116,7 @@ public class R8Command extends BaseCommand {
      */
     public Builder setPackageDistributionFile(Path path) {
       getAppBuilder().setPackageDistributionFile(path);
-      return this;
+      return self();
     }
 
     /**
@@ -126,7 +126,7 @@ public class R8Command extends BaseCommand {
      */
     Builder setIgnoreMissingClasses(boolean ignoreMissingClasses) {
       this.ignoreMissingClasses = ignoreMissingClasses;
-      return this;
+      return self();
     }
 
     @Override

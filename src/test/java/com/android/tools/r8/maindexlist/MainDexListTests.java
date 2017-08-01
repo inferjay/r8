@@ -121,6 +121,10 @@ public class MainDexListTests extends TestBase {
     return generatedApplicationsFolder.getRoot().toPath().resolve("many-classes-stereo.zip");
   }
 
+  private static Path getManyClassesForceMultiDexAppPath() {
+    return generatedApplicationsFolder.getRoot().toPath().resolve("many-classes-stereo-forced.zip");
+  }
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -308,6 +312,32 @@ public class MainDexListTests extends TestBase {
     }
   }
 
+  @Test
+  public void checkIntermediateMultiDex() throws Exception {
+    // Generates an application with many classes, every even in one package and every odd in
+    // another. Add enough methods so the application cannot fit into one dex file.
+    // Notice that this one allows multidex while using lower API.
+    AndroidApp generated = generateApplication(
+        MANY_CLASSES, Constants.ANDROID_K_API, true, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
+    generated.write(getManyClassesForceMultiDexAppPath(), OutputMode.Indexed);
+    // Make sure the generated app indeed has multiple dex files.
+    assertTrue(generated.getDexProgramResources().size() > 1);
+  }
+
+  @Test
+  public void testMultiDexFailDueToMinApi() throws Exception {
+    // Generates an application with many classes, every even in one package and every odd in
+    // another. Add enough methods so the application cannot fit into one dex file.
+    // Notice that this one fails due to the min API.
+    try {
+      generateApplication(
+          MANY_CLASSES, Constants.ANDROID_K_API, false, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
+      fail("Expect to fail, for there are many classes while multidex is not enabled.");
+    } catch (CompilationError e) {
+      assertTrue(e.getMessage().contains("Cannot fit all classes in a single dex file."));
+    }
+  }
+
   private void addMainListFile(ArrayList<Path> mainLists, List<String> content)
       throws IOException {
     Path listFile = temp.newFile().toPath();
@@ -393,9 +423,16 @@ public class MainDexListTests extends TestBase {
 
   public static AndroidApp generateApplication(List<String> classes, int minApi, int methodCount)
       throws IOException, ExecutionException {
+    return generateApplication(classes, minApi, false, methodCount);
+  }
+
+  private static AndroidApp generateApplication(
+      List<String> classes, int minApi, boolean intermediate, int methodCount)
+      throws IOException, ExecutionException {
     Timing timing = new Timing("MainDexListTests");
     InternalOptions options = new InternalOptions();
     options.minApiLevel = minApi;
+    options.intermediate = intermediate;
     DexItemFactory factory = options.itemFactory;
     DexApplication.Builder builder = new DexApplication.Builder(factory, timing);
     for (String clazz : classes) {
