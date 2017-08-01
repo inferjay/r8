@@ -41,11 +41,13 @@ abstract class FieldInstruction extends Instruction {
     return field;
   }
 
+  abstract DexEncodedField lookupTarget(DexType type, AppInfo appInfo);
+
   @Override
   public Constraint inliningConstraint(AppInfo info, DexType holder) {
     // Resolve the field if possible and decide whether the instruction can inlined.
     DexType fieldHolder = field.getHolder();
-    DexEncodedField target = info.lookupInstanceTarget(fieldHolder, field);
+    DexEncodedField target = lookupTarget(fieldHolder, info);
     DexClass fieldClass = info.definitionFor(fieldHolder);
     if ((target != null) && (fieldClass != null) && !fieldClass.isLibraryClass()) {
       DexAccessFlags flags = target.accessFlags;
