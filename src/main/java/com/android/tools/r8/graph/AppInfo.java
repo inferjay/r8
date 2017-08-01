@@ -226,17 +226,44 @@ public class AppInfo {
         ((DexEncodedMethod) dexItem).getCode() != null;
   }
 
-  private void checkIfMethodIsAmbiguous(DexItem previousResult, DexItem newResult) {
+  /** Returns if <code>interface1</code> is a super interface of <code>interface2</code> */
+  private boolean isSuperInterfaceOf(DexType interface1, DexType interface2) {
+    assert definitionFor(interface1).isInterface();
+    DexClass holder = definitionFor(interface2);
+    assert holder.isInterface();
+    for (DexType iface : holder.interfaces.values) {
+      if (iface == interface1 || isSuperInterfaceOf(interface1, iface)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private <S extends DexItem> S resolveAmbiguousResult(S previousResult, S newResult) {
+    // For default methods return the item found lowest in the interface hierarchy. Different
+    // implementations can come from different paths in a diamond.
+    // See §9.4.1 in The Java® Language Specification, Java SE 8 Edition.
     if (previousResult != null
         && previousResult != newResult
         && isDefaultMethod(previousResult)
         && isDefaultMethod(newResult)) {
+      DexEncodedMethod previousMethod = (DexEncodedMethod) previousResult;
+      DexEncodedMethod newMethod = (DexEncodedMethod) newResult;
+      if (isSuperInterfaceOf(previousMethod.method.getHolder(), newMethod.method.getHolder())) {
+        return newResult;
+      }
+      if (isSuperInterfaceOf(newMethod.method.getHolder(), previousMethod.method.getHolder())) {
+        return previousResult;
+      }
       throw new CompilationError("Duplicate default methods named "
           + previousResult.toSourceString()
           + " are inherited from the types "
-          + ((DexEncodedMethod) previousResult).method.holder.getName()
+          + previousMethod.method.holder.getName()
           + " and "
-          + ((DexEncodedMethod) newResult).method.holder.getName());
+          + newMethod.method.holder.getName());
+    } else {
+      // Return the first item found for everything except default methods.
+      return previousResult != null ? previousResult : newResult;
     }
   }
 
@@ -256,21 +283,13 @@ public class AppInfo {
     for (DexType iface : holder.interfaces.values) {
       S localResult = lookupTargetAlongSuperAndInterfaceChain(iface, desc, lookup);
       if (localResult != null) {
-        checkIfMethodIsAmbiguous(result, localResult);
-        // Return the first item found, we only continue to detect ambiguous method call.
-        if (result == null) {
-          result = localResult;
-        }
+        result = resolveAmbiguousResult(result, localResult);
       }
     }
     if (holder.superType != null) {
       S localResult = lookupTargetAlongInterfaceChain(holder.superType, desc, lookup);
       if (localResult != null) {
-        checkIfMethodIsAmbiguous(result, localResult);
-        // Return the first item found, we only continue to detect ambiguous method call.
-        if (result == null) {
-          result = localResult;
-        }
+        result = resolveAmbiguousResult(result, localResult);
       }
     }
     return result;
