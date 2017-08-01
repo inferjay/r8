@@ -1648,14 +1648,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         for (Phi phi : successor.getPhis()) {
           LiveIntervals toIntervals = phi.getLiveIntervals().getSplitCovering(toInstruction);
           Value operand = phi.getOperand(predIndex);
-          LiveIntervals fromIntervals = operand.getLiveIntervals();
-          if (operand.isPhi() && operand != phi && successor.getPhis().contains(operand)) {
-            // If the input to this phi is another phi in this block we want the value after
-            // merging which is the value for that phi at the from instruction.
-            fromIntervals = fromIntervals.getSplitCovering(fromInstruction);
-          } else {
-            fromIntervals = fromIntervals.getSplitCovering(fromInstruction);
-          }
+          LiveIntervals fromIntervals =
+              operand.getLiveIntervals().getSplitCovering(fromInstruction);
           if (fromIntervals != toIntervals && !toIntervals.isArgumentInterval()) {
             assert block.getSuccessors().size() == 1;
             spillMoves.addPhiMove(fromInstruction - 1, toIntervals, fromIntervals);
