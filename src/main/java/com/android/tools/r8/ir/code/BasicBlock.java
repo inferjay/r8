@@ -1120,11 +1120,13 @@ public class BasicBlock {
     List<BasicBlock> predecessors = this.getPredecessors();
     boolean hasMoveException = entry().isMoveException();
     MoveException move = null;
+    DebugPosition position = null;
     if (hasMoveException) {
       // Remove the move-exception instruction.
       move = entry().asMoveException();
+      position = move.getPosition();
       assert move.getPreviousLocalValue() == null;
-      this.getInstructions().remove(0);
+      getInstructions().remove(0);
     }
     // Create new predecessor blocks.
     List<BasicBlock> newPredecessors = new ArrayList<>();
@@ -1140,7 +1142,11 @@ public class BasicBlock {
         Value value = new Value(
             valueNumberGenerator.next(), MoveType.OBJECT, move.getDebugInfo());
         values.add(value);
-        newBlock.add(new MoveException(value));
+        MoveException newMove = new MoveException(value);
+        newBlock.add(newMove);
+        if (position != null) {
+          newMove.setPosition(new DebugPosition(position.line, position.file));
+        }
       }
       newBlock.add(new Goto());
       newBlock.close(null);

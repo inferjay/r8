@@ -9,6 +9,7 @@ import com.android.tools.r8.ir.code.Argument;
 import com.android.tools.r8.ir.code.DebugLocalsChange;
 import com.android.tools.r8.ir.code.DebugPosition;
 import com.android.tools.r8.ir.code.Instruction;
+import com.android.tools.r8.ir.code.MoveException;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap.Entry;
@@ -51,12 +52,6 @@ public class DexDebugEventBuilder {
   private DexString emittedFile = null;
   private Int2ReferenceMap<DebugLocalInfo> emittedLocals;
 
-  // If lastMoveInstructionPc != NO_PC_INFO, then the last pc-advancing instruction was a
-  // move-exception at lastMoveInstructionPc. This is needed to maintain the art/dx specific
-  // behaviour that the move-exception pc is associated with the catch-declaration line.
-  // See debug.ExceptionTest.testStepOnCatch().
-  private int lastMoveInstructionPc = NO_PC_INFO;
-
   // Emitted events.
   private final List<DexDebugEvent> events = new ArrayList<>();
 
@@ -81,23 +76,21 @@ public class DexDebugEventBuilder {
     }
     assert pendingLocals != null;
 
-    // If this is a position emit and exit as it always emits events.
     if (instruction.isDebugPosition()) {
       emitDebugPosition(pc, instruction.asDebugPosition());
-      return;
-    }
-
-    if (instruction.isArgument()) {
+    } else if (instruction.isMoveException()) {
+      MoveException move = instruction.asMoveException();
+      if (move.getPosition() != null) {
+        emitDebugPosition(pc, move.getPosition());
+      }
+    } else if (instruction.isArgument()) {
       startArgument(instruction.asArgument());
     } else if (instruction.isDebugLocalsChange()) {
       updateLocals(instruction.asDebugLocalsChange());
     } else if (instruction.getBlock().exit() == instruction) {
-      // If this is the end of the block clear out the pending state and exit.
+      // If this is the end of the block clear out the pending state.
       pendingLocals = null;
       pendingLocalChanges = false;
-      return;
-    } else if (instruction.isMoveException()) {
-      lastMoveInstructionPc = pc;
     } else {
       // For non-exit / pc-advancing instructions emit any pending changes.
       emitLocalChanges(pc);
@@ -191,18 +184,16 @@ public class DexDebugEventBuilder {
   }
 
   private void emitDebugPosition(int pc, int line, DexString file) {
-    int emitPc = lastMoveInstructionPc != NO_PC_INFO ? lastMoveInstructionPc : pc;
-    lastMoveInstructionPc = NO_PC_INFO;
     // The position requires a pc change event and possible events for line, file and local changes.
     // Verify that we do not ever produce two subsequent positions at the same pc.
-    assert emittedPc != emitPc;
+    assert emittedPc != pc;
     if (startLine == NO_LINE_INFO) {
       assert emittedLine == NO_LINE_INFO;
       startLine = line;
       emittedLine = line;
     }
-    emitAdvancementEvents(emittedPc, emittedLine, emittedFile, emitPc, line, file, events, factory);
-    emittedPc = emitPc;
+    emitAdvancementEvents(emittedPc, emittedLine, emittedFile, pc, line, file, events, factory);
+    emittedPc = pc;
     emittedLine = line;
     emittedFile = file;
     if (localsChanged()) {
@@ -215,11 +206,9 @@ public class DexDebugEventBuilder {
   private void emitLocalChanges(int pc) {
     // If pc advanced since the locals changed and locals indeed have changed, emit the changes.
     if (localsChanged()) {
-      int emitPc = lastMoveInstructionPc != NO_PC_INFO ? lastMoveInstructionPc : pc;
-      lastMoveInstructionPc = NO_PC_INFO;
       emitAdvancementEvents(
-          emittedPc, emittedLine, emittedFile, emitPc, emittedLine, emittedFile, events, factory);
-      emittedPc = emitPc;
+          emittedPc, emittedLine, emittedFile, pc, emittedLine, emittedFile, events, factory);
+      emittedPc = pc;
       emitLocalChangeEvents(emittedLocals, pendingLocals, lastKnownLocals, events, factory);
       pendingLocalChanges = false;
       assert localsEqual(emittedLocals, pendingLocals);

@@ -1977,6 +1977,16 @@ public class IRBuilder {
     if (currentDebugPosition != null) {
       DebugPosition position = currentDebugPosition;
       currentDebugPosition = null;
+      if (!currentBlock.getInstructions().isEmpty()) {
+        MoveException move = currentBlock.getInstructions().getLast().asMoveException();
+        if (move != null && move.getPosition() == null) {
+          // Set the position on the move-exception instruction.
+          // ART/DX associates the move-exception pc with the catch-declaration line.
+          // See debug.ExceptionTest.testStepOnCatch().
+          move.setPosition(position);
+          return;
+        }
+      }
       addInstruction(position);
     }
   }
