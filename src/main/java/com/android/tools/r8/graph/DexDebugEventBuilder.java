@@ -111,7 +111,7 @@ public class DexDebugEventBuilder {
     if (startLine == NO_LINE_INFO) {
       return null;
     }
-    DexString[] params = new DexString[method.method.proto.parameters.values.length];
+    DexString[] params = new DexString[method.method.getArity()];
     if (arguments != null) {
       assert params.length == arguments.size();
       for (int i = 0; i < arguments.size(); i++) {
@@ -159,7 +159,7 @@ public class DexDebugEventBuilder {
 
   private void startArgument(Argument argument) {
     if (arguments == null) {
-      arguments = new ArrayList<>(method.method.proto.parameters.values.length);
+      arguments = new ArrayList<>(method.method.getArity());
     }
     if (!argument.outValue().isThis()) {
       arguments.add(argument.getLocalInfo());

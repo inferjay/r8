@@ -32,6 +32,10 @@ public class DexMethod extends Descriptor<DexEncodedMethod, DexMethod>
     return "Method " + holder + "." + name + " " + proto.toString();
   }
 
+  public int getArity() {
+    return proto.parameters.size();
+  }
+
   @Override
   public void collectIndexedItems(IndexedItemCollection indexedItems) {
     if (indexedItems.addMethod(this)) {
@@ -132,7 +136,7 @@ public class DexMethod extends Descriptor<DexEncodedMethod, DexMethod>
     builder.append(".");
     builder.append(name);
     builder.append("(");
-    for (int i = 0; i < proto.parameters.values.length; i++) {
+    for (int i = 0; i < getArity(); i++) {
       if (i != 0) {
         builder.append(", ");
       }

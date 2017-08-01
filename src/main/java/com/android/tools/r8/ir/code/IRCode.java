@@ -363,7 +363,7 @@ public class IRCode {
       }
     }
     assert arguments.size()
-        == method.method.proto.parameters.values.length + (method.accessFlags.isStatic() ? 0 : 1);
+        == method.method.getArity() + (method.accessFlags.isStatic() ? 0 : 1);
     return arguments;
   }
 

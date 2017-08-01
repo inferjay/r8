@@ -234,7 +234,7 @@ public class DexSourceCode implements SourceCode {
   }
 
   private List<MoveType> computeArgumentTypes() {
-    List<MoveType> types = new ArrayList<>(proto.parameters.values.length);
+    List<MoveType> types = new ArrayList<>(proto.parameters.size());
     String shorty = proto.shorty.toString();
     for (int i = 1; i < proto.shorty.size; i++) {
       MoveType moveType = MoveType.fromTypeDescriptorChar(shorty.charAt(i));

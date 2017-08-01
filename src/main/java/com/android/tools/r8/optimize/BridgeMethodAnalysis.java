@@ -12,7 +12,6 @@ import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.optimize.InvokeSingleTargetExtractor.InvokeKind;
-
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -40,8 +39,7 @@ public class BridgeMethodAnalysis {
       method.getCode().registerReachableDefinitions(targetExtractor);
       DexMethod target = targetExtractor.getTarget();
       InvokeKind kind = targetExtractor.getKind();
-      if (target != null &&
-          target.proto.parameters.values.length == method.method.proto.parameters.values.length) {
+      if (target != null && target.getArity() == method.method.getArity()) {
         assert !method.accessFlags.isPrivate() && !method.accessFlags.isConstructor();
         target = lense.lookupMethod(target, method);
         if (kind == InvokeKind.STATIC) {
@@ -71,7 +69,6 @@ public class BridgeMethodAnalysis {
     // Force the target to be inlined into the bridge.
     target.markForceInline();
   }
-
 
 
   private static class BridgeLense extends GraphLense {
