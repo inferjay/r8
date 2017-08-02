@@ -13,7 +13,10 @@ import com.android.tools.r8.code.IgetShort;
 import com.android.tools.r8.code.IgetWide;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexField;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 
 public class InstanceGet extends FieldInstruction {
@@ -92,6 +95,11 @@ public class InstanceGet extends FieldInstruction {
       return result;
     }
     return type.ordinal() - o.type.ordinal();
+  }
+
+  @Override
+  DexEncodedField lookupTarget(DexType type, AppInfo appInfo) {
+    return appInfo.lookupInstanceTarget(type, field);
   }
 
   @Override

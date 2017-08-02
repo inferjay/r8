@@ -12,7 +12,10 @@ import com.android.tools.r8.code.SgetShort;
 import com.android.tools.r8.code.SgetWide;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexField;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 
 public class StaticGet extends FieldInstruction {
@@ -88,6 +91,11 @@ public class StaticGet extends FieldInstruction {
       return result;
     }
     return type.ordinal() - o.type.ordinal();
+  }
+
+  @Override
+  DexEncodedField lookupTarget(DexType type, AppInfo appInfo) {
+    return appInfo.lookupStaticTarget(type, field);
   }
 
   @Override

@@ -13,7 +13,10 @@ import com.android.tools.r8.code.IputShort;
 import com.android.tools.r8.code.IputWide;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexField;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import java.util.List;
 
@@ -93,6 +96,11 @@ public class InstancePut extends FieldInstruction {
   public int maxOutValueRegister() {
     assert false : "InstancePut instructions define no values.";
     return 0;
+  }
+
+  @Override
+  DexEncodedField lookupTarget(DexType type, AppInfo appInfo) {
+    return appInfo.lookupInstanceTarget(type, field);
   }
 
   @Override

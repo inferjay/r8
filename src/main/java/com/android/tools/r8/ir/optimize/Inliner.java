@@ -302,9 +302,9 @@ public class Inliner {
                 continue;
               }
               // Ensure the container is compatible with the target.
-             if (!forceInline
-                 && !result.target.isPublicInlining()
-                 && (method.method.getHolder() != result.target.method.getHolder())) {
+              if (!forceInline
+                  && !result.target.isPublicInlining()
+                  && (method.method.getHolder() != result.target.method.getHolder())) {
                 continue;
               }
               DexType downcast = null;
