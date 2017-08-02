@@ -18,6 +18,7 @@ public class DebugLocalsChange extends Instruction {
   public DebugLocalsChange(
       Int2ReferenceMap<DebugLocalInfo> ending, Int2ReferenceMap<DebugLocalInfo> starting) {
     super(null);
+    assert !ending.isEmpty() || !starting.isEmpty();
     this.ending = ending;
     this.starting = starting;
   }

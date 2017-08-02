@@ -4,6 +4,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
@@ -376,6 +377,18 @@ public class BasicBlock {
     assert filled;
     assert instructions.get(instructions.size() - 1).isJumpInstruction();
     return instructions.get(instructions.size() - 1).asJumpInstruction();
+  }
+
+  public Instruction exceptionalExit() {
+    assert hasCatchHandlers();
+    ListIterator<Instruction> it = listIterator(instructions.size());
+    while (it.hasPrevious()) {
+      Instruction instruction = it.previous();
+      if (instruction.instructionTypeCanThrow()) {
+        return instruction;
+      }
+    }
+    throw new Unreachable();
   }
 
   public void clearUserInfo() {

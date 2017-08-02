@@ -317,4 +317,35 @@ public class LocalsTest extends DebugTestBase {
         run());
   }
 
+  @Test
+  public void testInvokeRangeLongThrowOnDiv() throws Throwable {
+    final int initialValueOfX = 21;
+    final long expectedValueOfL = (long) initialValueOfX * 2;
+    runDebugTest("Locals",
+        breakpoint("Locals", "foo"),
+        run(),
+        // Initialize obj to 42 using original value of x.
+        stepOver(),
+        // Set value of x to zero which will cause a div-by-zero arithmetic exception below.
+        checkLocal("x", Value.createInt(initialValueOfX)),
+        setLocal("x", Value.createInt(0)),
+        // Single step until the catch handler triggers.
+        checkLine(SOURCE_FILE, 166), stepOver(),
+        checkLine(SOURCE_FILE, 168), stepOver(),
+        checkLine(SOURCE_FILE, 169), stepOver(),
+        // At the catch handler, inspect the initial state of locals.
+        checkLine(SOURCE_FILE, 172),
+        checkLocal("x", Value.createInt(0)),
+        getLocal("obj", value -> Assert.assertEquals(Tag.OBJECT_TAG, value.getTag())),
+        checkLocal("l", Value.createLong(expectedValueOfL)),
+        // Step onto first line of catch handler and inspect again, including the exception local.
+        stepOver(),
+        checkLine(SOURCE_FILE, 173),
+        getLocal("e", value -> Assert.assertEquals(Tag.OBJECT_TAG, value.getTag())),
+        checkLocal("x", Value.createInt(0)),
+        getLocal("obj", value -> Assert.assertEquals(Tag.OBJECT_TAG, value.getTag())),
+        checkLocal("l", Value.createLong(expectedValueOfL)),
+        run());
+  }
+
 }
