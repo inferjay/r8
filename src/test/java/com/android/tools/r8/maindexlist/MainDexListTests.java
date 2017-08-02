@@ -150,8 +150,15 @@ public class MainDexListTests extends TestBase {
 
   @Test
   public void cannotFitBothIntoMainDex() throws Throwable {
-    thrown.expect(CompilationError.class);
-    verifyMainDexContains(TWO_LARGE_CLASSES, getTwoLargeClassesAppPath(), false);
+    try {
+      verifyMainDexContains(TWO_LARGE_CLASSES, getTwoLargeClassesAppPath(), false);
+      fail("Expect to fail, for there are too many classes for the main-dex list.");
+    } catch (CompilationError e) {
+      // Make sure {@link MonoDexDistributor} was _not_ used.
+      assertFalse(e.getMessage().contains("single dex file"));
+      // Make sure what exceeds the limit is the number of methods.
+      assertTrue(e.getMessage().contains("# methods"));
+    }
   }
 
   @Test
@@ -183,8 +190,15 @@ public class MainDexListTests extends TestBase {
 
   @Test
   public void cannotFitAllIntoMainDex() throws Throwable {
-    thrown.expect(CompilationError.class);
-    verifyMainDexContains(MANY_CLASSES, getManyClassesMultiDexAppPath(), false);
+    try {
+      verifyMainDexContains(MANY_CLASSES, getManyClassesMultiDexAppPath(), false);
+      fail("Expect to fail, for there are too many classes for the main-dex list.");
+    } catch (CompilationError e) {
+      // Make sure {@link MonoDexDistributor} was _not_ used.
+      assertFalse(e.getMessage().contains("single dex file"));
+      // Make sure what exceeds the limit is the number of methods.
+      assertTrue(e.getMessage().contains("# methods"));
+    }
   }
 
   @Test
@@ -334,7 +348,10 @@ public class MainDexListTests extends TestBase {
           MANY_CLASSES, Constants.ANDROID_K_API, false, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
       fail("Expect to fail, for there are many classes while multidex is not enabled.");
     } catch (CompilationError e) {
-      assertTrue(e.getMessage().contains("Cannot fit all classes in a single dex file."));
+      // Make sure {@link MonoDexDistributor} was used.
+      assertTrue(e.getMessage().contains("single dex file"));
+      // Make sure what exceeds the limit is the number of methods.
+      assertTrue(e.getMessage().contains("# methods"));
     }
   }
 
@@ -476,8 +493,8 @@ public class MainDexListTests extends TestBase {
     }
     DexApplication application = builder.build();
     AppInfoWithSubtyping appInfo = new AppInfoWithSubtyping(application);
-    ApplicationWriter writer =
-        new ApplicationWriter(application, appInfo, options, null, NamingLens.getIdentityLens(), null);
+    ApplicationWriter writer = new ApplicationWriter(
+        application, appInfo, options, null, NamingLens.getIdentityLens(), null);
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
       return writer.write(null, executor);

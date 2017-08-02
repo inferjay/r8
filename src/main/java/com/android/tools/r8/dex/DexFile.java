@@ -62,13 +62,13 @@ public class DexFile {
     int version;
     switch (versionByte) {
       case '8':
-        version = 38;
+        version = Constants.ANDROID_O_DEX_VERSION;
         break;
       case '7':
-        version = 37;
+        version = Constants.ANDROID_N_DEX_VERSION;
         break;
       case '5':
-        version = 35;
+        version = Constants.ANDROID_PRE_N_DEX_VERSION;
         break;
       default:
         throw new CompilationError("Dex file has invalid version number: " + name);

@@ -174,6 +174,35 @@ public class VirtualFile {
     return isFull(transaction.getNumberOfMethods(), transaction.getNumberOfFields(), MAX_ENTRIES);
   }
 
+  void throwIfFull(boolean multiDexEnabled) {
+    if (!isFull()) {
+      return;
+    }
+    StringBuilder messageBuilder = new StringBuilder();
+    // General message: Cannot fit.
+    messageBuilder.append("Cannot fit requested classes in ");
+    messageBuilder.append(multiDexEnabled ? "the main-" : "a single ");
+    messageBuilder.append("dex file.\n");
+    // Suggest supplying the main-dex list or explicitly mention that main-dex list is too large.
+    if (multiDexEnabled) {
+      messageBuilder.append("The list of classes for the main-dex list is too large.\n");
+    } else {
+      messageBuilder.append("Try supplying a main-dex list.\n");
+    }
+    // Show the numbers of methods and/or fields that exceed the limit.
+    if (transaction.getNumberOfMethods() > MAX_ENTRIES) {
+      messageBuilder.append("# methods: ");
+      messageBuilder.append(transaction.getNumberOfMethods());
+      messageBuilder.append(" > ").append(MAX_ENTRIES).append('\n');
+    }
+    if (transaction.getNumberOfFields() > MAX_ENTRIES) {
+      messageBuilder.append("# fields: ");
+      messageBuilder.append(transaction.getNumberOfFields());
+      messageBuilder.append(" > ").append(MAX_ENTRIES).append('\n');
+    }
+    throw new CompilationError(messageBuilder.toString());
+  }
+
   private boolean isFilledEnough(FillStrategy fillStrategy) {
     return isFull(
         transaction.getNumberOfMethods(),
@@ -202,7 +231,7 @@ public class VirtualFile {
     protected final ApplicationWriter writer;
     protected final Map<Integer, VirtualFile> nameToFileMap = new HashMap<>();
 
-    public Distributor(ApplicationWriter writer) {
+    Distributor(ApplicationWriter writer) {
       this.application = writer.application;
       this.writer = writer;
     }
@@ -212,7 +241,7 @@ public class VirtualFile {
 
   public static class FilePerClassDistributor extends Distributor {
 
-    public FilePerClassDistributor(ApplicationWriter writer) {
+    FilePerClassDistributor(ApplicationWriter writer) {
       super(writer);
     }
 
@@ -232,7 +261,7 @@ public class VirtualFile {
     protected Set<DexProgramClass> classes;
     protected Map<DexProgramClass, String> originalNames;
 
-    public DistributorBase(ApplicationWriter writer) {
+    DistributorBase(ApplicationWriter writer) {
       super(writer);
 
       classes = Sets.newHashSet(application.classes());
@@ -247,9 +276,7 @@ public class VirtualFile {
           if (clazz != null && clazz.isProgramClass()) {
             DexProgramClass programClass = (DexProgramClass) clazz;
             mainDexFile.addClass(programClass);
-            if (mainDexFile.isFull()) {
-              throw new CompilationError("Cannot fit requested classes in main-dex file.");
-            }
+            mainDexFile.throwIfFull(true);
             classes.remove(programClass);
           } else {
             System.out.println(
@@ -298,7 +325,7 @@ public class VirtualFile {
   public static class FillFilesDistributor extends DistributorBase {
     private final FillStrategy fillStrategy;
 
-    public FillFilesDistributor(ApplicationWriter writer, boolean minimalMainDex) {
+    FillFilesDistributor(ApplicationWriter writer, boolean minimalMainDex) {
       super(writer);
       this.fillStrategy = minimalMainDex ? FillStrategy.MINIMAL_MAIN_DEX : FillStrategy.FILL_MAX;
     }
@@ -326,7 +353,7 @@ public class VirtualFile {
   }
 
   public static class MonoDexDistributor extends DistributorBase {
-    public MonoDexDistributor(ApplicationWriter writer) {
+    MonoDexDistributor(ApplicationWriter writer) {
       super(writer);
     }
 
@@ -337,9 +364,7 @@ public class VirtualFile {
 
       for (DexProgramClass programClass : classes) {
         mainDexFile.addClass(programClass);
-        if (mainDexFile.isFull()) {
-          throw new CompilationError("Cannot fit all classes in a single dex file.");
-        }
+        mainDexFile.throwIfFull(false);
       }
       mainDexFile.commitTransaction();
       return nameToFileMap;
@@ -350,7 +375,7 @@ public class VirtualFile {
     private final PackageDistribution packageDistribution;
     private final ExecutorService executorService;
 
-    public PackageMapDistributor(
+    PackageMapDistributor(
         ApplicationWriter writer,
         PackageDistribution packageDistribution,
         ExecutorService executorService) {
