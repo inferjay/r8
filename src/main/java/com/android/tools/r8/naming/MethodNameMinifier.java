@@ -140,24 +140,21 @@ class MethodNameMinifier {
     if (holder != null && !holder.isLibraryClass()) {
       NamingState<DexProto> state = states
           .computeIfAbsent(type, k -> states.get(holder.superType).createChild());
-      assignNamesToMethods(holder.directMethods(), state, doPrivates, renaming);
-      assignNamesToMethods(holder.virtualMethods(), state, doPrivates, renaming);
+      holder.forEachMethod(method -> assignNameToMethod(method, state, doPrivates, renaming));
     }
     type.forAllExtendsSubtypes(
         subtype -> assignNamesToClassesMethods(subtype, doPrivates, renaming));
   }
 
-  private void assignNamesToMethods(DexEncodedMethod[] methods,
+  private void assignNameToMethod(DexEncodedMethod encodedMethod,
       NamingState<DexProto> state, boolean doPrivates, Map<DexMethod, DexString> renaming) {
-    for (DexEncodedMethod encodedMethod : methods) {
-      if (encodedMethod.accessFlags.isPrivate() != doPrivates) {
-        continue;
-      }
-      DexMethod method = encodedMethod.method;
-      if (!state.isReserved(method.name, method.proto)
-          && !encodedMethod.accessFlags.isConstructor()) {
-        renaming.put(method, state.assignNewNameFor(method.name, method.proto, !doPrivates));
-      }
+    if (encodedMethod.accessFlags.isPrivate() != doPrivates) {
+      return;
+    }
+    DexMethod method = encodedMethod.method;
+    if (!state.isReserved(method.name, method.proto)
+        && !encodedMethod.accessFlags.isConstructor()) {
+      renaming.put(method, state.assignNewNameFor(method.name, method.proto, !doPrivates));
     }
   }
 
