@@ -29,9 +29,10 @@ import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Multisets;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap.Entry;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMaps;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -75,6 +76,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
   }
 
   private static class LocalRange implements Comparable<LocalRange> {
+    final Value value;
     final DebugLocalInfo local;
     final int register;
     final int start;
@@ -82,6 +84,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
 
     LocalRange(Value value, int register, int start, int end) {
       assert value.getLocalInfo() != null;
+      this.value = value;
       this.local = value.getLocalInfo();
       this.register = register;
       this.start = start;
@@ -252,7 +255,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           // information, we always use the argument register whenever a local corresponds to an
           // argument value. That avoids ending and restarting locals whenever we move arguments
           // to lower register.
-          int register = getRegisterForValue(value, value.isArgument() ? 0 : start);
+          int register = getArgumentOrAllocateRegisterForValue(value, start);
           ranges.add(new LocalRange(value, register, start, nextEnd));
           Integer nextStart = nextInRange(nextEnd, end, starts);
           if (nextStart == null) {
@@ -262,7 +265,8 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           start = nextStart;
         }
         if (start >= 0) {
-          ranges.add(new LocalRange(value, getRegisterForValue(value, start), start, end));
+          ranges.add(new LocalRange(value, getArgumentOrAllocateRegisterForValue(value, start),
+              start, end));
         }
       }
     }
@@ -287,7 +291,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
 
     for (BasicBlock block : blocks) {
-      block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
+      boolean blockEntry = true;
       ListIterator<Instruction> instructionIterator = block.listIterator();
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
@@ -316,15 +320,25 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           }
           nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
         }
-        if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
-          DebugLocalsChange change = createLocalsChange(ending, starting);
-          if (change != null) {
-            if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
-              instructionIterator.previous();
-              instructionIterator.add(new DebugLocalsChange(ending, starting));
-              instructionIterator.next();
-            } else {
-              instructionIterator.add(new DebugLocalsChange(ending, starting));
+
+        if (blockEntry) {
+          blockEntry = false;
+          if (instruction.isMoveException()) {
+            fixupSpillMovesAtMoveException(block, instructionIterator, openRanges, currentLocals);
+          } else {
+            block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
+          }
+        } else {
+          if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
+            DebugLocalsChange change = createLocalsChange(ending, starting);
+            if (change != null) {
+              if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
+                instructionIterator.previous();
+                instructionIterator.add(change);
+                instructionIterator.next();
+              } else {
+                instructionIterator.add(change);
+              }
             }
           }
         }
@@ -333,13 +347,83 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
   }
 
+  private void fixupSpillMovesAtMoveException(
+      BasicBlock block,
+      ListIterator<Instruction> instructionIterator,
+      List<LocalRange> openRanges,
+      Int2ReferenceMap<DebugLocalInfo> finalLocals) {
+    Int2ReferenceMap<DebugLocalInfo> initialLocals = new Int2ReferenceOpenHashMap<>();
+    int exceptionalIndex = block.getPredecessors().get(0).exceptionalExit().getNumber();
+    for (LocalRange open : openRanges) {
+      int exceptionalRegister = getArgumentOrAllocateRegisterForValue(open.value, exceptionalIndex);
+      initialLocals.put(exceptionalRegister, open.local);
+    }
+    block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(initialLocals));
+    Int2ReferenceMap<DebugLocalInfo> clobberedLocals = new Int2ReferenceOpenHashMap<>();
+    Iterator<Instruction> moveIterator = block.iterator();
+    assert block.entry().isMoveException();
+    int index = block.entry().getNumber();
+    moveIterator.next();
+    while (moveIterator.hasNext()) {
+      Instruction next = moveIterator.next();
+      if (next.getNumber() != -1) {
+        break;
+      }
+      if (clobberedLocals.isEmpty()) {
+        // Advance the iterator so it ends up at the first move that clobbers a local.
+        instructionIterator.next();
+      }
+      if (next.isMove()) {
+        Move move = next.asMove();
+        int dstRegister = getArgumentOrAllocateRegisterForValue(move.dest(), index);
+        DebugLocalInfo dstInitialLocal = initialLocals.get(dstRegister);
+        DebugLocalInfo dstFinalLocal = finalLocals.get(dstRegister);
+        if (dstInitialLocal != null && dstInitialLocal != dstFinalLocal) {
+          initialLocals.remove(dstRegister);
+          clobberedLocals.put(dstRegister, dstInitialLocal);
+        }
+      }
+    }
+    // Add an initial local change for all clobbered locals after the first clobbered local.
+    if (!clobberedLocals.isEmpty()) {
+      instructionIterator.add(new DebugLocalsChange(
+          clobberedLocals, Int2ReferenceMaps.emptyMap()));
+    }
+    // Compute the final change in locals and emit it after all spill moves.
+    while (instructionIterator.hasNext()) {
+      if (instructionIterator.next().getNumber() != -1) {
+        instructionIterator.previous();
+        break;
+      }
+    }
+    Int2ReferenceMap<DebugLocalInfo> ending = new Int2ReferenceOpenHashMap<>();
+    Int2ReferenceMap<DebugLocalInfo> starting = new Int2ReferenceOpenHashMap<>();
+    for (Entry<DebugLocalInfo> initialLocal : initialLocals.int2ReferenceEntrySet()) {
+      if (finalLocals.get(initialLocal.getIntKey()) != initialLocal.getValue()) {
+        ending.put(initialLocal.getIntKey(), initialLocal.getValue());
+      }
+    }
+    for (Entry<DebugLocalInfo> finalLocal : finalLocals.int2ReferenceEntrySet()) {
+      if (initialLocals.get(finalLocal.getIntKey()) != finalLocal.getValue()) {
+        starting.put(finalLocal.getIntKey(), finalLocal.getValue());
+      }
+    }
+    DebugLocalsChange change = createLocalsChange(ending, starting);
+    if (change != null) {
+      instructionIterator.add(change);
+    }
+  }
+
   private DebugLocalsChange createLocalsChange(
       Int2ReferenceMap<DebugLocalInfo> ending, Int2ReferenceMap<DebugLocalInfo> starting) {
+    if (ending.isEmpty() && starting.isEmpty()) {
+      return null;
+    }
     if (ending.isEmpty() || starting.isEmpty()) {
       return new DebugLocalsChange(ending, starting);
     }
     IntSet unneeded = new IntArraySet(Math.min(ending.size(), starting.size()));
-    for (Int2ReferenceMap.Entry<DebugLocalInfo> entry : ending.int2ReferenceEntrySet()) {
+    for (Entry<DebugLocalInfo> entry : ending.int2ReferenceEntrySet()) {
       if (starting.get(entry.getIntKey()) == entry.getValue()) {
         unneeded.add(entry.getIntKey());
       }
@@ -1112,7 +1196,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           map.add(operandRegister);
         }
       }
-      for (Entry<Integer> entry : Multisets.copyHighestCountFirst(map).entrySet()) {
+      for (Multiset.Entry<Integer> entry : Multisets.copyHighestCountFirst(map).entrySet()) {
         int register = entry.getElement();
         if (tryHint(unhandledInterval, registerConstraint, freePositions, needsRegisterPair,
             register)) {

@@ -325,6 +325,10 @@ public abstract class DebugTestBase {
     return new JUnit3Wrapper.Command.SetLocalCommand(localName, newValue);
   }
 
+  protected final JUnit3Wrapper.Command getLocal(String localName, Consumer<Value> inspector) {
+    return t -> inspector.accept(t.debuggeeState.getLocalValues().get(localName));
+  }
+
   @Ignore("Prevents Gradle from running the wrapper as a test.")
   static class JUnit3Wrapper extends JDWPTestCase {
 
@@ -643,7 +647,8 @@ public abstract class DebugTestBase {
           assert valuesCount == 1;
           Value localValue = replyPacket.getNextValueAsValue();
 
-          Assert.assertEquals(expectedValue, localValue);
+          Assert.assertEquals("Incorrect value for local '" + localName + "'",
+              expectedValue, localValue);
         }
 
         public String getClassName() {
