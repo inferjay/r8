@@ -49,7 +49,7 @@ public abstract class CompilationTestBase {
   }
 
   public AndroidApp runAndCheckVerification(D8Command command, String referenceApk)
-      throws IOException, ExecutionException, CompilationException {
+      throws IOException, ExecutionException {
     return checkVerification(ToolHelper.runD8(command), referenceApk);
   }
 

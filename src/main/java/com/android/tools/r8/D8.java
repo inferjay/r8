@@ -62,7 +62,7 @@ public final class D8 {
    * @param command D8 command.
    * @return the compilation result.
    */
-  public static D8Output run(D8Command command) throws IOException, CompilationException {
+  public static D8Output run(D8Command command) throws IOException {
     InternalOptions options = command.getInternalOptions();
     CompilationResult result = runForTesting(command.getInputApp(), options);
     assert result != null;
@@ -83,8 +83,7 @@ public final class D8 {
    * @param executor executor service from which to get threads for multi-threaded processing.
    * @return the compilation result.
    */
-  public static D8Output run(D8Command command, ExecutorService executor)
-      throws IOException, CompilationException {
+  public static D8Output run(D8Command command, ExecutorService executor) throws IOException {
     InternalOptions options = command.getInternalOptions();
     CompilationResult result = runForTesting(
         command.getInputApp(), options, executor);
@@ -143,7 +142,7 @@ public final class D8 {
   }
 
   static CompilationResult runForTesting(AndroidApp inputApp, InternalOptions options)
-      throws IOException, CompilationException {
+      throws IOException {
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
       return runForTesting(inputApp, options, executor);
@@ -153,8 +152,7 @@ public final class D8 {
   }
 
   static CompilationResult runForTesting(
-      AndroidApp inputApp, InternalOptions options, ExecutorService executor)
-      throws IOException, CompilationException {
+      AndroidApp inputApp, InternalOptions options, ExecutorService executor) throws IOException {
     try {
       assert !inputApp.hasPackageDistribution();
 
@@ -189,8 +187,6 @@ public final class D8 {
     } catch (ExecutionException e) {
       if (e.getCause() instanceof CompilationError) {
         throw (CompilationError) e.getCause();
-      } else if (e.getCause() instanceof CompilationException) {
-        throw (CompilationException) e.getCause();
       } else {
         throw new RuntimeException(e.getMessage(), e.getCause());
       }
