@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.dex;
 
-import com.android.tools.r8.ApiLevelException;
 import com.android.tools.r8.dex.VirtualFile.FilePerClassDistributor;
 import com.android.tools.r8.dex.VirtualFile.FillFilesDistributor;
 import com.android.tools.r8.dex.VirtualFile.PackageMapDistributor;
@@ -197,7 +196,7 @@ public class ApplicationWriter {
     }
   }
 
-  private byte[] writeDexFile(VirtualFile vfile) throws ApiLevelException {
+  private byte[] writeDexFile(VirtualFile vfile) {
     FileWriter fileWriter =
         new FileWriter(
             vfile.computeMapping(application), application, appInfo, options, namingLens);

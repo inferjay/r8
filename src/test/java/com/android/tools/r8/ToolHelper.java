@@ -505,12 +505,12 @@ public class ToolHelper {
     return runD8(D8Command.builder(app).build(), optionsConsumer);
   }
 
-  public static AndroidApp runD8(D8Command command) throws IOException, CompilationException {
+  public static AndroidApp runD8(D8Command command) throws IOException {
     return runD8(command, null);
   }
 
   public static AndroidApp runD8(D8Command command, Consumer<InternalOptions> optionsConsumer)
-      throws IOException, CompilationException {
+      throws IOException {
     InternalOptions options = command.getInternalOptions();
     if (optionsConsumer != null) {
       optionsConsumer.accept(options);
