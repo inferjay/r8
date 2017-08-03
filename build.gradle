@@ -832,6 +832,7 @@ task supportLibList() {
         }
     }
     doLast {
+        file("build/generated").mkdir()
         def file = file("build/generated/supportlibraries.txt")
         file.createNewFile()
         file.text = ""
