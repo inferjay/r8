@@ -158,9 +158,9 @@ def main(argv):
         app_provided_pg_conf = True
     if options.k:
       args.extend(['--pg-conf', options.k])
-    if 'multidexrules' in values:
-      for rules in values['multidexrules']:
-        args.extend(['--multidex-rules', rules])
+    if 'maindexrules' in values:
+      for rules in values['maindexrules']:
+        args.extend(['--main-dex-rules', rules])
 
   if not options.no_libraries and 'libraries' in values:
     for lib in values['libraries']:

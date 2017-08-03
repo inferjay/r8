@@ -129,6 +129,14 @@ public class R8Command extends BaseCommand {
       return self();
     }
 
+    protected void validate() throws CompilationException {
+      super.validate();
+      if (minimalMainDex && mainDexRules.isEmpty()) {
+        throw new CompilationException(
+            "Option --minimal-main-dex require --main-dex-rules");
+      }
+    }
+
     @Override
     public R8Command build() throws CompilationException, IOException {
       // If printing versions ignore everything else.
@@ -193,20 +201,23 @@ public class R8Command extends BaseCommand {
       "Usage: r8 [options] <input-files>",
       " where <input-files> are any combination of dex, class, zip, jar, or apk files",
       " and options are:",
-      "  --release               # Compile without debugging information (default).",
-      "  --debug                 # Compile with debugging information.",
-      "  --output <file>         # Output result in <file>.",
-      "                          # <file> must be an existing directory or a zip file.",
-      "  --lib <file>            # Add <file> as a library resource.",
-      "  --min-api               # Minimum Android API level compatibility.",
-      "  --pg-conf <file>        # Proguard configuration <file> (implies tree shaking/minification).",
-      "  --pg-map <file>         # Proguard map <file>.",
-      "  --no-tree-shaking       # Force disable tree shaking of unreachable classes.",
-      "  --no-minification       # Force disable minification of names.",
-      "  --multidex-rules <file> # Enable automatic classes partitioning for legacy multidex.",
-      "                          # <file> is a Proguard configuration file (with only keep rules).",
-      "  --version               # Print the version of r8.",
-      "  --help                  # Print this message."));
+      "  --release                # Compile without debugging information (default).",
+      "  --debug                  # Compile with debugging information.",
+      "  --output <file>          # Output result in <file>.",
+      "                           # <file> must be an existing directory or a zip file.",
+      "  --lib <file>             # Add <file> as a library resource.",
+      "  --min-api                # Minimum Android API level compatibility.",
+      "  --pg-conf <file>         # Proguard configuration <file> (implies tree",
+      "                           # shaking/minification).",
+      "  --pg-map <file>          # Proguard map <file>.",
+      "  --no-tree-shaking        # Force disable tree shaking of unreachable classes.",
+      "  --no-minification        # Force disable minification of names.",
+      "  --main-dex-rules <file>  # Proguard keep rules for classes to place in the",
+      "                           # primary dex file.",
+      "  --minimal-main-dex       # Only place classes specified by --main-dex-rules",
+      "                           # in the primary dex file.",
+      "  --version                # Print the version of r8.",
+      "  --help                   # Print this message."));
 
   private final ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
   private final boolean minimalMainDex;
@@ -271,9 +282,9 @@ public class R8Command extends BaseCommand {
         builder.setTreeShaking(false);
       } else if (arg.equals("--no-minification")) {
         builder.setMinification(false);
-      } else if (arg.equals("--multidex-rules")) {
+      } else if (arg.equals("--main-dex-rules")) {
         builder.addMainDexRules(Paths.get(args[++i]));
-      } else if (arg.equals("--minimal-maindex")) {
+      } else if (arg.equals("--minimal-main-dex")) {
         builder.setMinimalMainDex(true);
       } else if (arg.equals("--pg-conf")) {
         builder.addProguardConfigurationFiles(Paths.get(args[++i]));

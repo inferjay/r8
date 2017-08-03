@@ -248,6 +248,10 @@ abstract class BaseCommand {
     }
 
     protected void validate() throws CompilationException {
+      if (app.hasMainDexList() && outputMode == OutputMode.FilePerClass) {
+        throw new CompilationException(
+            "Option --main-dex-list cannot be used with --file-per-class");
+      }
       FileUtils.validateOutputFile(outputPath);
     }
   }
