@@ -1107,7 +1107,7 @@ public class BasicBlock {
       catchSuccessor.splitCriticalExceptionEdges(
           code.valueNumberGenerator,
           newBlock -> {
-            newBlock.setNumber(code.blocks.size());
+            newBlock.setNumber(code.getHighestBlockNumber() + 1);
             blockIterator.add(newBlock);
           });
     }
