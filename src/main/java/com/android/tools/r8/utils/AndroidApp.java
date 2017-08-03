@@ -579,6 +579,10 @@ public class AndroidApp {
       return this;
     }
 
+    public boolean hasMainDexList() {
+      return mainDexList != null;
+    }
+
     /**
      * Set the main-dex list data.
      */

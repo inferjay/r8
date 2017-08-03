@@ -89,6 +89,24 @@ public class R8CommandTest {
   }
 
   @Test
+  public void mainDexRules() throws Throwable {
+    Path mailDexRules = temp.newFile("main-dex.rules").toPath();
+    parse("--main-dex-rules", mailDexRules.toString());
+  }
+
+  @Test
+  public void minimalMainDex() throws Throwable {
+    thrown.expect(CompilationException.class);
+    parse("--minimal-main-dex");
+  }
+
+  @Test
+  public void mainDexRulesWithMinimalMainDex() throws Throwable {
+    Path mailDexRules = temp.newFile("main-dex.rules").toPath();
+    parse("--main-dex-rules", mailDexRules.toString(), "--minimal-main-dex");
+  }
+
+  @Test
   public void existingOutputDirWithDexFiles() throws Throwable {
     Path existingDir = temp.newFolder().toPath();
     List<Path> classesFiles = ImmutableList.of(

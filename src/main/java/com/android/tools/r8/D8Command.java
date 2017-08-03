@@ -71,6 +71,14 @@ public class D8Command extends BaseCommand {
       return this;
     }
 
+    protected void validate() throws CompilationException {
+      super.validate();
+      if (getAppBuilder().hasMainDexList() && intermediate) {
+        throw new CompilationException(
+            "Option --main-dex-list cannot be used with --intermediate");
+      }
+    }
+
     /**
      * Build the final D8Command.
      */
@@ -95,17 +103,19 @@ public class D8Command extends BaseCommand {
       "Usage: d8 [options] <input-files>",
       " where <input-files> are any combination of dex, class, zip, jar, or apk files",
       " and options are:",
-      "  --debug             # Compile with debugging information (default).",
-      "  --release           # Compile without debugging information.",
-      "  --output <file>     # Output result in <outfile>.",
-      "                      # <file> must be an existing directory or a zip file.",
-      "  --lib <file>        # Add <file> as a library resource.",
-      "  --classpath <file>  # Add <file> as a classpath resource.",
-      "  --min-api           # Minimum Android API level compatibility",
-      "  --intermediate      # Compile an intermediate result intended for later merging.",
-      "  --file-per-class    # Produce a separate dex file per class",
-      "  --version           # Print the version of d8.",
-      "  --help              # Print this message."));
+      "  --debug                 # Compile with debugging information (default).",
+      "  --release               # Compile without debugging information.",
+      "  --output <file>         # Output result in <outfile>.",
+      "                          # <file> must be an existing directory or a zip file.",
+      "  --lib <file>            # Add <file> as a library resource.",
+      "  --classpath <file>      # Add <file> as a classpath resource.",
+      "  --min-api               # Minimum Android API level compatibility",
+      "  --intermediate          # Compile an intermediate result intended for later",
+      "                          # merging.",
+      "  --file-per-class        # Produce a separate dex file per class",
+      "  --main-dex-list <file>  # List of classes to place in the primary dex file.",
+      "  --version               # Print the version of d8.",
+      "  --help                  # Print this message."));
 
   private boolean intermediate = false;
 
@@ -121,6 +131,7 @@ public class D8Command extends BaseCommand {
   public static Builder parse(String[] args) throws CompilationException, IOException {
     CompilationMode modeSet = null;
     Path outputPath = null;
+    String mainDexList = null;
     Builder builder = builder();
     try {
       for (int i = 0; i < args.length; i++) {
@@ -156,6 +167,12 @@ public class D8Command extends BaseCommand {
           builder.addLibraryFiles(Paths.get(args[++i]));
         } else if (arg.equals("--classpath")) {
           builder.addClasspathFiles(Paths.get(args[++i]));
+        } else if (arg.equals("--main-dex-list")) {
+          if (mainDexList != null) {
+            throw new CompilationException("Only one --main-dex-list supported");
+          }
+          mainDexList = args[++i];
+          builder.setMainDexListFile(Paths.get(mainDexList));
         } else if (arg.equals("--min-api")) {
           builder.setMinApiLevel(Integer.valueOf(args[++i]));
         } else if (arg.equals("--intermediate")) {

@@ -77,7 +77,7 @@ VERSIONS = {
       'pgconf': [
           '%s_proguard.config' % V12_22_PREFIX,
           '%s/proguardsettings/YouTubeRelease_proguard.config' % THIRD_PARTY],
-      'multidexrules' : [
+      'maindexrules' : [
           os.path.join(V12_22_BASE, 'mainDexClasses.rules'),
           os.path.join(V12_22_BASE, 'main-dex-classes-release.cfg'),
           os.path.join(V12_22_BASE, 'main_dex_YouTubeRelease_proguard.cfg')],

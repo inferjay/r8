@@ -156,6 +156,37 @@ public class D8CommandTest {
   }
 
   @Test
+  public void mainDexList() throws Throwable {
+    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    D8Command command = parse("--main-dex-list", mailDexList.toString());
+    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+  }
+
+  @Test
+  public void multipleMainDexList() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path mailDexList1 = temp.getRoot().toPath().resolve("main-dex-list-1.txt");
+    Path mailDexList2 = temp.getRoot().toPath().resolve("main-dex-list-2.txt");
+    parse("--main-dex-list", mailDexList1.toString(), "--main-dex-list", mailDexList2.toString());
+  }
+
+  @Test
+  public void mainDexListWithFilePerClass() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    D8Command command = parse("--main-dex-list", mailDexList.toString(), "--file-per-class");
+    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+  }
+
+  @Test
+  public void mainDexListWithIntermediate() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    D8Command command = parse("--main-dex-list", mailDexList.toString(), "--intermediate");
+    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+  }
+
+  @Test
   public void invalidOutputFileTypeParse() throws Throwable {
     thrown.expect(CompilationException.class);
     Path invalidType = temp.getRoot().toPath().resolve("an-invalid-output-file-type.foobar");
