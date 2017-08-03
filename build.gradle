@@ -12,6 +12,7 @@ apply plugin: 'com.google.protobuf'
 apply from: 'copyAdditionalJctfCommonFiles.gradle'
 
 repositories {
+    maven { url 'https://maven.google.com' }
     mavenCentral()
 }
 
@@ -94,6 +95,10 @@ sourceSets {
     }
 }
 
+configurations {
+    supportLibs
+}
+
 dependencies {
     compile 'net.sf.jopt-simple:jopt-simple:4.6'
     compile group: 'com.google.guava', name: 'guava', version: '19.0'
@@ -114,6 +119,9 @@ dependencies {
     examplesAndroidOCompile group: 'org.ow2.asm', name: 'asm', version: '5.1'
     examplesCompile 'com.google.protobuf:protobuf-lite:3.0.0'
     examplesRuntime 'com.google.protobuf:protobuf-lite:3.0.0'
+    supportLibs 'com.android.support:support-v4:25.4.0'
+    supportLibs 'junit:junit:4.12'
+    supportLibs 'com.android.support.test.espresso:espresso-core:3.0.0'
 }
 
 protobuf {
@@ -791,7 +799,56 @@ task buildPreNJdwpTestsJar(type: Jar) {
     includeEmptyDirs = false
 }
 
+task supportLibDir() {
+    doLast {
+        File dir = file("build/supportlibraries")
+        dir.mkdir()
+    }
+}
+
+configurations.supportLibs.files.each { file ->
+    if (file.getName().endsWith(".aar")) {
+        def name = "extract_"+file.getName()
+        task "${name}"(type: Copy) {
+            dependsOn supportLibDir
+            from zipTree(file)
+            into "build/supportlibraries"
+            eachFile { FileCopyDetails fcp ->
+                if (fcp.relativePath.pathString.equals("classes.jar")) {
+                    // remap the file to the root with correct name
+                    fcp.relativePath = new RelativePath(true, file.getName().replace(".aar", ".jar"))
+                } else {
+                    fcp.exclude()
+                }
+            }
+        }
+    }
+}
+
+task supportLibList() {
+    configurations.supportLibs.files.each {
+        if (it.getName().endsWith(".aar")) {
+            dependsOn "extract_"+it.getName()
+        }
+    }
+    doLast {
+        def file = file("build/generated/supportlibraries.txt")
+        file.createNewFile()
+        file.text = ""
+        configurations.supportLibs.files.each {
+            if (it.getName().endsWith(".aar")) {
+                def outName =  it.getName().replace(".aar", ".jar")
+                file.text += ("build/supportlibraries/"
+                  + outName + "\n")
+            } else {
+                file.text += (it.getPath() + "\n")
+            }
+        }
+    }
+}
+
 test {
+    dependsOn supportLibList
     testLogging.exceptionFormat = 'full'
     if (project.hasProperty('print_test_stdout')) {
         testLogging.showStandardStreams = true
