@@ -131,7 +131,7 @@ public class R8Command extends BaseCommand {
 
     protected void validate() throws CompilationException {
       super.validate();
-      if (minimalMainDex && mainDexRules.isEmpty()) {
+      if (minimalMainDex && mainDexRules.isEmpty() && !getAppBuilder().hasMainDexList()) {
         throw new CompilationException(
             "Option --minimal-main-dex require --main-dex-rules");
       }

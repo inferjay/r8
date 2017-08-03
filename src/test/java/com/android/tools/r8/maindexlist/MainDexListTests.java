@@ -410,7 +410,7 @@ public class MainDexListTests extends TestBase {
         R8Command.builder()
             .addProgramFiles(app)
             .setMainDexListFile(mainDexList)
-            .setMinimalMainDex(minimalMainDex)
+            .setMinimalMainDex(minimalMainDex && mainDex.size() > 0)
             .setOutputPath(outDir)
             .setTreeShaking(false)
             .setMinification(false)
