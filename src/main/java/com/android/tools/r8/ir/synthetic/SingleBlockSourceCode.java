@@ -155,6 +155,7 @@ public abstract class SingleBlockSourceCode implements SourceCode {
     if (receiver != null) {
       receiverValue = builder.writeRegister(receiverRegister, MoveType.OBJECT, NO_THROW);
       builder.add(new Argument(receiverValue));
+      receiverValue.markAsThis();
     }
 
     // Fill in the Argument instructions in the argument block.
