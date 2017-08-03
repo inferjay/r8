@@ -292,19 +292,22 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
 
     for (BasicBlock block : blocks) {
       ListIterator<Instruction> instructionIterator = block.listIterator();
-      // Update ranges up-to but excluding the index of the first instruction.
+      // Close ranges up-to and including the first instruction. Ends are exclusive so the range is
+      // closed at entry.
       int entryIndex = block.entry().getNumber();
       {
         ListIterator<LocalRange> it = openRanges.listIterator(0);
         while (it.hasNext()) {
           LocalRange openRange = it.next();
-          if (openRange.end < entryIndex) {
+          if (openRange.end <= entryIndex) {
             it.remove();
             assert currentLocals.get(openRange.register) == openRange.local;
             currentLocals.remove(openRange.register);
           }
         }
       }
+      // Open ranges up-to but excluding the first instruction. Starts are inclusive but entry is
+      // prior to the first instruction.
       while (nextStartingRange != null && nextStartingRange.start < entryIndex) {
         // If the range is live at this index open it.
         if (entryIndex < nextStartingRange.end) {
