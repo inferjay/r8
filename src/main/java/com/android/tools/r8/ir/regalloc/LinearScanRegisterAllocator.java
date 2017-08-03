@@ -291,8 +291,34 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
 
     for (BasicBlock block : blocks) {
-      boolean blockEntry = true;
       ListIterator<Instruction> instructionIterator = block.listIterator();
+      // Update ranges up-to but excluding the index of the first instruction.
+      int entryIndex = block.entry().getNumber();
+      {
+        ListIterator<LocalRange> it = openRanges.listIterator(0);
+        while (it.hasNext()) {
+          LocalRange openRange = it.next();
+          if (openRange.end < entryIndex) {
+            it.remove();
+            assert currentLocals.get(openRange.register) == openRange.local;
+            currentLocals.remove(openRange.register);
+          }
+        }
+      }
+      while (nextStartingRange != null && nextStartingRange.start < entryIndex) {
+        // If the range is live at this index open it.
+        if (entryIndex < nextStartingRange.end) {
+          openRanges.add(nextStartingRange);
+          assert !currentLocals.containsKey(nextStartingRange.register);
+          currentLocals.put(nextStartingRange.register, nextStartingRange.local);
+        }
+        nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
+      }
+      if (block.entry().isMoveException()) {
+        fixupSpillMovesAtMoveException(block, instructionIterator, openRanges, currentLocals);
+      } else {
+        block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
+      }
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
         int index = instruction.getNumber();
@@ -320,25 +346,15 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           }
           nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
         }
-
-        if (blockEntry) {
-          blockEntry = false;
-          if (instruction.isMoveException()) {
-            fixupSpillMovesAtMoveException(block, instructionIterator, openRanges, currentLocals);
-          } else {
-            block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
-          }
-        } else {
-          if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
-            DebugLocalsChange change = createLocalsChange(ending, starting);
-            if (change != null) {
-              if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
-                instructionIterator.previous();
-                instructionIterator.add(change);
-                instructionIterator.next();
-              } else {
-                instructionIterator.add(change);
-              }
+        if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
+          DebugLocalsChange change = createLocalsChange(ending, starting);
+          if (change != null) {
+            if (instruction.isDebugPosition() || instruction.isJumpInstruction()) {
+              instructionIterator.previous();
+              instructionIterator.add(change);
+              instructionIterator.next();
+            } else {
+              instructionIterator.add(change);
             }
           }
         }
@@ -359,11 +375,13 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       initialLocals.put(exceptionalRegister, open.local);
     }
     block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(initialLocals));
-    Int2ReferenceMap<DebugLocalInfo> clobberedLocals = new Int2ReferenceOpenHashMap<>();
-    Iterator<Instruction> moveIterator = block.iterator();
+    Instruction entry = instructionIterator.next();
+    assert block.entry() == entry;
     assert block.entry().isMoveException();
-    int index = block.entry().getNumber();
+    Iterator<Instruction> moveIterator = block.iterator();
     moveIterator.next();
+    int index = entry.getNumber();
+    Int2ReferenceMap<DebugLocalInfo> clobberedLocals = new Int2ReferenceOpenHashMap<>();
     while (moveIterator.hasNext()) {
       Instruction next = moveIterator.next();
       if (next.getNumber() != -1) {
@@ -392,10 +410,10 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     // Compute the final change in locals and emit it after all spill moves.
     while (instructionIterator.hasNext()) {
       if (instructionIterator.next().getNumber() != -1) {
-        instructionIterator.previous();
         break;
       }
     }
+    instructionIterator.previous();
     Int2ReferenceMap<DebugLocalInfo> ending = new Int2ReferenceOpenHashMap<>();
     Int2ReferenceMap<DebugLocalInfo> starting = new Int2ReferenceOpenHashMap<>();
     for (Entry<DebugLocalInfo> initialLocal : initialLocals.int2ReferenceEntrySet()) {
