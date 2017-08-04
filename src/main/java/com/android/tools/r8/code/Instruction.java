@@ -34,22 +34,21 @@ public abstract class Instruction {
     this.offset = -1;
   }
 
-  static int readSigned8BitValue(BytecodeStream stream) {
+  static byte readSigned8BitValue(BytecodeStream stream) {
     return (byte) stream.nextByte();
   }
 
-  static int read8BitValue(BytecodeStream stream) {
-    int result = stream.nextByte();
-    return result;
+  static short read8BitValue(BytecodeStream stream) {
+    return (short) stream.nextByte();
   }
 
-  static int readSigned16BitValue(BytecodeStream stream) {
+  static short readSigned16BitValue(BytecodeStream stream) {
     // Convert to signed.
     return (short) stream.nextShort();
   }
 
-  static int read16BitValue(BytecodeStream stream) {
-    return stream.nextShort() & 0xffff;
+  static char read16BitValue(BytecodeStream stream) {
+    return (char) (stream.nextShort() & 0xffff);
   }
 
   static int readSigned32BitValue(BytecodeStream stream) {

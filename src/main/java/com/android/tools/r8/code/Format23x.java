@@ -11,14 +11,14 @@ import java.nio.ShortBuffer;
 
 abstract class Format23x extends Base2Format {
 
-  public final int AA;
-  public final int BB;
-  public final int CC;
+  public final short AA;
+  public final short BB;
+  public final short CC;
 
   // vAA | op | vCC | vBB
   Format23x(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     CC = read8BitValue(stream);
     BB = read8BitValue(stream);
   }
@@ -27,9 +27,9 @@ abstract class Format23x extends Base2Format {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
     assert 0 <= BB && BB <= Constants.U8BIT_MAX;
     assert 0 <= CC && CC <= Constants.U8BIT_MAX;
-    this.AA = AA;
-    this.BB = BB;
-    this.CC = CC;
+    this.AA = (short) AA;
+    this.BB = (short) BB;
+    this.CC = (short) CC;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

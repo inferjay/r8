@@ -13,26 +13,26 @@ import java.util.function.BiPredicate;
 
 public abstract class Format35c extends Base3Format {
 
-  public final int A;
-  public final int C;
-  public final int D;
-  public final int E;
-  public final int F;
-  public final int G;
+  public final byte A;
+  public final byte C;
+  public final byte D;
+  public final byte E;
+  public final byte F;
+  public final byte G;
   public IndexedDexItem BBBB;
 
   // A | G | op | BBBB | F | E | D | C
   Format35c(int high, BytecodeStream stream, IndexedDexItem[] map) {
     super(stream);
-    G = high & 0xf;
-    A = (high >> 4) & 0xf;
+    G = (byte) (high & 0xf);
+    A = (byte) ((high >> 4) & 0xf);
     BBBB = map[read16BitValue(stream)];
     int next = read8BitValue(stream);
-    E = next & 0xf;
-    F = (next >> 4) & 0xf;
+    E = (byte) (next & 0xf);
+    F = (byte) ((next >> 4) & 0xf);
     next = read8BitValue(stream);
-    C = next & 0xf;
-    D = (next >> 4) & 0xf;
+    C = (byte) (next & 0xf);
+    D = (byte) ((next >> 4) & 0xf);
   }
 
   protected Format35c(int A, IndexedDexItem BBBB, int C, int D, int E, int F, int G) {
@@ -42,13 +42,13 @@ public abstract class Format35c extends Base3Format {
     assert 0 <= E && E <= Constants.U4BIT_MAX;
     assert 0 <= F && F <= Constants.U4BIT_MAX;
     assert 0 <= G && G <= Constants.U4BIT_MAX;
-    this.A = A;
+    this.A = (byte) A;
     this.BBBB = BBBB;
-    this.C = C;
-    this.D = D;
-    this.E = E;
-    this.F = F;
-    this.G = G;
+    this.C = (byte) C;
+    this.D = (byte) D;
+    this.E = (byte) E;
+    this.F = (byte) F;
+    this.G = (byte) G;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

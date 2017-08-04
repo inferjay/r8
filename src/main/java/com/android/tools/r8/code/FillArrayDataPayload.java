@@ -26,7 +26,7 @@ public class FillArrayDataPayload extends Nop {
     int numberOfShorts = (int) (size * element_width + 1) / 2;
     data = new short[numberOfShorts];
     for (int i = 0; i < data.length; i++) {
-      data[i] = (short) readSigned16BitValue(stream);
+      data[i] = readSigned16BitValue(stream);
     }
   }
 

@@ -16,26 +16,26 @@ import java.nio.ShortBuffer;
 /** Format45cc for instructions of size 4, with 5 registers and 2 constant pool index. */
 public abstract class Format45cc extends Base4Format {
 
-  public final int A;
-  public final int C;
-  public final int D;
-  public final int E;
-  public final int F;
-  public final int G;
+  public final byte A;
+  public final byte C;
+  public final byte D;
+  public final byte E;
+  public final byte F;
+  public final byte G;
   public DexMethod BBBB;
   public DexProto HHHH;
 
   Format45cc(int high, BytecodeStream stream, DexMethod[] methodMap, DexProto[] protoMap) {
     super(stream);
-    G = high & 0xf;
-    A = (high >> 4) & 0xf;
+    G = (byte) (high & 0xf);
+    A = (byte) ((high >> 4) & 0xf);
     BBBB = methodMap[read16BitValue(stream)];
     int next = read8BitValue(stream);
-    E = next & 0xf;
-    F = (next >> 4) & 0xf;
+    E = (byte) (next & 0xf);
+    F = (byte) ((next >> 4) & 0xf);
     next = read8BitValue(stream);
-    C = next & 0xf;
-    D = (next >> 4) & 0xf;
+    C = (byte) (next & 0xf);
+    D = (byte) ((next >> 4) & 0xf);
     HHHH = protoMap[read16BitValue(stream)];
   }
 
@@ -47,14 +47,14 @@ public abstract class Format45cc extends Base4Format {
     assert 0 <= E && E <= U4BIT_MAX;
     assert 0 <= F && F <= U4BIT_MAX;
     assert 0 <= G && G <= U4BIT_MAX;
-    this.A = A;
+    this.A = (byte) A;
     this.BBBB = BBBB;
     this.HHHH = HHHH;
-    this.C = C;
-    this.D = D;
-    this.E = E;
-    this.F = F;
-    this.G = G;
+    this.C = (byte) C;
+    this.D = (byte) D;
+    this.E = (byte) E;
+    this.F = (byte) F;
+    this.G = (byte) G;
   }
 
   public final int hashCode() {

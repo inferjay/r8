@@ -16,15 +16,15 @@ import java.util.function.BiPredicate;
 /** Format4rcc for instructions of size 4, with a range of registers and 2 constant pool index. */
 public abstract class Format4rcc extends Base4Format {
 
-  public final int AA;
-  public final int CCCC;
+  public final short AA;
+  public final char CCCC;
   public DexMethod BBBB;
   public DexProto HHHH;
 
   // AA | op | [meth]@BBBB | CCCC | [proto]@HHHH
   Format4rcc(int high, BytecodeStream stream, DexMethod[] methodMap, DexProto[] protoMap) {
     super(stream);
-    this.AA = high;
+    this.AA = (short) high;
     this.BBBB = methodMap[read16BitValue(stream)];
     this.CCCC = read16BitValue(stream);
     this.HHHH = protoMap[read16BitValue(stream)];
@@ -33,8 +33,8 @@ public abstract class Format4rcc extends Base4Format {
   Format4rcc(int firstArgumentRegister, int argumentCount, DexMethod method, DexProto proto) {
     assert 0 <= firstArgumentRegister && firstArgumentRegister <= Constants.U16BIT_MAX;
     assert 0 <= argumentCount && argumentCount <= Constants.U8BIT_MAX;
-    this.CCCC = firstArgumentRegister;
-    this.AA = argumentCount;
+    this.CCCC = (char) firstArgumentRegister;
+    this.AA = (short) argumentCount;
     BBBB = method;
     HHHH = proto;
   }
@@ -106,10 +106,11 @@ public abstract class Format4rcc extends Base4Format {
   }
 
   private void appendRegisterRange(StringBuilder builder) {
+    int firstRegister = CCCC;
     builder.append("{ ");
-    builder.append("v").append(CCCC);
+    builder.append("v").append(firstRegister);
     if (AA != 1) {
-      builder.append(" .. v").append(CCCC + AA - 1);
+      builder.append(" .. v").append(firstRegister + AA - 1);
     }
     builder.append(" }");
   }

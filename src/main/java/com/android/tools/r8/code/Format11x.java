@@ -11,17 +11,17 @@ import java.nio.ShortBuffer;
 
 abstract class Format11x extends Base1Format {
 
-  public final int AA;
+  public final short AA;
 
   // vAA | op
   Format11x(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
   }
 
   protected Format11x(int AA) {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
-    this.AA = AA;
+    this.AA = (short) AA;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

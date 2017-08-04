@@ -15,19 +15,19 @@ import java.util.function.BiPredicate;
 
 abstract class Format31c extends Base3Format {
 
-  public final int AA;
+  public final short AA;
   public DexString BBBBBBBB;
 
   // vAA | op | string@BBBBlo | string@#+BBBBhi
   Format31c(int high, BytecodeStream stream, DexString[] map) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBBBBBB = map[(int) read32BitValue(stream)];
   }
 
   Format31c(int AA, DexString BBBBBBBB) {
     assert 0 <= AA && AA <= U8BIT_MAX;
-    this.AA = AA;
+    this.AA = (short) AA;
     this.BBBBBBBB = BBBBBBBB;
   }
 

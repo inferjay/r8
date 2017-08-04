@@ -13,19 +13,19 @@ import java.util.function.BiPredicate;
 
 abstract class Format21c extends Base2Format {
 
-  public final int AA;
+  public final short AA;
   public IndexedDexItem BBBB;
 
   // AA | op | [type|field|string]@BBBB
   Format21c(int high, BytecodeStream stream, IndexedDexItem[] map) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBB = map[read16BitValue(stream)];
   }
 
   protected Format21c(int AA, IndexedDexItem BBBB) {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
-    this.AA = AA;
+    this.AA = (short) AA;
     this.BBBB = BBBB;
   }
 

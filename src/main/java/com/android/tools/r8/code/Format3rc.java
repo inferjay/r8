@@ -13,14 +13,14 @@ import java.util.function.BiPredicate;
 
 public abstract class Format3rc extends Base3Format {
 
-  public final int AA;
-  public final int CCCC;
+  public final short AA;
+  public final char CCCC;
   public IndexedDexItem BBBB;
 
   // AA | op | [meth|type]@BBBBB | CCCC
   Format3rc(int high, BytecodeStream stream, IndexedDexItem[] map) {
     super(stream);
-    this.AA = high;
+    this.AA = (short) high;
     this.BBBB = map[read16BitValue(stream)];
     this.CCCC = read16BitValue(stream);
   }
@@ -28,8 +28,8 @@ public abstract class Format3rc extends Base3Format {
   Format3rc(int firstArgumentRegister, int argumentCount, IndexedDexItem dexItem) {
     assert 0 <= firstArgumentRegister && firstArgumentRegister <= Constants.U16BIT_MAX;
     assert 0 <= argumentCount && argumentCount <= Constants.U8BIT_MAX;
-    this.CCCC = firstArgumentRegister;
-    this.AA = argumentCount;
+    this.CCCC = (char) firstArgumentRegister;
+    this.AA = (short) argumentCount;
     BBBB = dexItem;
   }
 
@@ -52,10 +52,11 @@ public abstract class Format3rc extends Base3Format {
   }
 
   private void appendRegisterRange(StringBuilder builder) {
+    int firstRegister = CCCC;
     builder.append("{ ");
-    builder.append("v").append(CCCC);
+    builder.append("v").append(firstRegister);
     if (AA != 1) {
-      builder.append(" .. v").append(CCCC + AA - 1);
+      builder.append(" .. v").append(firstRegister + AA - 1);
     }
     builder.append(" }");
   }
