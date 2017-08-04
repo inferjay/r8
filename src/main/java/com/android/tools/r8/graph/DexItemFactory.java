@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 
 public class DexItemFactory {
 
-  private final Map<String, DexString> strings = new HashMap<>();
+  private final Map<DexString, DexString> strings = new HashMap<>();
   private final Map<DexType, DexType> types = new HashMap<>();
   private final Map<DexField, DexField> fields = new HashMap<>();
   private final Map<DexProto, DexProto> protos = new HashMap<>();
@@ -277,19 +277,14 @@ public class DexItemFactory {
     return previous == null ? item : previous;
   }
 
-  synchronized private DexString canonicalizeString(String key) {
-    assert key != null;
-    return strings.computeIfAbsent(key, DexString::new);
-  }
-
   public DexString createString(int size, byte[] content) {
     assert !sorted;
-    return canonicalizeString(new DexString(size, content).toString());
+    return canonicalize(strings, new DexString(size, content));
   }
 
   public DexString createString(String source) {
     assert !sorted;
-    return canonicalizeString(source);
+    return canonicalize(strings, new DexString(source));
   }
 
   public DexType createType(DexString descriptor) {
