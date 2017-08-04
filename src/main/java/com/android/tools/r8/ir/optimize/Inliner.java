@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Inliner {
 
@@ -129,7 +130,11 @@ public class Inliner {
       OptimizationFeedback feedback) {
     if (doubleInlineCallers.size() > 0) {
       applyDoubleInlining = true;
-      for (DexEncodedMethod method : doubleInlineCallers) {
+      List<DexEncodedMethod> methods = doubleInlineCallers
+          .stream()
+          .sorted(DexEncodedMethod::slowCompare)
+          .collect(Collectors.toList());
+      for (DexEncodedMethod method : methods) {
         converter.processMethod(method, feedback, Outliner::noProcessing);
         assert method.isProcessed();
       }

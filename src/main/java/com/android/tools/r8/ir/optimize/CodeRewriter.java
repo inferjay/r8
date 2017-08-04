@@ -414,7 +414,7 @@ public class CodeRewriter {
             // Due to member rebinding, only the fields are certain to provide the actual enums
             // class.
             DexType switchMapHolder = indexMap.values().iterator().next().getHolder();
-            Reference2IntMap ordinalsMap = extractOrdinalsMapFor(switchMapHolder);
+            Reference2IntMap<DexField> ordinalsMap = extractOrdinalsMapFor(switchMapHolder);
             if (ordinalsMap != null) {
               Int2IntMap targetMap = new Int2IntArrayMap();
               IntList keys = new IntArrayList(switchInsn.numberOfKeys());
@@ -555,6 +555,10 @@ public class CodeRewriter {
     }
     DexEncodedMethod initializer = clazz.getClassInitializer();
     if (!clazz.accessFlags.isEnum() || initializer == null || initializer.getCode() == null) {
+      return null;
+    }
+    if (initializer.getCode().isDexCode()) {
+      // If the initializer have been optimized we cannot extract the ordinals map reliably.
       return null;
     }
     IRCode code = initializer.getCode().buildIR(initializer, new InternalOptions());

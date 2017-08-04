@@ -355,6 +355,11 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
   public DexEncodedMethod toForwardingMethod(DexClass holder, DexItemFactory itemFactory) {
     assert accessFlags.isPublic();
+    // Clear the final flag, as this method is now overwritten. Do this before creating the builder
+    // for the forwarding method, as the forwarding method will copy the access flags from this,
+    // and if different forwarding methods are created in different subclasses the first could be
+    // final.
+    accessFlags.unsetFinal();
     DexMethod newMethod = itemFactory.createMethod(holder.type, method.proto, method.name);
     Invoke.Type type = accessFlags.isStatic() ? Invoke.Type.STATIC : Invoke.Type.SUPER;
     Builder builder = builder(this);
@@ -381,7 +386,6 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
           }));
     }
     builder.accessFlags.setSynthetic();
-    accessFlags.unsetFinal();
     return builder.build();
   }
 
@@ -405,6 +409,10 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
       }
       code.registerReachableDefinitions(registry);
     }
+  }
+
+  public static int slowCompare(DexEncodedMethod m1, DexEncodedMethod m2) {
+    return m1.method.slowCompareTo(m2.method);
   }
 
   public static class OptimizationInfo {

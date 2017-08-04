@@ -10,17 +10,17 @@ import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.Resource;
+import com.android.tools.r8.utils.InternalOptions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 public class R8GMSCoreTreeShakeJarVerificationTest extends GMSCoreCompilationTestBase {
 
-  public void buildAndTreeShakeFromDeployJar(
-      CompilationMode mode, String base, boolean hasReference, int maxSize)
+  public AndroidApp buildAndTreeShakeFromDeployJar(
+      CompilationMode mode, String base, boolean hasReference, int maxSize,
+      Consumer<InternalOptions> optionsConsumer)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     AndroidApp app = runAndCheckVerification(
         CompilerUnderTest.R8,
@@ -28,15 +28,12 @@ public class R8GMSCoreTreeShakeJarVerificationTest extends GMSCoreCompilationTes
         hasReference ? base + REFERENCE_APK : null,
         null,
         base + PG_CONF,
+        optionsConsumer,
         // Don't pass any inputs. The input will be read from the -injars in the Proguard
         // configuration file.
         ImmutableList.of());
-    int bytes = 0;
-    try (Closer closer = Closer.create()) {
-      for (Resource dex : app.getDexProgramResources()) {
-        bytes += ByteStreams.toByteArray(closer.register(dex.getStream())).length;
-      }
-    }
+    int bytes = applicationSize(app);
     assertTrue("Expected max size of " + maxSize + ", got " + bytes, bytes < maxSize);
+    return app;
   }
 }
