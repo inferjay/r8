@@ -8,6 +8,7 @@ import static com.android.tools.r8.D8Command.USAGE_MESSAGE;
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.ir.conversion.IRConverter;
@@ -151,7 +152,7 @@ public final class D8 {
     }
   }
 
-  static CompilationResult runForTesting(
+  private static CompilationResult runForTesting(
       AndroidApp inputApp, InternalOptions options, ExecutorService executor) throws IOException {
     try {
       assert !inputApp.hasPackageDistribution();
@@ -184,12 +185,13 @@ public final class D8 {
 
       options.printWarnings();
       return output;
+    } catch (MainDexError mainDexError) {
+      throw new CompilationError(mainDexError.getMessageForD8());
     } catch (ExecutionException e) {
       if (e.getCause() instanceof CompilationError) {
         throw (CompilationError) e.getCause();
-      } else {
-        throw new RuntimeException(e.getMessage(), e.getCause());
       }
+      throw new RuntimeException(e.getMessage(), e.getCause());
     }
   }
 

@@ -3,9 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.dex;
 
-import com.android.tools.r8.dex.VirtualFile.FilePerClassDistributor;
-import com.android.tools.r8.dex.VirtualFile.FillFilesDistributor;
-import com.android.tools.r8.dex.VirtualFile.PackageMapDistributor;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
@@ -134,7 +131,7 @@ public class ApplicationWriter {
       if (options.outputMode == OutputMode.FilePerClass) {
         assert packageDistribution == null :
             "Cannot combine package distribution definition with file-per-class option.";
-        distributor = new FilePerClassDistributor(this);
+        distributor = new VirtualFile.FilePerClassDistributor(this);
       } else if (!options.canUseMultidex()
           && options.mainDexKeepRules.isEmpty()
           && application.mainDexList.isEmpty()) {
@@ -148,9 +145,10 @@ public class ApplicationWriter {
       } else if (packageDistribution != null) {
         assert !options.minimalMainDex :
             "Cannot combine package distribution definition with minimal-main-dex option.";
-        distributor = new PackageMapDistributor(this, packageDistribution, executorService);
+        distributor =
+            new VirtualFile.PackageMapDistributor(this, packageDistribution, executorService);
       } else {
-        distributor = new FillFilesDistributor(this, options.minimalMainDex);
+        distributor = new VirtualFile.FillFilesDistributor(this, options.minimalMainDex);
       }
       Map<Integer, VirtualFile> newFiles = distributor.run();
 

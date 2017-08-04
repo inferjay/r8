@@ -6,6 +6,7 @@ package com.android.tools.r8.compatdx;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.Constants;
@@ -35,6 +36,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 public class CompatDxTests {
+  private static final int MAX_METHOD_COUNT = Constants.U16BIT_MAX;
+
   private static final String EXAMPLE_JAR_FILE1 = "build/test/examples/arithmetic.jar";
   private static final String EXAMPLE_JAR_FILE2 = "build/test/examples/barray.jar";
 
@@ -42,9 +45,6 @@ public class CompatDxTests {
   private static final String NO_POSITIONS = "--positions=none";
   private static final String MULTIDEX = "--multi-dex";
   private static final String NUM_THREADS_5 = "--num-threads=5";
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temp = ToolHelper.getTemporaryFolderForTest();
@@ -104,7 +104,7 @@ public class CompatDxTests {
     // Generate an application that fills the whole dex file.
     AndroidApp generated =
         MainDexListTests.generateApplication(
-            ImmutableList.of("A"), Constants.ANDROID_L_API, Constants.U16BIT_MAX + 1);
+            ImmutableList.of("A"), Constants.ANDROID_L_API, MAX_METHOD_COUNT + 1);
     Path applicationJar = temp.newFile("application.jar").toPath();
     generated.write(applicationJar, OutputMode.Indexed);
     runDexer(applicationJar.toString());
@@ -114,11 +114,19 @@ public class CompatDxTests {
   public void singleDexProgramIsTooLarge() throws IOException, ExecutionException {
     // Generate an application that will not fit into a single dex file.
     AndroidApp generated = MainDexListTests.generateApplication(
-        ImmutableList.of("A", "B"), Constants.ANDROID_L_API, Constants.U16BIT_MAX / 2 + 2);
+        ImmutableList.of("A", "B"), Constants.ANDROID_L_API, MAX_METHOD_COUNT / 2 + 2);
     Path applicationJar = temp.newFile("application.jar").toPath();
     generated.write(applicationJar, OutputMode.Indexed);
-    thrown.expect(CompilationError.class);
-    runDexer(applicationJar.toString());
+    try {
+      runDexer(applicationJar.toString());
+      fail("Expect to fail, for there are many classes while multidex is not enabled.");
+    } catch (CompilationError e) {
+      // Make sure {@link MonoDexDistributor} was used.
+      assertTrue(e.getMessage().contains("single dex file"));
+      // Make sure what exceeds the limit is the number of methods.
+      assertTrue(e.getMessage().contains("# methods: "
+          + String.valueOf((MAX_METHOD_COUNT / 2 + 2) * 2)));
+    }
   }
 
   @Test

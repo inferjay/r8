@@ -5,6 +5,7 @@ package com.android.tools.r8.dex;
 
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InternalCompilerError;
+import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexCallSite;
 import com.android.tools.r8.graph.DexClass;
@@ -174,33 +175,15 @@ public class VirtualFile {
     return isFull(transaction.getNumberOfMethods(), transaction.getNumberOfFields(), MAX_ENTRIES);
   }
 
-  void throwIfFull(boolean multiDexEnabled) {
+  void throwIfFull(boolean hasMainDexList) {
     if (!isFull()) {
       return;
     }
-    StringBuilder messageBuilder = new StringBuilder();
-    // General message: Cannot fit.
-    messageBuilder.append("Cannot fit requested classes in ");
-    messageBuilder.append(multiDexEnabled ? "the main-" : "a single ");
-    messageBuilder.append("dex file.\n");
-    // Suggest supplying the main-dex list or explicitly mention that main-dex list is too large.
-    if (multiDexEnabled) {
-      messageBuilder.append("The list of classes for the main-dex list is too large.\n");
-    } else {
-      messageBuilder.append("Try supplying a main-dex list.\n");
-    }
-    // Show the numbers of methods and/or fields that exceed the limit.
-    if (transaction.getNumberOfMethods() > MAX_ENTRIES) {
-      messageBuilder.append("# methods: ");
-      messageBuilder.append(transaction.getNumberOfMethods());
-      messageBuilder.append(" > ").append(MAX_ENTRIES).append('\n');
-    }
-    if (transaction.getNumberOfFields() > MAX_ENTRIES) {
-      messageBuilder.append("# fields: ");
-      messageBuilder.append(transaction.getNumberOfFields());
-      messageBuilder.append(" > ").append(MAX_ENTRIES).append('\n');
-    }
-    throw new CompilationError(messageBuilder.toString());
+    throw new MainDexError(
+        hasMainDexList,
+        transaction.getNumberOfMethods(),
+        transaction.getNumberOfFields(),
+        MAX_ENTRIES);
   }
 
   private boolean isFilledEnough(FillStrategy fillStrategy) {
@@ -276,7 +259,6 @@ public class VirtualFile {
           if (clazz != null && clazz.isProgramClass()) {
             DexProgramClass programClass = (DexProgramClass) clazz;
             mainDexFile.addClass(programClass);
-            mainDexFile.throwIfFull(true);
             classes.remove(programClass);
           } else {
             System.out.println(
@@ -286,6 +268,7 @@ public class VirtualFile {
           }
           mainDexFile.commitTransaction();
         }
+        mainDexFile.throwIfFull(true);
       }
     }
 
@@ -364,9 +347,9 @@ public class VirtualFile {
 
       for (DexProgramClass programClass : classes) {
         mainDexFile.addClass(programClass);
-        mainDexFile.throwIfFull(false);
       }
       mainDexFile.commitTransaction();
+      mainDexFile.throwIfFull(false);
       return nameToFileMap;
     }
   }

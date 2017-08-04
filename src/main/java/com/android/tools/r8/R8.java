@@ -9,6 +9,7 @@ import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.ClassAndMemberPublicizer;
@@ -363,12 +364,13 @@ public class R8 {
 
       options.printWarnings();
       return new CompilationResult(androidApp, application, appInfo);
+    } catch (MainDexError mainDexError) {
+      throw new CompilationError(mainDexError.getMessageForR8());
     } catch (ExecutionException e) {
       if (e.getCause() instanceof CompilationError) {
         throw (CompilationError) e.getCause();
-      } else {
-        throw new RuntimeException(e.getMessage(), e.getCause());
       }
+      throw new RuntimeException(e.getMessage(), e.getCause());
     } finally {
       // Dump timings.
       if (options.printTimes) {
