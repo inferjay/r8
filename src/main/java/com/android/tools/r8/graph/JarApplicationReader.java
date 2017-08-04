@@ -7,6 +7,7 @@ import com.android.tools.r8.errors.InternalCompilerError;
 import com.android.tools.r8.graph.DexMethodHandle.MethodHandleType;
 import com.android.tools.r8.utils.InternalOptions;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import org.objectweb.asm.Type;
 
 /**
@@ -19,6 +20,8 @@ import org.objectweb.asm.Type;
 public class JarApplicationReader {
   public final InternalOptions options;
 
+  ConcurrentHashMap<String, DexString> stringCache = new ConcurrentHashMap<>();
+
   public JarApplicationReader(InternalOptions options) {
     this.options = options;
   }
@@ -28,7 +31,7 @@ public class JarApplicationReader {
   }
 
   public DexString getString(String string) {
-    return options.itemFactory.createString(string);
+    return stringCache.computeIfAbsent(string, options.itemFactory::createString);
   }
 
   public DexType getType(Type type) {
