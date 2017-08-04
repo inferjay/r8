@@ -151,10 +151,13 @@ public class PrintUsageTest {
   }
 
   private static void inspectShaking9(PrintUsageInspector inspector) {
-    assertFalse(inspector.clazz("shaking9.Superclass").isPresent());
+    Optional<ClassSubject> superClass = inspector.clazz("shaking9.Superclass");
+    assertTrue(superClass.isPresent());
+    assertTrue(superClass.get().method("void", "<init>", Collections.emptyList()));
     Optional<ClassSubject> subClass = inspector.clazz("shaking9.Subclass");
     assertTrue(subClass.isPresent());
     assertTrue(subClass.get().method("void", "aMethod", Collections.emptyList()));
+    assertTrue(subClass.get().method("void", "<init>", Collections.emptyList()));
   }
 
   private static void inspectShaking12(PrintUsageInspector inspector) {

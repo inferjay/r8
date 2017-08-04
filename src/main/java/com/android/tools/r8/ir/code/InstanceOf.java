@@ -5,7 +5,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.dex.Constants;
-import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
@@ -75,14 +75,11 @@ public class InstanceOf extends Instruction {
   }
 
   @Override
-  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
     DexClass targetClass = info.definitionFor(type());
     if (targetClass == null) {
       return Constraint.NEVER;
     }
-    if (targetClass.accessFlags.isPublic()) {
-      return Constraint.ALWAYS;
-    }
-    return Constraint.NEVER;
+    return Constraint.deriveConstraint(holder, type(), targetClass.accessFlags, info);
   }
 }

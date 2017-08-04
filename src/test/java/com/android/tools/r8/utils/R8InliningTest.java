@@ -85,7 +85,10 @@ public class R8InliningTest {
             .setOutputPath(out)
             .addProguardConfigurationFiles(Paths.get(keepRulesFile))
             .build();
-    ToolHelper.runR8(command);
+    // TODO(62048823): Enable minification.
+    ToolHelper.runR8(command, o -> {
+      o.skipMinification = true;
+    });
     ToolHelper.runArtNoVerificationErrors(out + "/classes.dex", "inlining.Inlining");
   }
 

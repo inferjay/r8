@@ -3,7 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.code;
 
+import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
+import com.android.tools.r8.graph.DexClass;
+import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
+import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
 import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
@@ -44,6 +50,29 @@ public abstract class InvokeMethod extends Invoke {
   @Override
   public InvokeMethod asInvokeMethod() {
     return this;
+  }
+
+  abstract DexEncodedMethod lookupTarget(AppInfo appInfo);
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    if (method.holder.isArrayType()) {
+      return Constraint.ALWAYS;
+    }
+    DexEncodedMethod target = lookupTarget(info);
+    if (target != null) {
+      DexType methodHolder = target.method.holder;
+      DexClass methodClass = info.definitionFor(methodHolder);
+      if ((methodClass != null)) {
+        Constraint methodConstrain = Constraint
+            .deriveConstraint(holder, methodHolder, target.accessFlags, info);
+        // We also have to take the constraint of the enclosing class into account.
+        Constraint classConstraint = Constraint
+            .deriveConstraint(holder, methodHolder, methodClass.accessFlags, info);
+        return Constraint.min(methodConstrain, classConstraint);
+      }
+    }
+    return Constraint.NEVER;
   }
 
   public abstract InlineAction computeInlining(InliningOracle decider);

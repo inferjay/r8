@@ -12,10 +12,7 @@ import com.android.tools.r8.code.ConstWide16;
 import com.android.tools.r8.code.ConstWide32;
 import com.android.tools.r8.code.ConstWideHigh16;
 import com.android.tools.r8.dex.Constants;
-import com.android.tools.r8.graph.AppInfo;
-import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.utils.NumberUtils;
 
 public class ConstNumber extends ConstInstruction {
@@ -185,10 +182,5 @@ public class ConstNumber extends ConstInstruction {
   @Override
   public ConstNumber asConstNumber() {
     return this;
-  }
-
-  @Override
-  public Constraint inliningConstraint(AppInfo info, DexType holder) {
-    return Constraint.ALWAYS;
   }
 }

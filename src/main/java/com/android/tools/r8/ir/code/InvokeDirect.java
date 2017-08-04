@@ -5,12 +5,11 @@ package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.InvokeDirectRange;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
-import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
 
 public class InvokeDirect extends InvokeMethodWithReceiver {
@@ -89,7 +88,7 @@ public class InvokeDirect extends InvokeMethodWithReceiver {
   }
 
   @Override
-  public InlineAction computeInlining(InliningOracle decider) {
-    return decider.computeForInvokeDirect(this);
+  DexEncodedMethod lookupTarget(AppInfo appInfo) {
+    return appInfo.lookupDirectTarget(getInvokedMethod());
   }
 }

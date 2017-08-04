@@ -8,7 +8,7 @@ import com.android.tools.r8.code.ReturnVoid;
 import com.android.tools.r8.code.ReturnWide;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.ir.optimize.Inliner.Constraint;
@@ -110,7 +110,7 @@ public class Return extends JumpInstruction {
   }
 
   @Override
-  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
     return Constraint.ALWAYS;
   }
 }

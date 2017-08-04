@@ -3,9 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
-import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE;
-import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PRIVATE;
-import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_PUBLIC;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_ANY;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_SAME_CLASS;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_SAME_PACKAGE;
+import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_INLINING_CANDIDATE_SUBCLASS;
 import static com.android.tools.r8.graph.DexEncodedMethod.CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
 
 import com.android.tools.r8.code.Const;
@@ -35,17 +36,40 @@ import com.android.tools.r8.utils.InternalOptions;
 
 public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
-  public enum CompilationState
-
-  {
+  /**
+   * Encodes the processing state of a method.
+   * <p>
+   * We also use this enum to encode whether and if under what constraints a method may be
+   * inlined.
+   */
+  public enum CompilationState {
+    /**
+     * Has not been processed, yet.
+     */
     NOT_PROCESSED,
+    /**
+     * Has been processed but cannot be inlined due to instructions that are not supported.
+     */
     PROCESSED_NOT_INLINING_CANDIDATE,
-    // Code only contains instructions that access public entities.
-    PROCESSED_INLINING_CANDIDATE_PUBLIC,
-    // Code only contains instructions that access public and package private entities.
-    PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE,
-    // Code also contains instructions that access public entities.
-    PROCESSED_INLINING_CANDIDATE_PRIVATE,
+    /**
+     * Code only contains instructions that access public entities and can this be inlined
+     * into any context.
+     */
+    PROCESSED_INLINING_CANDIDATE_ANY,
+    /**
+     * Code also contains instructions that access protected entities that reside in a differnt
+     * package and hence require subclass relationship to be visible.
+     */
+    PROCESSED_INLINING_CANDIDATE_SUBCLASS,
+    /**
+     * Code contains instructions that reference package private entities or protected entities
+     * from the same package.
+     */
+    PROCESSED_INLINING_CANDIDATE_SAME_PACKAGE,
+    /**
+     * Code contains instructions that reference private entities.
+     */
+    PROCESSED_INLINING_CANDIDATE_SAME_CLASS,
   }
 
   public static final DexEncodedMethod[] EMPTY_ARRAY = new DexEncodedMethod[]{};
@@ -79,7 +103,8 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
         || compilationState == CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
   }
 
-  public boolean isInliningCandidate(DexEncodedMethod container, boolean alwaysInline) {
+  public boolean isInliningCandidate(DexEncodedMethod container, boolean alwaysInline,
+      AppInfoWithSubtyping appInfo) {
     if (container.accessFlags.isStatic() && container.accessFlags.isConstructor()) {
       // This will probably never happen but never inline a class initializer.
       return false;
@@ -92,33 +117,33 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
       return true;
     }
     switch (compilationState) {
-      case PROCESSED_INLINING_CANDIDATE_PUBLIC:
+      case PROCESSED_INLINING_CANDIDATE_ANY:
         return true;
-      case PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE:
+      case PROCESSED_INLINING_CANDIDATE_SUBCLASS:
+        return container.method.getHolder().isSubtypeOf(method.getHolder(), appInfo);
+      case PROCESSED_INLINING_CANDIDATE_SAME_PACKAGE:
         return container.method.getHolder().isSamePackage(method.getHolder());
-      // TODO(bak): Expand check for package private access:
-      case PROCESSED_INLINING_CANDIDATE_PRIVATE:
+      case PROCESSED_INLINING_CANDIDATE_SAME_CLASS:
         return container.method.getHolder() == method.getHolder();
       default:
         return false;
     }
   }
 
-  public boolean isPublicInlining() {
-    return compilationState == PROCESSED_INLINING_CANDIDATE_PUBLIC;
-  }
-
   public boolean markProcessed(Constraint state) {
     CompilationState prevCompilationState = compilationState;
     switch (state) {
       case ALWAYS:
-        compilationState = PROCESSED_INLINING_CANDIDATE_PUBLIC;
+        compilationState = PROCESSED_INLINING_CANDIDATE_ANY;
+        break;
+      case SUBCLASS:
+        compilationState = PROCESSED_INLINING_CANDIDATE_SUBCLASS;
         break;
       case PACKAGE:
-        compilationState = PROCESSED_INLINING_CANDIDATE_PACKAGE_PRIVATE;
+        compilationState = PROCESSED_INLINING_CANDIDATE_SAME_PACKAGE;
         break;
-      case PRIVATE:
-        compilationState = PROCESSED_INLINING_CANDIDATE_PRIVATE;
+      case SAMECLASS:
+        compilationState = PROCESSED_INLINING_CANDIDATE_SAME_CLASS;
         break;
       case NEVER:
         compilationState = PROCESSED_NOT_INLINING_CANDIDATE;

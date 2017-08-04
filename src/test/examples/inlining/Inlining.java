@@ -3,6 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 package inlining;
 
+import inlining.pkg.OtherPublicClass;
+import inlining.pkg.PublicClass;
+import inlining.pkg.Subclass;
+
 class A {
 
   int a;
@@ -14,12 +18,28 @@ class A {
   int a() {
     return a;
   }
+
+  int cannotInline(int v) {
+    // Cannot inline due to recursion.
+    if (v > 0) {
+      return cannotInline(v - 1);
+    }
+    return 42;
+  }
 }
 
 class B extends A {
 
   B(int a) {
     super(a);
+  }
+
+  int cannotInline(int v) {
+    return -1;
+  }
+
+  int callMethodInSuper() {
+    return super.cannotInline(10);
   }
 }
 
@@ -134,6 +154,21 @@ public class Inlining {
     Assert(ic != null);
     InlineConstructorOfInner icoi = new InlineConstructorOfInner();
     Assert(icoi != null);
+
+    // Check that super calls are processed correctly.
+    new B(123).callMethodInSuper();
+
+    // Inline calls to package private methods
+    PublicClass.alsoCallsPackagePrivateMethod();
+    OtherPublicClass.callsMethodThatCallsPackagePrivateMethod();
+    // Inline calls to protected methods.
+    PublicClass.callsProtectedMethod3();
+    PublicClass.alsoReadsPackagePrivateField();
+    OtherPublicClass.callsMethodThatCallsProtectedMethod();
+    OtherPublicClass.callsMethodThatReadsFieldInPackagePrivateClass();
+    Subclass.callsMethodThatCallsProtectedMethod();
+    // Do not inline constructors which set final field.
+    System.out.println(new InlineConstructorFinalField());
   }
 
   private static boolean intCmpExpression(A a, A b) {
@@ -180,6 +215,7 @@ public class Inlining {
     return 21.21F == floatConstantInline();
   }
 
+  @CheckDiscarded
   private static String stringConstantInline() {
     return "Fisk er godt";
   }

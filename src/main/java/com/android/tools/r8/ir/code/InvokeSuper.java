@@ -4,15 +4,16 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.InvokeSuperRange;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
-import com.android.tools.r8.ir.optimize.InliningOracle;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import java.util.List;
 
-public class InvokeSuper extends InvokeMethod {
+public class InvokeSuper extends InvokeMethodWithReceiver {
 
   public InvokeSuper(DexMethod target, Value result, List<Value> arguments) {
     super(target, result, arguments);
@@ -75,7 +76,14 @@ public class InvokeSuper extends InvokeMethod {
   }
 
   @Override
-  public InlineAction computeInlining(InliningOracle decider) {
-    return decider.computeForInvokeSuper(this);
+  DexEncodedMethod lookupTarget(AppInfo appInfo) {
+    DexMethod method = getInvokedMethod();
+    return appInfo.lookupVirtualDefinition(method.holder, method);
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    // The semantics of invoke super depend on the context.
+    return Constraint.SAMECLASS;
   }
 }

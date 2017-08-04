@@ -7,7 +7,7 @@ import static com.android.tools.r8.dex.Constants.U4BIT_MAX;
 import static com.android.tools.r8.dex.Constants.U8BIT_MAX;
 
 import com.android.tools.r8.errors.Unreachable;
-import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
 import com.android.tools.r8.ir.optimize.Inliner.Constraint;
@@ -112,7 +112,7 @@ public abstract class Binop extends Instruction {
   }
 
   @Override
-  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
     return Constraint.ALWAYS;
   }
 }

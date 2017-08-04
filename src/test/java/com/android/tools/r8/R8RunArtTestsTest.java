@@ -743,6 +743,18 @@ public abstract class R8RunArtTestsTest {
                   DexVm.ART_4_4_4, DexVm.ART_5_1_1, DexVm.ART_6_0_1, DexVm.ART_7_0_0)))
           .build();
 
+  public static List<String> requireInliningToBeDisabled = ImmutableList.of(
+      // Test for a specific stack trace that gets destroyed by inlining.
+      "492-checker-inline-invoke-interface",
+      "493-checker-inline-invoke-interface",
+      "488-checker-inline-recursive-calls",
+      "487-checker-inline-calls",
+      "122-npe",
+
+      // Calls some internal art methods that cannot tolerate inlining.
+      "466-get-live-vreg"
+  );
+
   private static List<String> failuresToTriage = ImmutableList.of(
       // This is flaky.
       "104-growth-limit",
@@ -812,11 +824,14 @@ public abstract class R8RunArtTestsTest {
     private final boolean failsWithArtOriginalOnly;
     // Test might produce different outputs.
     private final boolean outputMayDiffer;
+    // Whether to disable inlining
+    private final boolean disableInlining;
 
     TestSpecification(String name, DexTool dexTool,
         File directory, boolean skipArt, boolean skipTest, boolean failsWithX8,
         boolean failsWithArt, boolean failsWithArtOutput, boolean failsWithArtOriginalOnly,
-        String nativeLibrary, boolean expectedToFailWithX8, boolean outputMayDiffer) {
+        String nativeLibrary, boolean expectedToFailWithX8, boolean outputMayDiffer,
+        boolean disableInlining) {
       this.name = name;
       this.dexTool = dexTool;
       this.nativeLibrary = nativeLibrary;
@@ -829,12 +844,13 @@ public abstract class R8RunArtTestsTest {
       this.failsWithArtOriginalOnly = failsWithArtOriginalOnly;
       this.expectedToFailWithX8 = expectedToFailWithX8;
       this.outputMayDiffer = outputMayDiffer;
+      this.disableInlining = disableInlining;
     }
 
     TestSpecification(String name, DexTool dexTool, File directory, boolean skipArt,
         boolean failsWithArt) {
       this(name, dexTool, directory, skipArt,
-          false, false, failsWithArt, false, false, null, false, false);
+          false, false, failsWithArt, false, false, null, false, false, false);
     }
 
     public File resolveFile(String name) {
@@ -980,7 +996,8 @@ public abstract class R8RunArtTestsTest {
                 failsRunWithArtOriginalOnly.contains(name),
                 useNativeLibrary.contains(name) ? "arttest" : null,
                 expectedToFailWithCompilerSet.contains(name),
-                outputMayDiffer.contains(name)));
+                outputMayDiffer.contains(name),
+                requireInliningToBeDisabled.contains(name)));
       }
     }
     return data;
@@ -1049,9 +1066,11 @@ public abstract class R8RunArtTestsTest {
       CompilerUnderTest compilerUnderTest,
       Collection<String> fileNames,
       String resultPath,
-      CompilationMode compilationMode)
+      CompilationMode compilationMode,
+      boolean disableInlining)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, compilationMode, null);
+    executeCompilerUnderTest(compilerUnderTest, fileNames, resultPath, compilationMode, null,
+        disableInlining);
   }
 
   private void executeCompilerUnderTest(
@@ -1059,7 +1078,8 @@ public abstract class R8RunArtTestsTest {
       Collection<String> fileNames,
       String resultPath,
       CompilationMode mode,
-      String keepRulesFile)
+      String keepRulesFile,
+      boolean disableInlining)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     assert mode != null;
     switch (compilerUnderTest) {
@@ -1099,6 +1119,9 @@ public abstract class R8RunArtTestsTest {
               options -> {
                 if (enableInterfaceMethodDesugaring.contains(name)) {
                   options.interfaceMethodDesugaring = OffOrAuto.Auto;
+                }
+                if (disableInlining) {
+                  options.inlineAccessors = false;
                 }
               });
           break;
@@ -1292,7 +1315,8 @@ public abstract class R8RunArtTestsTest {
       DexVm dexVm,
       File resultDir)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
-    executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getAbsolutePath(), mode);
+    executeCompilerUnderTest(compilerUnderTest, fileNames, resultDir.getAbsolutePath(), mode,
+        specification.disableInlining);
 
     if (!ToolHelper.artSupported()) {
       return;
@@ -1445,7 +1469,8 @@ public abstract class R8RunArtTestsTest {
       thrown.expect(CompilationError.class);
       try {
         executeCompilerUnderTest(
-            compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode, null);
+            compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode,
+            specification.disableInlining);
       } catch (CompilationException e) {
         throw new CompilationError(e.getMessage(), e);
       } catch (ExecutionException e) {
@@ -1456,12 +1481,14 @@ public abstract class R8RunArtTestsTest {
     } else if (specification.failsWithX8) {
       thrown.expect(Throwable.class);
       executeCompilerUnderTest(
-          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode);
+          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode,
+          specification.disableInlining);
       System.err.println("Should have failed R8/D8 compilation with an exception.");
       return;
     } else {
       executeCompilerUnderTest(
-          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode);
+          compilerUnderTest, fileNames, resultDir.getCanonicalPath(), compilationMode,
+          specification.disableInlining);
     }
 
     if (!specification.skipArt && ToolHelper.artSupported()) {
