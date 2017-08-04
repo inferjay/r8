@@ -11,20 +11,20 @@ import java.nio.ShortBuffer;
 
 abstract class Format12x extends Base1Format {
 
-  public final int A, B;
+  public final byte A, B;
 
   // vB | vA | op
   Format12x(int high, BytecodeStream stream) {
     super(stream);
-    A = high & 0xF;
-    B = (high >> 4) & 0xF;
+    A = (byte) (high & 0xF);
+    B = (byte) ((high >> 4) & 0xF);
   }
 
   Format12x(int A, int B) {
     assert 0 <= A && A <= Constants.U4BIT_MAX;
     assert 0 <= B && B <= Constants.U4BIT_MAX;
-    this.A = A;
-    this.B = B;
+    this.A = (byte) A;
+    this.B = (byte) B;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

@@ -11,21 +11,21 @@ import java.nio.ShortBuffer;
 
 abstract class Format22x extends Base2Format {
 
-  public final int AA;
-  public final int BBBB;
+  public final short AA;
+  public final char BBBB;
 
   // AA | op | vBBBB
   Format22x(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBB = read16BitValue(stream);
   }
 
   Format22x(int dest, int src) {
     assert 0 <= dest && dest <= Constants.U8BIT_MAX;
     assert 0 <= src && src <= Constants.U16BIT_MAX;
-    AA = dest;
-    BBBB = src;
+    AA = (short) dest;
+    BBBB = (char) src;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

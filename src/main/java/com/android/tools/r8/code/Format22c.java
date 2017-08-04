@@ -13,23 +13,23 @@ import java.util.function.BiPredicate;
 
 abstract class Format22c extends Base2Format {
 
-  public final int A;
-  public final int B;
+  public final byte A;
+  public final byte B;
   public IndexedDexItem CCCC;
 
   // vB | vA | op | [type|field]@CCCC
   /*package*/ Format22c(int high, BytecodeStream stream, IndexedDexItem[] map) {
     super(stream);
-    A = high & 0xf;
-    B = (high >> 4) & 0xf;
+    A = (byte) (high & 0xf);
+    B = (byte) ((high >> 4) & 0xf);
     CCCC = map[read16BitValue(stream)];
   }
 
   /*package*/ Format22c(int A, int B, IndexedDexItem CCCC) {
     assert 0 <= A && A <= Constants.U4BIT_MAX;
     assert 0 <= B && B <= Constants.U4BIT_MAX;
-    this.A = A;
-    this.B = B;
+    this.A = (byte) A;
+    this.B = (byte) B;
     this.CCCC = CCCC;
   }
 

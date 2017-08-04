@@ -11,26 +11,26 @@ import java.nio.ShortBuffer;
 
 abstract class Format11n extends Base1Format {
 
-  public final int A, B;
+  public final byte A, B;
 
   // #+B | vA | op
   /*package*/ Format11n(int high, BytecodeStream stream) {
     super(stream);
-    A = high & 0xf;
+    A = (byte) (high & 0xf);
     // Sign extend 4bit value.
     high >>= 4;
     if ((high & Constants.S4BIT_SIGN_MASK) != 0) {
-      B = ~(~high & 0xf);
+      B = (byte) (~(~high & 0xf));
     } else {
-      B = high & 0xf;
+      B = (byte) (high & 0xf);
     }
   }
 
   /*package*/ Format11n(int A, int B) {
     assert 0 <= A && A <= Constants.U4BIT_MAX;
     assert Constants.S4BIT_MIN <= B && B <= Constants.S4BIT_MAX;
-    this.A = A;
-    this.B = B;
+    this.A = (byte) A;
+    this.B = (byte) B;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

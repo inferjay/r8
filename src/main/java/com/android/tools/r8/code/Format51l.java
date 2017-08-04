@@ -11,19 +11,19 @@ import java.nio.ShortBuffer;
 
 abstract class Format51l extends Base5Format {
 
-  public final int AA;
+  public final short AA;
   public final long BBBBBBBBBBBBBBBB;
 
   // AA | op | BBBB | BBBB | BBBB | BBBB
   Format51l(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBBBBBBBBBBBBBB = read64BitValue(stream);
   }
 
   public Format51l(int AA, long BBBBBBBBBBBBBBBB) {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
-    this.AA = AA;
+    this.AA = (short) AA;
     this.BBBBBBBBBBBBBBBB = BBBBBBBBBBBBBBBB;
   }
 

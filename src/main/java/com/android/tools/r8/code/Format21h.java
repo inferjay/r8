@@ -10,21 +10,21 @@ import java.nio.ShortBuffer;
 
 abstract class Format21h extends Base2Format {
 
-  public final int AA;
-  public final int BBBB;
+  public final short AA;
+  public final char BBBB;
 
   // AA | op | BBBB0000[00000000]
   /*package*/ Format21h(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBB = read16BitValue(stream);
   }
 
   /*package*/ Format21h(int AA, int BBBB) {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
     assert 0 <= BBBB && BBBB <= Constants.U16BIT_MAX;
-    this.AA = AA;
-    this.BBBB = BBBB;
+    this.AA = (short) AA;
+    this.BBBB = (char) BBBB;
   }
 
   public void write(ShortBuffer dest, ObjectToOffsetMapping mapping) {

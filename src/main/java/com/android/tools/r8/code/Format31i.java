@@ -11,19 +11,19 @@ import java.nio.ShortBuffer;
 
 abstract class Format31i extends Base3Format {
 
-  public final int AA;
+  public final short AA;
   public final int BBBBBBBB;
 
   // vAA | op | #+BBBBlo | #+BBBBhi
   /*package*/ Format31i(int high, BytecodeStream stream) {
     super(stream);
-    AA = high;
+    AA = (short) high;
     BBBBBBBB = readSigned32BitValue(stream);
   }
 
   /*package*/ Format31i(int AA, int BBBBBBBB) {
     assert 0 <= AA && AA <= Constants.U8BIT_MAX;
-    this.AA = AA;
+    this.AA = (short) AA;
     this.BBBBBBBB = BBBBBBBB;
   }
 
