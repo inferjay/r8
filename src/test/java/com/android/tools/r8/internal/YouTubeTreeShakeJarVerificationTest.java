@@ -30,6 +30,7 @@ public class YouTubeTreeShakeJarVerificationTest extends YouTubeCompilationBase 
         BASE + APK,
         null,
         BASE + PG_CONF,
+        null,
         // Don't pass any inputs. The input will be read from the -injars in the Proguard
         // configuration file.
         ImmutableList.of());

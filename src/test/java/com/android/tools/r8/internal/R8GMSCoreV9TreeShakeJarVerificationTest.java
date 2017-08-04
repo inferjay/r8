@@ -16,6 +16,6 @@ public class R8GMSCoreV9TreeShakeJarVerificationTest extends R8GMSCoreTreeShakeJ
   public void buildAndTreeShakeFromDeployJar()
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     buildAndTreeShakeFromDeployJar(
-        CompilationMode.RELEASE, GMSCORE_V9_DIR, true, GMSCORE_V9_MAX_SIZE);
+        CompilationMode.RELEASE, GMSCORE_V9_DIR, true, GMSCORE_V9_MAX_SIZE, null);
   }
 }

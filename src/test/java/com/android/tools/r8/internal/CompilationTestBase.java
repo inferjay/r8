@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.internal;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.android.tools.r8.CompilationException;
@@ -10,6 +12,7 @@ import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
+import com.android.tools.r8.Resource;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
@@ -18,15 +21,20 @@ import com.android.tools.r8.utils.ArtErrorParser;
 import com.android.tools.r8.utils.ArtErrorParser.ArtErrorInfo;
 import com.android.tools.r8.utils.ArtErrorParser.ArtErrorParserException;
 import com.android.tools.r8.utils.DexInspector;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
 import com.android.tools.r8.utils.OutputMode;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Closer;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import org.junit.ComparisonFailure;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -45,7 +53,7 @@ public abstract class CompilationTestBase {
       String... inputs)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     return runAndCheckVerification(
-        compiler, mode, referenceApk, pgMap, pgConf, Arrays.asList(inputs));
+        compiler, mode, referenceApk, pgMap, pgConf, null, Arrays.asList(inputs));
   }
 
   public AndroidApp runAndCheckVerification(D8Command command, String referenceApk)
@@ -59,6 +67,7 @@ public abstract class CompilationTestBase {
       String referenceApk,
       String pgMap,
       String pgConf,
+      Consumer<InternalOptions> optionsConsumer,
       List<String> inputs)
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     assertTrue(referenceApk == null || new File(referenceApk).exists());
@@ -77,6 +86,9 @@ public abstract class CompilationTestBase {
                   options -> {
                     options.printSeeds = false;
                     options.minApiLevel = Constants.ANDROID_L_API;
+                    if (optionsConsumer != null) {
+                      optionsConsumer.accept(options);
+                    }
                   });
     } else {
       assert compiler == CompilerUnderTest.D8;
@@ -124,6 +136,40 @@ public abstract class CompilationTestBase {
       throw new ComparisonFailure(error.getMessage(),
           "REFERENCE\n" + error.dump(theirs, false) + "\nEND REFERENCE",
           "PROCESSED\n" + error.dump(ours, true) + "\nEND PROCESSED");
+    }
+  }
+
+  public int applicationSize(AndroidApp app) throws IOException {
+    int bytes = 0;
+    try (Closer closer = Closer.create()) {
+      for (Resource dex : app.getDexProgramResources()) {
+        bytes += ByteStreams.toByteArray(closer.register(dex.getStream())).length;
+      }
+    }
+    return bytes;
+  }
+
+  public void assertIdenticalApplications(AndroidApp app1, AndroidApp app2) throws IOException {
+    assertIdenticalApplications(app1, app2, false);
+  }
+
+  public void assertIdenticalApplications(AndroidApp app1, AndroidApp app2, boolean write)
+      throws IOException {
+    try (Closer closer = Closer.create()) {
+      if (write) {
+        app1.writeToDirectory(Paths.get("app1"), OutputMode.Indexed);
+        app2.writeToDirectory(Paths.get("app2"), OutputMode.Indexed);
+      }
+      List<Resource> files1 = app1.getDexProgramResources();
+      List<Resource> files2 = app2.getDexProgramResources();
+      assertEquals(files1.size(), files2.size());
+      for (int index = 0; index < files1.size(); index++) {
+        InputStream file1 = closer.register(files1.get(index).getStream());
+        InputStream file2 = closer.register(files2.get(index).getStream());
+        byte[] bytes1 = ByteStreams.toByteArray(file1);
+        byte[] bytes2 = ByteStreams.toByteArray(file2);
+        assertArrayEquals("File index " + index, bytes1, bytes2);
+      }
     }
   }
 }
