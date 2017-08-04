@@ -4,7 +4,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.graph.AppInfo;
-import com.android.tools.r8.graph.DexAccessFlags;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexField;
@@ -44,22 +44,17 @@ abstract class FieldInstruction extends Instruction {
   abstract DexEncodedField lookupTarget(DexType type, AppInfo appInfo);
 
   @Override
-  public Constraint inliningConstraint(AppInfo info, DexType holder) {
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
     // Resolve the field if possible and decide whether the instruction can inlined.
     DexType fieldHolder = field.getHolder();
     DexEncodedField target = lookupTarget(fieldHolder, info);
     DexClass fieldClass = info.definitionFor(fieldHolder);
-    if ((target != null) && (fieldClass != null) && !fieldClass.isLibraryClass()) {
-      DexAccessFlags flags = target.accessFlags;
-      if (flags.isPublic()) {
-        return Constraint.ALWAYS;
-      }
-      if (flags.isPrivate() && (fieldHolder == holder)) {
-        return Constraint.PRIVATE;
-      }
-      if (flags.isProtected() && (fieldHolder.isSamePackage(holder))) {
-        return Constraint.PACKAGE;
-      }
+    if ((target != null) && (fieldClass != null)) {
+      Constraint fieldConstraint = Constraint
+          .deriveConstraint(holder, fieldHolder, target.accessFlags, info);
+      Constraint classConstraint = Constraint
+          .deriveConstraint(holder, fieldHolder, fieldClass.accessFlags, info);
+      return Constraint.min(fieldConstraint, classConstraint);
     }
     return Constraint.NEVER;
   }

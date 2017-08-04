@@ -4,6 +4,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.InvokePolymorphicRange;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
@@ -84,6 +85,12 @@ public class InvokePolymorphic extends InvokeMethod {
   @Override
   public InvokePolymorphic asInvokePolymorphic() {
     return this;
+  }
+
+  @Override
+  DexEncodedMethod lookupTarget(AppInfo appInfo) {
+    // TODO(herhut): Implement lookup target for invokePolymorphic.
+    return null;
   }
 
   @Override

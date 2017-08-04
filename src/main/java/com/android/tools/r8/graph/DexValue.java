@@ -99,6 +99,15 @@ public abstract class DexValue extends DexItem {
     return this == defaultForType(type, factory);
   }
 
+  /**
+   * Whether creating this value as a default value for a field might trigger an allocation.
+   * <p>
+   * This is conservative.
+   */
+  public boolean mayTriggerAllocation() {
+    return true;
+  }
+
   static private abstract class SimpleDexValue extends DexValue {
 
     @Override
@@ -109,6 +118,11 @@ public abstract class DexValue extends DexItem {
     @Override
     public void sort() {
       // Intentionally empty
+    }
+
+    @Override
+    public boolean mayTriggerAllocation() {
+      return false;
     }
 
     protected static void writeIntegerTo(byte type, long value, int expected,

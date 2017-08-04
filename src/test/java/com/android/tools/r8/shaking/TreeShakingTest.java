@@ -73,8 +73,12 @@ public class TreeShakingTest {
       "minifygeneric:keep-rules.txt:DEX:false",
       "minifygeneric:keep-rules.txt:JAR:false",
       "minifygenericwithinner:keep-rules.txt:DEX:false",
-      "minifygenericwithinner:keep-rules.txt:JAR:false"
-
+      "minifygenericwithinner:keep-rules.txt:JAR:false",
+      // TODO(62048823): Inlining tests don't use allowaccessmodification.
+      "inlining:keep-rules.txt:DEX:true",
+      "inlining:keep-rules.txt:JAR:true",
+      "inlining:keep-rules-discard.txt:DEX:true",
+      "inlining:keep-rules-discard.txt:JAR:true"
   );
   private final boolean minify;
 

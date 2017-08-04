@@ -4,6 +4,7 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.InvokeStaticRange;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
@@ -73,6 +74,12 @@ public class InvokeStatic extends InvokeMethod {
   @Override
   public InvokeStatic asInvokeStatic() {
     return this;
+  }
+
+  @Override
+  DexEncodedMethod lookupTarget(AppInfo appInfo) {
+    DexMethod method = getInvokedMethod();
+    return appInfo.lookupStaticTarget(method);
   }
 
   @Override

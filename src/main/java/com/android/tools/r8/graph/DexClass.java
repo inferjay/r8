@@ -7,9 +7,7 @@ import com.android.tools.r8.Resource;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
-
 import com.google.common.base.MoreObjects;
-
 import java.util.Arrays;
 import java.util.function.Consumer;
 
@@ -203,5 +201,10 @@ public abstract class DexClass extends DexItem {
     }
     // For non-dex code we don't try to check the code.
     return true;
+  }
+
+  public boolean defaultValuesForStaticFieldsMayTriggerAllocation() {
+    return Arrays.stream(staticFields())
+        .anyMatch(field -> !field.staticValue.mayTriggerAllocation());
   }
 }

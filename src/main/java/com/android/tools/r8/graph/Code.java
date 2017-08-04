@@ -33,6 +33,10 @@ public abstract class Code extends CanonicalizedDexItem {
     return false;
   }
 
+  public int estimatedSizeForInlining() {
+    return Integer.MAX_VALUE;
+  }
+
   public DexCode asDexCode() {
     throw new Unreachable(getClass().getCanonicalName() + ".asDexCode()");
   }

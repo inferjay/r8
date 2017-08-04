@@ -43,6 +43,13 @@ import org.junit.Test;
 
 public class OutlineTest extends SmaliTestBase {
 
+  private InternalOptions createInternalOptions() {
+    InternalOptions result = new InternalOptions();
+    // Disable inlining to make sure that code looks as expected.
+    result.inlineAccessors = false;
+    return result;
+  }
+
   DexEncodedMethod getInvokedMethod(DexApplication application, InvokeStatic invoke) {
     DexInspector inspector = new DexInspector(application);
     ClassSubject clazz = inspector.clazz(invoke.getMethod().holder.toSourceString());
@@ -118,7 +125,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 6; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -183,7 +190,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 6; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -249,7 +256,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     DexApplication originalApplication = buildApplication(builder, options);
     DexApplication processedApplication = processApplication(originalApplication, options);
@@ -313,7 +320,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     DexApplication originalApplication = buildApplication(builder, options);
     DexApplication processedApplication = processApplication(originalApplication, options);
@@ -372,7 +379,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 4; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -446,7 +453,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 4; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -516,7 +523,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 6; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -614,7 +621,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 7;
     options.outline.maxSize = 7;
@@ -678,7 +685,7 @@ public class OutlineTest extends SmaliTestBase {
     );
 
     for (int i = 2; i < 8; i++) {
-      InternalOptions options = new InternalOptions();
+      InternalOptions options = createInternalOptions();
       options.outline.threshold = 1;
       options.outline.minSize = i;
       options.outline.maxSize = i;
@@ -735,7 +742,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;
     options.outline.maxSize = 3;
@@ -808,7 +815,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;
     options.outline.maxSize = 3;
@@ -879,7 +886,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;
     options.outline.maxSize = 3;
@@ -943,7 +950,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 5;
     options.outline.maxSize = 5;
@@ -1003,7 +1010,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 4;
     options.outline.maxSize = 4;
@@ -1077,7 +1084,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 4;
     options.outline.maxSize = 4;
@@ -1152,7 +1159,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;  // Outline add, sub and mul.
     options.outline.maxSize = 3;
@@ -1204,7 +1211,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;
     options.outline.maxSize = 3;
@@ -1249,7 +1256,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 1;
     options.outline.minSize = 3;
     options.outline.maxSize = 3;
@@ -1455,7 +1462,7 @@ public class OutlineTest extends SmaliTestBase {
         "    return-void"
     );
 
-    InternalOptions options = new InternalOptions();
+    InternalOptions options = createInternalOptions();
     options.outline.threshold = 2;
 
     DexApplication originalApplication = buildApplicationWithAndroidJar(builder, options);

@@ -4,12 +4,11 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.InvokeVirtualRange;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.ir.conversion.DexBuilder;
-import com.android.tools.r8.ir.optimize.Inliner.InlineAction;
-import com.android.tools.r8.ir.optimize.InliningOracle;
 import java.util.List;
 
 public class InvokeVirtual extends InvokeMethodWithReceiver {
@@ -76,7 +75,8 @@ public class InvokeVirtual extends InvokeMethodWithReceiver {
   }
 
   @Override
-  public InlineAction computeInlining(InliningOracle decider) {
-    return decider.computeForInvokeVirtual(this);
+  DexEncodedMethod lookupTarget(AppInfo appInfo) {
+    DexMethod method = getInvokedMethod();
+    return appInfo.lookupVirtualTarget(method.holder, method);
   }
 }

@@ -64,6 +64,11 @@ public class DexCode extends Code {
   }
 
   @Override
+  public int estimatedSizeForInlining() {
+    return instructions.length;
+  }
+
+  @Override
   public DexCode asDexCode() {
     return this;
   }
