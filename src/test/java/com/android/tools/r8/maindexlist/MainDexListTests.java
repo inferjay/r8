@@ -16,6 +16,7 @@ import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.dex.ApplicationWriter;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.Code;
@@ -157,7 +158,8 @@ public class MainDexListTests extends TestBase {
       // Make sure {@link MonoDexDistributor} was _not_ used.
       assertFalse(e.getMessage().contains("single dex file"));
       // Make sure what exceeds the limit is the number of methods.
-      assertTrue(e.getMessage().contains("# methods"));
+      assertTrue(e.getMessage().contains("# methods: "
+          + String.valueOf(TWO_LARGE_CLASSES.size() * MAX_METHOD_COUNT)));
     }
   }
 
@@ -197,7 +199,8 @@ public class MainDexListTests extends TestBase {
       // Make sure {@link MonoDexDistributor} was _not_ used.
       assertFalse(e.getMessage().contains("single dex file"));
       // Make sure what exceeds the limit is the number of methods.
-      assertTrue(e.getMessage().contains("# methods"));
+      assertTrue(e.getMessage().contains("# methods: "
+          + String.valueOf(MANY_CLASSES_COUNT * MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS)));
     }
   }
 
@@ -283,7 +286,7 @@ public class MainDexListTests extends TestBase {
     }
     addMainListFile(mainLists, mainList);
 
-    // Same in reverese order
+    // Same in reverse order
     addMainListFile(mainLists, Lists.reverse(mainList));
 
     // Mixed partial list.
@@ -347,11 +350,12 @@ public class MainDexListTests extends TestBase {
       generateApplication(
           MANY_CLASSES, Constants.ANDROID_K_API, false, MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS);
       fail("Expect to fail, for there are many classes while multidex is not enabled.");
-    } catch (CompilationError e) {
+    } catch (MainDexError e) {
       // Make sure {@link MonoDexDistributor} was used.
       assertTrue(e.getMessage().contains("single dex file"));
       // Make sure what exceeds the limit is the number of methods.
-      assertTrue(e.getMessage().contains("# methods"));
+      assertTrue(e.getMessage().contains("# methods: "
+          + String.valueOf(MANY_CLASSES_COUNT * MANY_CLASSES_MULTI_DEX_METHODS_PER_CLASS)));
     }
   }
 
