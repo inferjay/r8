@@ -66,6 +66,12 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "overloadaggressively.flags";
   private static final String DONT_OPTIMIZE =
       VALID_PROGUARD_DIR + "dontoptimize.flags";
+  private static final String DONT_OPTIMIZE_OVERRIDES_PASSES =
+      VALID_PROGUARD_DIR + "dontoptimize-overrides-optimizationpasses.flags";
+  private static final String OPTIMIZATION_PASSES =
+      VALID_PROGUARD_DIR + "optimizationpasses.flags";
+  private static final String OPTIMIZATION_PASSES_WITHOUT_N =
+      INVALID_PROGUARD_DIR + "optimizationpasses-without-n.flags";
   private static final String SKIP_NON_PUBLIC_LIBRARY_CLASSES =
       VALID_PROGUARD_DIR + "skipnonpubliclibraryclasses.flags";
   private static final String PARSE_AND_SKIP_SINGLE_ARGUMENT =
@@ -357,10 +363,40 @@ public class ProguardConfigurationParserTest extends TestBase {
   }
 
   @Test
-  public void parseDontOptimize()
-      throws IOException, ProguardRuleParserException {
+  public void parseDontOptimize() throws IOException, ProguardRuleParserException {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(DONT_OPTIMIZE));
+    ProguardConfiguration config = parser.getConfig();
+    assertTrue(config.getOptimizationPasses() == 0);
+  }
+
+  @Test
+  public void parseDontOptimizeOverridesPasses() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(DONT_OPTIMIZE_OVERRIDES_PASSES));
+    ProguardConfiguration config = parser.getConfig();
+    assertTrue(config.getOptimizationPasses() == 0);
+  }
+
+  @Test
+  public void parseOptimizationPasses() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(OPTIMIZATION_PASSES));
+    ProguardConfiguration config = parser.getConfig();
+    // TODO(b/36800551): optimizationPasses should not be set at the moment.
+    // assertTrue(config.getOptimizationPasses() == 8);
+    assertTrue(config.getOptimizationPasses() == 1);
+  }
+
+  @Test
+  public void parseOptimizationPassesError() throws IOException, ProguardRuleParserException {
+    try {
+      ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+      parser.parse(Paths.get(OPTIMIZATION_PASSES_WITHOUT_N));
+      fail();
+    } catch (ProguardRuleParserException e) {
+      assertTrue(e.getMessage().contains("Missing n"));
+    }
   }
 
   @Test
