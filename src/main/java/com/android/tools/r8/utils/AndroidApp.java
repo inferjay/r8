@@ -15,7 +15,6 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,19 +24,15 @@ import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
@@ -52,6 +47,7 @@ public class AndroidApp {
   private final ImmutableList<Resource> programResources;
   private final ImmutableList<ClassFileResourceProvider> classpathResourceProviders;
   private final ImmutableList<ClassFileResourceProvider> libraryResourceProviders;
+  private final ImmutableList<ProgramFileArchiveReader> programFileArchiveReaders;
   private final Resource deadCode;
   private final Resource proguardMap;
   private final Resource proguardSeeds;
@@ -61,6 +57,7 @@ public class AndroidApp {
   // See factory methods and AndroidApp.Builder below.
   private AndroidApp(
       ImmutableList<Resource> programResources,
+      ImmutableList<ProgramFileArchiveReader> programFileArchiveReaders,
       ImmutableList<ClassFileResourceProvider> classpathResourceProviders,
       ImmutableList<ClassFileResourceProvider> libraryResourceProviders,
       Resource deadCode,
@@ -69,6 +66,7 @@ public class AndroidApp {
       Resource packageDistribution,
       Resource mainDexList) {
     this.programResources = programResources;
+    this.programFileArchiveReaders = programFileArchiveReaders;
     this.classpathResourceProviders = classpathResourceProviders;
     this.libraryResourceProviders = libraryResourceProviders;
     this.deadCode = deadCode;
@@ -142,13 +140,26 @@ public class AndroidApp {
   }
 
   /** Get input streams for all dex program resources. */
-  public List<Resource> getDexProgramResources() {
+  public List<Resource> getDexProgramResources() throws IOException {
+    List<Resource> dexResources = filter(programResources, Resource.Kind.DEX);
+    for (ProgramFileArchiveReader reader : programFileArchiveReaders) {
+      dexResources.addAll(reader.getDexProgramResources());
+    }
+    return dexResources;
+  }
+
+  public List<Resource> getDexProgramResourcesForOutput() {
+    assert programFileArchiveReaders.isEmpty();
     return filter(programResources, Resource.Kind.DEX);
   }
 
   /** Get input streams for all Java-bytecode program resources. */
-  public List<Resource> getClassProgramResources() {
-    return filter(programResources, Resource.Kind.CLASSFILE);
+  public List<Resource> getClassProgramResources() throws IOException {
+    List<Resource> classResources = filter(programResources, Resource.Kind.CLASSFILE);
+    for (ProgramFileArchiveReader reader : programFileArchiveReaders) {
+      classResources.addAll(reader.getClassProgramResources());
+    }
+    return classResources;
   }
 
   /** Get classpath resource providers. */
@@ -367,6 +378,7 @@ public class AndroidApp {
   public static class Builder {
 
     private final List<Resource> programResources = new ArrayList<>();
+    private final List<ProgramFileArchiveReader> programFileArchiveReaders = new ArrayList<>();
     private final List<ClassFileResourceProvider> classpathResourceProviders = new ArrayList<>();
     private final List<ClassFileResourceProvider> libraryResourceProviders = new ArrayList<>();
     private Resource deadCode;
@@ -382,6 +394,7 @@ public class AndroidApp {
     // See AndroidApp::builder(AndroidApp).
     private Builder(AndroidApp app) {
       programResources.addAll(app.programResources);
+      programFileArchiveReaders.addAll(app.programFileArchiveReaders);
       classpathResourceProviders.addAll(app.classpathResourceProviders);
       libraryResourceProviders.addAll(app.libraryResourceProviders);
       deadCode = app.deadCode;
@@ -597,6 +610,7 @@ public class AndroidApp {
     public AndroidApp build() {
       return new AndroidApp(
           ImmutableList.copyOf(programResources),
+          ImmutableList.copyOf(programFileArchiveReaders),
           ImmutableList.copyOf(classpathResourceProviders),
           ImmutableList.copyOf(libraryResourceProviders),
           deadCode,
@@ -615,7 +629,7 @@ public class AndroidApp {
       } else if (isClassFile(file)) {
         programResources.add(Resource.fromFile(Resource.Kind.CLASSFILE, file));
       } else if (isArchive(file)) {
-        addProgramArchive(file);
+        programFileArchiveReaders.add(new ProgramFileArchiveReader(file));
       } else {
         throw new CompilationError("Unsupported source file type for file: " + file);
       }
@@ -632,36 +646,6 @@ public class AndroidApp {
         providerList.add(DirectoryClassFileProvider.fromDirectory(file));
       } else {
         throw new CompilationError("Unsupported source file type for file: " + file);
-      }
-    }
-
-    private void addProgramArchive(Path archive) throws IOException {
-      assert isArchive(archive);
-      boolean containsDexData = false;
-      boolean containsClassData = false;
-      try (ZipInputStream stream = new ZipInputStream(new FileInputStream(archive.toFile()))) {
-        ZipEntry entry;
-        while ((entry = stream.getNextEntry()) != null) {
-          Path name = Paths.get(entry.getName());
-          if (isDexFile(name)) {
-            containsDexData = true;
-            programResources.add(Resource.fromBytes(
-                Resource.Kind.DEX, ByteStreams.toByteArray(stream)));
-          } else if (isClassFile(name)) {
-            containsClassData = true;
-            String descriptor = PreloadedClassFileProvider.guessTypeDescriptor(name);
-            programResources.add(Resource.fromBytes(Resource.Kind.CLASSFILE,
-                ByteStreams.toByteArray(stream), Collections.singleton(descriptor)));
-          }
-        }
-      } catch (ZipException e) {
-        throw new CompilationError(
-            "Zip error while reading '" + archive + "': " + e.getMessage(), e);
-      }
-      if (containsDexData && containsClassData) {
-        throw new CompilationError(
-            "Cannot create android app from an archive '" + archive
-                + "' containing both DEX and Java-bytecode content");
       }
     }
   }
