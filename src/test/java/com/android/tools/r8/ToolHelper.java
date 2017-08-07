@@ -341,8 +341,8 @@ public class ToolHelper {
   }
 
   // Returns if the passed in vm to use is the default.
-  public static boolean isDefaultDexVm() {
-    return getDexVm() == DexVm.ART_DEFAULT;
+  public static boolean isDefaultDexVm(DexVm dexVm) {
+    return dexVm == DexVm.ART_DEFAULT;
   }
 
   public static DexVm getDexVm() {

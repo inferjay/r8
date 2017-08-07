@@ -908,9 +908,9 @@ public abstract class R8RunArtTestsTest {
   }
 
   private static Map<SpecificationKey, TestSpecification> getTestsMap(
-      CompilerUnderTest compilerUnderTest, CompilationMode compilationMode, DexVm version) {
+      CompilerUnderTest compilerUnderTest, CompilationMode compilationMode, DexVm dexVm) {
     File artTestDir = new File(ART_TESTS_DIR);
-    if (version != DexVm.ART_DEFAULT) {
+    if (dexVm != DexVm.ART_DEFAULT) {
       artTestDir = new File(ART_LEGACY_TESTS_DIR);
     }
     if (!artTestDir.exists()) {
@@ -930,7 +930,6 @@ public abstract class R8RunArtTestsTest {
     // Collect the tests requiring the native library.
     Set<String> useNativeLibrary = Sets.newHashSet(useJNI);
 
-    DexVm dexVm = ToolHelper.getDexVm();
     for (DexTool dexTool : DexTool.values()) {
       // Collect the tests failing code generation.
       Set<String> failsWithCompiler =
@@ -962,11 +961,11 @@ public abstract class R8RunArtTestsTest {
         failsWithArt.addAll(tmpSet);
       }
 
-      if (!ToolHelper.isDefaultDexVm()) {
+      if (!ToolHelper.isDefaultDexVm(dexVm)) {
         // Generally failing when not TOT art.
         failsWithArt.addAll(expectedToFailRunWithArtNonDefault);
         // Version specific failures
-        failsWithArt.addAll(expectedToFailRunWithArtVersion.get(ToolHelper.getDexVm()));
+        failsWithArt.addAll(expectedToFailRunWithArtVersion.get(dexVm));
       }
 
       // Collect the tests failing with output differences in Art.
