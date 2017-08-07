@@ -43,7 +43,7 @@ abstract class BaseOutput {
    * @return an immutable list of compiled DEX resources.
    */
   public List<Resource> getDexResources() {
-    return ImmutableList.copyOf(app.getDexProgramResources());
+    return ImmutableList.copyOf(app.getDexProgramResourcesForOutput());
   }
 
   /**

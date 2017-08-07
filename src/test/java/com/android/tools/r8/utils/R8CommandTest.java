@@ -46,7 +46,7 @@ public class R8CommandTest {
     verifyEmptyCommand(parse("\t", "\t"));
   }
 
-  private void verifyEmptyCommand(R8Command command) {
+  private void verifyEmptyCommand(R8Command command) throws IOException {
     assertEquals(0, ToolHelper.getApp(command).getDexProgramResources().size());
     assertEquals(0, ToolHelper.getApp(command).getClassProgramResources().size());
     assertFalse(ToolHelper.getApp(command).hasMainDexList());

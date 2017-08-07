@@ -18,7 +18,7 @@ public abstract class Resource {
     DEX, CLASSFILE
   }
 
-  private Resource(Kind kind) {
+  protected Resource(Kind kind) {
     this.kind = kind;
   }
 
