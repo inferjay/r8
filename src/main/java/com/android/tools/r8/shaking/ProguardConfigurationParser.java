@@ -38,7 +38,6 @@ public class ProguardConfigurationParser {
 
   private static final List<String> ignoredSingleArgOptions = ImmutableList
       .of("protomapping",
-          "optimizationpasses",
           "target");
   private static final List<String> ignoredOptionalSingleArgOptions = ImmutableList
       .of("keepdirectories", "runtype", "laststageoutput");
@@ -63,7 +62,7 @@ public class ProguardConfigurationParser {
           "outjars",
           "adaptresourcefilecontents");
   private static final List<String> warnedFlagOptions = ImmutableList
-      .of("dontoptimize");
+      .of();
 
   // Those options are unsupported and are treated as compilation errors.
   // Just ignoring them would produce outputs incompatible with user expectations.
@@ -96,7 +95,7 @@ public class ProguardConfigurationParser {
     private int position = 0;
     private Path baseDirectory;
 
-    public ProguardFileParser(Path path) throws IOException {
+    ProguardFileParser(Path path) throws IOException {
       this.path = path;
       contents = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
       baseDirectory = path.getParent();
@@ -149,6 +148,17 @@ public class ProguardConfigurationParser {
       } else if (acceptString("whyareyoukeeping")) {
         ProguardKeepRule rule = parseWhyAreYouKeepingRule();
         configurationBuilder.addRule(rule);
+      } else if (acceptString("dontoptimize")) {
+        configurationBuilder.setOptimize(false);
+        System.out.println("WARNING: Ignoring option: -dontoptimize");
+      } else if (acceptString("optimizationpasses")) {
+        skipWhitespace();
+        Integer expectedOptimizationPasses = acceptInteger();
+        if (expectedOptimizationPasses == null) {
+          throw parseError("Missing n of \"-optimizationpasses n\"");
+        }
+        configurationBuilder.setOptimizationPasses(expectedOptimizationPasses);
+        System.out.println("WARNING: Ignoring option: -optimizationpasses");
       } else if (acceptString("dontobfuscate")) {
         configurationBuilder.setObfuscating(false);
       } else if (acceptString("dontshrink")) {
