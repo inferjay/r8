@@ -7,6 +7,7 @@ import static com.android.tools.r8.TestCondition.compilers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import com.android.tools.r8.JctfTestSpecifications.Outcome;
 import com.android.tools.r8.ToolHelper.ArtCommandBuilder;
 import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.ToolHelper.ProcessResult;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import org.junit.ComparisonFailure;
 import org.junit.Rule;
@@ -851,9 +853,9 @@ public abstract class R8RunArtTestsTest {
     }
 
     TestSpecification(String name, DexTool dexTool, File directory, boolean skipArt,
-        boolean failsWithArt) {
+        boolean failsWithArt, boolean disableInlining) {
       this(name, dexTool, directory, skipArt,
-          false, false, failsWithArt, false, false, null, false, false, false);
+          false, false, failsWithArt, false, false, null, false, false, disableInlining);
     }
 
     public File resolveFile(String name) {
@@ -1184,6 +1186,15 @@ public abstract class R8RunArtTestsTest {
     return auxClassFiles;
   }
 
+  private static BiFunction<Outcome, Boolean, TestSpecification> jctfOutcomeToSpecification(
+      String name, DexTool dexTool, File resultDir) {
+    return (outcome, noInlining) -> new TestSpecification(name, dexTool, resultDir,
+        outcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
+            || outcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
+        outcome == JctfTestSpecifications.Outcome.FAILS_WITH_ART,
+        noInlining);
+  }
+
   protected void runJctfTest(CompilerUnderTest compilerUnderTest, String classFilePath,
       String fullClassName)
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
@@ -1198,13 +1209,9 @@ public abstract class R8RunArtTestsTest {
 
     File resultDir = temp.newFolder(firstCompilerUnderTest.toString().toLowerCase() + "-output");
 
-    JctfTestSpecifications.Outcome expectedOutcome =
-        JctfTestSpecifications.getExpectedOutcome(
-            name, firstCompilerUnderTest, dexVm, compilationMode);
-    TestSpecification specification = new TestSpecification(name, DexTool.NONE, resultDir,
-        expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
-            || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
-        expectedOutcome == JctfTestSpecifications.Outcome.FAILS_WITH_ART);
+    TestSpecification specification = JctfTestSpecifications.getExpectedOutcome(
+        name, firstCompilerUnderTest, dexVm, compilationMode,
+        jctfOutcomeToSpecification(name, DexTool.NONE, resultDir));
 
     if (specification.skipTest) {
       return;
@@ -1287,13 +1294,9 @@ public abstract class R8RunArtTestsTest {
               .collect(Collectors.toList());
       File r8ResultDir = temp.newFolder("r8-output");
       compilationMode = CompilationMode.DEBUG;
-      expectedOutcome =
-          JctfTestSpecifications.getExpectedOutcome(
-              name, CompilerUnderTest.R8_AFTER_D8, dexVm, compilationMode);
-      specification = new TestSpecification(name, DexTool.DX, r8ResultDir,
-          expectedOutcome == JctfTestSpecifications.Outcome.TIMEOUTS_WITH_ART
-              || expectedOutcome == JctfTestSpecifications.Outcome.FLAKY_WITH_ART,
-          expectedOutcome == JctfTestSpecifications.Outcome.FAILS_WITH_ART);
+      specification = JctfTestSpecifications.getExpectedOutcome(
+          name, CompilerUnderTest.R8_AFTER_D8, dexVm, compilationMode,
+          jctfOutcomeToSpecification(name, DexTool.DX, r8ResultDir));
       if (specification.skipTest) {
         return;
       }
