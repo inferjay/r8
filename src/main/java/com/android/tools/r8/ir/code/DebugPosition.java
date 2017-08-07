@@ -64,10 +64,14 @@ public class DebugPosition extends Instruction {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder(super.toString());
+    printLineInfo(builder);
+    return builder.toString();
+  }
+
+  public void printLineInfo(StringBuilder builder) {
     if (file != null) {
       builder.append(file).append(":");
     }
     builder.append(line);
-    return builder.toString();
   }
 }

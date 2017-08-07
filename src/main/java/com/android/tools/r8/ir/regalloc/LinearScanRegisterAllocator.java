@@ -318,13 +318,21 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
       }
       if (block.entry().isMoveException()) {
-        fixupSpillMovesAtMoveException(block, instructionIterator, openRanges, currentLocals);
+        fixupLocalsLiveAtMoveException(block, instructionIterator, openRanges, currentLocals);
       } else {
         block.setLocalsAtEntry(new Int2ReferenceOpenHashMap<>(currentLocals));
       }
+      int spillCount = 0;
       while (instructionIterator.hasNext()) {
         Instruction instruction = instructionIterator.next();
         int index = instruction.getNumber();
+        if (index == -1) {
+          spillCount++;
+          continue;
+        }
+        // If there is more than one spill instruction we may need to end clobbered locals.
+        Int2ReferenceMap<DebugLocalInfo> preSpillLocals =
+            spillCount > 1 ? new Int2ReferenceOpenHashMap<>(currentLocals) : null;
         ListIterator<LocalRange> it = openRanges.listIterator(0);
         Int2ReferenceMap<DebugLocalInfo> ending = new Int2ReferenceOpenHashMap<>();
         Int2ReferenceMap<DebugLocalInfo> starting = new Int2ReferenceOpenHashMap<>();
@@ -349,6 +357,18 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           }
           nextStartingRange = rangeIterator.hasNext() ? rangeIterator.next() : null;
         }
+        if (preSpillLocals != null) {
+          for (int i = 0; i <= spillCount; i++) {
+            instructionIterator.previous();
+          }
+          Int2ReferenceMap<DebugLocalInfo> clobbered =
+              endClobberedLocals(instructionIterator, preSpillLocals, currentLocals);
+          for (Entry<DebugLocalInfo> entry : clobbered.int2ReferenceEntrySet()) {
+            assert ending.get(entry.getIntKey()) == entry.getValue();
+            ending.remove(entry.getIntKey());
+          }
+        }
+        spillCount = 0;
         if (localsChanged && shouldEmitChangesAtInstruction(instruction)) {
           DebugLocalsChange change = createLocalsChange(ending, starting);
           if (change != null) {
@@ -366,7 +386,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     }
   }
 
-  private void fixupSpillMovesAtMoveException(
+  private void fixupLocalsLiveAtMoveException(
       BasicBlock block,
       ListIterator<Instruction> instructionIterator,
       List<LocalRange> openRanges,
@@ -381,42 +401,15 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     Instruction entry = instructionIterator.next();
     assert block.entry() == entry;
     assert block.entry().isMoveException();
-    Iterator<Instruction> moveIterator = block.iterator();
-    moveIterator.next();
-    int index = entry.getNumber();
-    Int2ReferenceMap<DebugLocalInfo> clobberedLocals = new Int2ReferenceOpenHashMap<>();
-    while (moveIterator.hasNext()) {
-      Instruction next = moveIterator.next();
-      if (next.getNumber() != -1) {
-        break;
-      }
-      if (clobberedLocals.isEmpty()) {
-        // Advance the iterator so it ends up at the first move that clobbers a local.
-        instructionIterator.next();
-      }
-      if (next.isMove()) {
-        Move move = next.asMove();
-        int dstRegister = getArgumentOrAllocateRegisterForValue(move.dest(), index);
-        DebugLocalInfo dstInitialLocal = initialLocals.get(dstRegister);
-        DebugLocalInfo dstFinalLocal = finalLocals.get(dstRegister);
-        if (dstInitialLocal != null && dstInitialLocal != dstFinalLocal) {
-          initialLocals.remove(dstRegister);
-          clobberedLocals.put(dstRegister, dstInitialLocal);
-        }
-      }
-    }
-    // Add an initial local change for all clobbered locals after the first clobbered local.
-    if (!clobberedLocals.isEmpty()) {
-      instructionIterator.add(new DebugLocalsChange(
-          clobberedLocals, Int2ReferenceMaps.emptyMap()));
-    }
-    // Compute the final change in locals and emit it after all spill moves.
-    while (instructionIterator.hasNext()) {
-      if (instructionIterator.next().getNumber() != -1) {
-        break;
-      }
+    // Moves may have clobber current locals so they must be closed.
+    Int2ReferenceMap<DebugLocalInfo> clobbered =
+        endClobberedLocals(instructionIterator, initialLocals, finalLocals);
+    for (Entry<DebugLocalInfo> ended : clobbered.int2ReferenceEntrySet()) {
+      assert initialLocals.get(ended.getIntKey()) == ended.getValue();
+      initialLocals.remove(ended.getIntKey());
     }
     instructionIterator.previous();
+    // Compute the final change in locals and insert it after the last move.
     Int2ReferenceMap<DebugLocalInfo> ending = new Int2ReferenceOpenHashMap<>();
     Int2ReferenceMap<DebugLocalInfo> starting = new Int2ReferenceOpenHashMap<>();
     for (Entry<DebugLocalInfo> initialLocal : initialLocals.int2ReferenceEntrySet()) {
@@ -433,6 +426,46 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     if (change != null) {
       instructionIterator.add(change);
     }
+  }
+
+  private Int2ReferenceMap<DebugLocalInfo> endClobberedLocals(
+      ListIterator<Instruction> instructionIterator,
+      Int2ReferenceMap<DebugLocalInfo> initialLocals,
+      Int2ReferenceMap<DebugLocalInfo> finalLocals) {
+    int spillCount;
+    int firstClobberedMove = -1;
+    Int2ReferenceMap<DebugLocalInfo> clobberedLocals = Int2ReferenceMaps.emptyMap();
+    for (spillCount = 0; instructionIterator.hasNext(); spillCount++) {
+      Instruction next = instructionIterator.next();
+      if (next.getNumber() != -1) {
+        break;
+      }
+      if (next.isMove()) {
+        Move move = next.asMove();
+        int dst = getRegisterForValue(move.dest(), move.getNumber());
+        DebugLocalInfo initialLocal = initialLocals.get(dst);
+        if (initialLocal != null && initialLocal != finalLocals.get(dst)) {
+          if (firstClobberedMove == -1) {
+            firstClobberedMove = spillCount;
+            clobberedLocals = new Int2ReferenceOpenHashMap<>();
+          }
+          clobberedLocals.put(dst, initialLocal);
+        }
+      }
+    }
+    // Add an initial local change for all clobbered locals after the first clobbered local.
+    if (firstClobberedMove != -1) {
+      int tail = spillCount - firstClobberedMove;
+      for (int i = 0; i < tail; i++) {
+        instructionIterator.previous();
+      }
+      instructionIterator.add(new DebugLocalsChange(
+          clobberedLocals, Int2ReferenceMaps.emptyMap()));
+      for (int i = 0; i < tail; i++) {
+        instructionIterator.next();
+      }
+    }
+    return clobberedLocals;
   }
 
   private DebugLocalsChange createLocalsChange(

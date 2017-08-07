@@ -70,4 +70,16 @@ public class MoveException extends Instruction {
   public boolean canBeDeadCode(IRCode code, InternalOptions options) {
     return !options.debug;
   }
+
+  @Override
+  public String toString() {
+    if (position != null) {
+      StringBuilder builder = new StringBuilder(super.toString());
+      builder.append("(DebugPosition ");
+      position.printLineInfo(builder);
+      builder.append(')');
+      return builder.toString();
+    }
+    return super.toString();
+  }
 }
