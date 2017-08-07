@@ -1,0 +1,19 @@
+// Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+// // for details. All rights reserved. Use of this source code is governed by a
+// // BSD-style license that can be found in the LICENSE file.
+syntax = "proto2";
+package protowithexts;
+
+option java_outer_classname = "GeneratedProtoWithExts";
+
+message Simple {
+  required int32 id = 1;
+
+  optional int32 other = 2;
+
+  extensions 10 to 19;
+}
+
+extend Simple {
+  optional string extra = 10;
+}

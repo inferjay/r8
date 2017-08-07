@@ -372,6 +372,80 @@ public class TreeShakingTest {
         subclass.method("double", "anotherMethod", ImmutableList.of("double")).isPresent());
   }
 
+  private static void simpleproto1UnusedFieldIsGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("simpleproto1.GeneratedSimpleProto$Simple");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("boolean", "other_").isPresent());
+  }
+
+  private static void simpleproto2UnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("simpleproto2.GeneratedSimpleProto$Simple");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("int", "id_").isPresent());
+    Assert.assertFalse(protoClass.field("float", "hasMe_").isPresent());
+    Assert.assertFalse(protoClass.field("int", "other_").isPresent());
+  }
+
+  private static void nestedproto1UnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("nestedproto1.GeneratedNestedProto$Outer");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("int", "id_").isPresent());
+    Assert.assertTrue(
+        protoClass.field("nestedproto1.GeneratedNestedProto$NestedOne", "inner_").isPresent());
+    Assert.assertFalse(
+        protoClass.field("nestedproto1.GeneratedNestedProto$NestedTwo", "inner2_").isPresent());
+    ClassSubject nestedOne = inspector.clazz("nestedproto1.GeneratedNestedProto$NestedOne");
+    Assert.assertTrue(nestedOne.isPresent());
+    Assert.assertTrue(nestedOne.field("java.lang.String", "other_").isPresent());
+    Assert.assertFalse(nestedOne.field("int", "id_").isPresent());
+    Assert.assertFalse(inspector.clazz("nestedproto1.GeneratedNestedProto$NestedTwo").isPresent());
+  }
+
+  private static void nestedproto2UnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("nestedproto2.GeneratedNestedProto$Outer");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertTrue(protoClass.field("int", "id_").isPresent());
+    Assert.assertFalse(
+        protoClass.field("nestedproto2.GeneratedNestedProto$NestedOne", "inner_").isPresent());
+    Assert.assertFalse(
+        protoClass.field("nestedproto2.GeneratedNestedProto$NestedTwo", "inner2_").isPresent());
+    Assert.assertFalse(inspector.clazz("nestedproto2.GeneratedNestedProto$NestedOne").isPresent());
+    Assert.assertFalse(inspector.clazz("nestedproto2.GeneratedNestedProto$NestedTwo").isPresent());
+  }
+
+
+  private static void enumprotoUnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("enumproto.GeneratedEnumProto$Enum");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("int", "id_").isPresent());
+    Assert.assertTrue(protoClass.field("int", "enum_").isPresent());
+    Assert.assertFalse(protoClass.field("int", "other_").isPresent());
+    ClassSubject protoThreeClass = inspector.clazz("enumproto.three.GeneratedEnumProto$EnumThree");
+    Assert.assertTrue(protoThreeClass.isPresent());
+    Assert.assertFalse(protoThreeClass.field("int", "id_").isPresent());
+    Assert.assertTrue(protoThreeClass.field("int", "enum_").isPresent());
+    Assert.assertFalse(protoThreeClass.field("int", "other_").isPresent());
+  }
+
+  private static void repeatedUnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("repeatedproto.GeneratedRepeatedProto$Repeated");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("int", "id_").isPresent());
+    Assert.assertTrue(
+        protoClass.field("com.google.protobuf.Internal$ProtobufList", "repeated_").isPresent());
+    Assert.assertFalse(
+        protoClass.field("com.google.protobuf.Internal$ProtobufList", "sub_").isPresent());
+    Assert.assertFalse(
+        protoClass.field("com.google.protobuf.Internal$BooleanList", "other_").isPresent());
+  }
+
+  private static void oneofprotoUnusedFieldsAreGone(DexInspector inspector) {
+    ClassSubject protoClass = inspector.clazz("oneofproto.GeneratedOneOfProto$Oneof");
+    Assert.assertTrue(protoClass.isPresent());
+    Assert.assertFalse(protoClass.field("int", "id_").isPresent());
+    Assert.assertFalse(protoClass.field("Object", "otherfields_").isPresent());
+  }
+
   private static List<String> names =
       ImmutableList.of("pqr", "vw$", "abc", "def", "stu", "ghi", "jkl", "ea", "xyz_", "mno");
 
@@ -557,7 +631,15 @@ public class TreeShakingTest {
             "assumevalues5",
             "annotationremoval",
             "memberrebinding2",
-            "memberrebinding3");
+            "memberrebinding3",
+            "simpleproto1",
+            "simpleproto2",
+            "simpleproto3",
+            "nestedproto1",
+            "nestedproto2",
+            "enumproto",
+            "repeatedproto",
+            "oneofproto");
 
     // Keys can be the name of the test or the name of the test followed by a colon and the name
     // of the keep file.
@@ -614,6 +696,20 @@ public class TreeShakingTest {
     inspections
         .put("annotationremoval:keep-rules-keep-innerannotation.txt",
             TreeShakingTest::annotationRemovalHasAllInnerClassAnnotations);
+    inspections
+        .put("simpleproto1:keep-rules.txt", TreeShakingTest::simpleproto1UnusedFieldIsGone);
+    inspections
+        .put("simpleproto2:keep-rules.txt", TreeShakingTest::simpleproto2UnusedFieldsAreGone);
+    inspections
+        .put("nestedproto1:keep-rules.txt", TreeShakingTest::nestedproto1UnusedFieldsAreGone);
+    inspections
+        .put("nestedproto2:keep-rules.txt", TreeShakingTest::nestedproto2UnusedFieldsAreGone);
+    inspections
+        .put("enumproto:keep-rules.txt", TreeShakingTest::enumprotoUnusedFieldsAreGone);
+    inspections
+        .put("repeatedproto:keep-rules.txt", TreeShakingTest::repeatedUnusedFieldsAreGone);
+    inspections
+        .put("oneofproto:keep-rules.txt", TreeShakingTest::oneofprotoUnusedFieldsAreGone);
 
     // Keys can be the name of the test or the name of the test followed by a colon and the name
     // of the keep file.
@@ -779,7 +875,7 @@ public class TreeShakingTest {
           Collections.singletonList(generated.toString()), mainClass, extraArtArgs, null);
       outputComparator.accept(output1, output2);
     } else {
-      ToolHelper.checkArtOutputIdentical(Collections.singletonList(originalDex),
+      String output = ToolHelper.checkArtOutputIdentical(Collections.singletonList(originalDex),
           Collections.singletonList(generated.toString()), mainClass,
           extraArtArgs, null);
     }

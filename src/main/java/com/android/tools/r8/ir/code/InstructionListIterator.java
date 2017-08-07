@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.function.Predicate;
 
-public interface InstructionListIterator extends ListIterator<Instruction> {
+public interface InstructionListIterator extends ListIterator<Instruction>,
+    NextUntilIterator<Instruction> {
 
   /**
    * Peek the previous instruction.

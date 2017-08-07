@@ -1,0 +1,24 @@
+// Copyright (c) 2016, the R8 project authors. Please see the AUTHORS file
+// // for details. All rights reserved. Use of this source code is governed by a
+// // BSD-style license that can be found in the LICENSE file.
+syntax = "proto2";
+package nestedproto1;
+
+option java_outer_classname = "GeneratedNestedProto";
+
+message NestedOne {
+  required int32 id = 1;
+  optional string other = 2;
+}
+
+message NestedTwo {
+  required int32 id = 1;
+  optional float other = 2;
+}
+
+message Outer {
+  required int32 id = 1;
+  required NestedOne inner = 2;
+  optional NestedTwo inner2 = 3;
+}
+

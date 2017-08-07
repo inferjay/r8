@@ -37,12 +37,14 @@ import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
@@ -74,6 +76,9 @@ public class Enqueuer {
   private Map<DexType, Set<DexField>> instanceFieldsRead = Maps.newIdentityHashMap();
   private Map<DexType, Set<DexField>> staticFieldsRead = Maps.newIdentityHashMap();
   private Map<DexType, Set<DexField>> staticFieldsWritten = Maps.newIdentityHashMap();
+
+  private final List<SemanticsProvider> extensions = new ArrayList<>();
+  private final Map<Class, Object> extensionsState = new HashMap<>();
 
   /**
    * This map keeps a view of all virtual methods that are reachable from virtual invokes. A method
@@ -150,6 +155,10 @@ public class Enqueuer {
 
   public Enqueuer(AppInfoWithSubtyping appInfo) {
     this.appInfo = appInfo;
+  }
+
+  public void addExtension(SemanticsProvider extension) {
+    extensions.add(extension);
   }
 
   private void enqueueRootItems(Map<DexItem, ProguardKeepRule> items) {
@@ -852,7 +861,21 @@ public class Enqueuer {
       for (DexAnnotationSet parameterAnnotation : method.parameterAnnotations.values) {
         processAnnotations(parameterAnnotation.annotations);
       }
-      method.registerReachableDefinitions(new UseRegistry(method));
+      boolean processed = false;
+      if (!extensions.isEmpty()) {
+        for (SemanticsProvider extension : extensions) {
+          if (extension.appliesTo(method)) {
+            assert extensions.stream().filter(e -> e.appliesTo(method)).count() == 1;
+            extensionsState.put(extension.getClass(),
+                extension.processMethod(method, new UseRegistry(method),
+                    extensionsState.get(extension.getClass())));
+            processed = true;
+          }
+        }
+      }
+      if (!processed) {
+        method.registerReachableDefinitions(new UseRegistry(method));
+      }
       // Add all dependent members to the workqueue.
       enqueueRootItems(rootSet.getDependentItems(method));
     }
@@ -1007,7 +1030,7 @@ public class Enqueuer {
      * Set of fields that belong to live classes and can be reached by invokes. These need to be
      * kept.
      */
-    final Set<DexField> liveFields;
+    public final Set<DexField> liveFields;
     /**
      * Set of all fields which may be touched by a get operation. This is actual field definitions.
      */
@@ -1060,6 +1083,10 @@ public class Enqueuer {
      * All items with assumevalues rule.
      */
     public final Map<DexItem, ProguardMemberRule> assumedValues;
+    /**
+     * Map from the class of an extension to the state it produced.
+     */
+    public final Map<Class, Object> extensions;
 
     private AppInfoWithLiveness(AppInfoWithSubtyping appInfo, Enqueuer enqueuer) {
       super(appInfo);
@@ -1081,6 +1108,7 @@ public class Enqueuer {
       this.staticInvokes = joinInvokedMethods(enqueuer.staticInvokes);
       this.noSideEffects = enqueuer.rootSet.noSideEffects;
       this.assumedValues = enqueuer.rootSet.assumedValues;
+      this.extensions = enqueuer.extensionsState;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
@@ -1106,6 +1134,7 @@ public class Enqueuer {
       this.superInvokes = previous.superInvokes;
       this.directInvokes = previous.directInvokes;
       this.staticInvokes = previous.staticInvokes;
+      this.extensions = previous.extensions;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
@@ -1131,6 +1160,7 @@ public class Enqueuer {
       this.superInvokes = rewriteItems(previous.superInvokes, lense::lookupMethod);
       this.directInvokes = rewriteItems(previous.directInvokes, lense::lookupMethod);
       this.staticInvokes = rewriteItems(previous.staticInvokes, lense::lookupMethod);
+      this.extensions = previous.extensions;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
@@ -1157,6 +1187,20 @@ public class Enqueuer {
         builder.add(rewrite.apply(item, null));
       }
       return builder.build();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getExtension(Class extension, T defaultValue) {
+      if (extensions.containsKey(extension)) {
+        return (T) extensions.get(extension);
+      } else {
+        return defaultValue;
+      }
+    }
+
+    public <T> void setExtension(Class extension, T value) {
+      assert !extensions.containsKey(extension);
+      extensions.put(extension, value);
     }
 
     @Override
@@ -1298,5 +1342,13 @@ public class Enqueuer {
       }
       return false;
     }
+  }
+
+  public interface SemanticsProvider {
+
+    boolean appliesTo(DexEncodedMethod method);
+
+    Object processMethod(DexEncodedMethod method,
+        com.android.tools.r8.graph.UseRegistry useRegistry, Object state);
   }
 }

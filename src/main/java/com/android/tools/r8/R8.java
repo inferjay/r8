@@ -17,6 +17,8 @@ import com.android.tools.r8.graph.DexApplication;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.ir.conversion.IRConverter;
+import com.android.tools.r8.ir.optimize.EnumOrdinalMapCollector;
+import com.android.tools.r8.ir.optimize.SwitchMapCollector;
 import com.android.tools.r8.naming.Minifier;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.optimize.BridgeMethodAnalysis;
@@ -36,6 +38,7 @@ import com.android.tools.r8.shaking.RootSetBuilder;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
 import com.android.tools.r8.shaking.SimpleClassMerger;
 import com.android.tools.r8.shaking.TreePruner;
+import com.android.tools.r8.shaking.protolite.ProtoLiteExtension;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.FileUtils;
@@ -241,6 +244,7 @@ public class R8 {
         }
         rootSet = new RootSetBuilder(application, appInfo, options.keepRules).run(executorService);
         Enqueuer enqueuer = new Enqueuer(appInfo);
+        enqueuer.addExtension(new ProtoLiteExtension(appInfo));
         appInfo = enqueuer.traceApplication(rootSet, timing);
         if (options.printSeeds) {
           ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -270,8 +274,7 @@ public class R8 {
 
       GraphLense graphLense = GraphLense.getIdentityLense();
 
-      if (appInfo.withLiveness() != null) {
-        // No-op until class merger is added.
+      if (appInfo.hasLiveness()) {
         graphLense = new MemberRebindingAnalysis(appInfo.withLiveness(), graphLense).run();
         // Class merging requires inlining.
         if (!options.skipClassMerging && options.inlineAccessors) {
@@ -282,6 +285,9 @@ public class R8 {
         }
         appInfo = appInfo.withLiveness().prunedCopyFrom(application);
         appInfo = appInfo.withLiveness().rewrittenWithLense(graphLense);
+        // Collect switch maps and ordinals maps.
+        new SwitchMapCollector(appInfo.withLiveness(), options).run();
+        new EnumOrdinalMapCollector(appInfo.withLiveness(), options).run();
       }
 
       graphLense = new BridgeMethodAnalysis(graphLense, appInfo.withSubtyping()).run();

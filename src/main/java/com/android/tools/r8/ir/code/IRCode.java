@@ -390,4 +390,9 @@ public class IRCode {
   public final int getHighestBlockNumber() {
     return blocks.stream().max(Comparator.comparingInt(BasicBlock::getNumber)).get().getNumber();
   }
+
+  public Instruction createConstNull(Instruction from) {
+    Value newValue = createValue(from.outType());
+    return new ConstNumber(ConstType.fromMoveType(from.outType()), newValue, 0);
+  }
 }

@@ -9,12 +9,10 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedMethod;
-import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexProto;
 import com.android.tools.r8.graph.DexType;
-import com.android.tools.r8.ir.code.ArrayGet;
 import com.android.tools.r8.ir.code.ArrayPut;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.Binop;
@@ -32,7 +30,6 @@ import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.InstructionIterator;
 import com.android.tools.r8.ir.code.InstructionListIterator;
 import com.android.tools.r8.ir.code.Invoke;
-import com.android.tools.r8.ir.code.InvokeDirect;
 import com.android.tools.r8.ir.code.InvokeMethod;
 import com.android.tools.r8.ir.code.InvokeVirtual;
 import com.android.tools.r8.ir.code.MemberType;
@@ -47,6 +44,7 @@ import com.android.tools.r8.ir.code.StaticPut;
 import com.android.tools.r8.ir.code.Switch;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.conversion.OptimizationFeedback;
+import com.android.tools.r8.ir.optimize.SwitchUtils.EnumSwitchInfo;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LongInterval;
 import com.google.common.base.Equivalence;
@@ -56,12 +54,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap;
-import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
-import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -371,8 +365,6 @@ public class CodeRewriter {
    *   ...
    * }
    * </pre></blockquote>
-   * See {@link #extractIndexMapFrom} and {@link #extractOrdinalsMapFor} for
-   * details of the companion class and ordinals computation.
    */
   public void removeSwitchMaps(IRCode code) {
     for (BasicBlock block : code.blocks) {
@@ -382,223 +374,43 @@ public class CodeRewriter {
         // Pattern match a switch on a switch map as input.
         if (insn.isSwitch()) {
           Switch switchInsn = insn.asSwitch();
-          Instruction input = switchInsn.inValues().get(0).definition;
-          if (input == null || !input.isArrayGet()) {
-            continue;
-          }
-          ArrayGet arrayGet = input.asArrayGet();
-          Instruction index = arrayGet.index().definition;
-          if (index == null || !index.isInvokeVirtual()) {
-            continue;
-          }
-          InvokeVirtual ordinalInvoke = index.asInvokeVirtual();
-          DexMethod ordinalMethod = ordinalInvoke.getInvokedMethod();
-          DexClass enumClass = appInfo.definitionFor(ordinalMethod.holder);
-          if (enumClass == null
-              || (!enumClass.accessFlags.isEnum() && enumClass.type != dexItemFactory.enumType)
-              || ordinalMethod.name != dexItemFactory.ordinalMethodName
-              || ordinalMethod.proto.returnType != dexItemFactory.intType
-              || !ordinalMethod.proto.parameters.isEmpty()) {
-            continue;
-          }
-          Instruction array = arrayGet.array().definition;
-          if (array == null || !array.isStaticGet()) {
-            continue;
-          }
-          StaticGet staticGet = array.asStaticGet();
-          if (staticGet.getField().name.toSourceString().startsWith("$SwitchMap$")) {
-            Int2ReferenceMap<DexField> indexMap = extractIndexMapFrom(staticGet.getField());
-            if (indexMap == null || indexMap.isEmpty()) {
-              continue;
+          EnumSwitchInfo info = SwitchUtils
+              .analyzeSwitchOverEnum(switchInsn, appInfo.withLiveness());
+          if (info != null) {
+            Int2IntMap targetMap = new Int2IntArrayMap();
+            IntList keys = new IntArrayList(switchInsn.numberOfKeys());
+            for (int i = 0; i < switchInsn.numberOfKeys(); i++) {
+              assert switchInsn.targetBlockIndices()[i] != switchInsn.getFallthroughBlockIndex();
+              int key = info.ordinalsMap.getInt(info.indexMap.get(switchInsn.getKey(i)));
+              keys.add(key);
+              targetMap.put(key, switchInsn.targetBlockIndices()[i]);
             }
-            // Due to member rebinding, only the fields are certain to provide the actual enums
-            // class.
-            DexType switchMapHolder = indexMap.values().iterator().next().getHolder();
-            Reference2IntMap<DexField> ordinalsMap = extractOrdinalsMapFor(switchMapHolder);
-            if (ordinalsMap != null) {
-              Int2IntMap targetMap = new Int2IntArrayMap();
-              IntList keys = new IntArrayList(switchInsn.numberOfKeys());
-              for (int i = 0; i < switchInsn.numberOfKeys(); i++) {
-                assert switchInsn.targetBlockIndices()[i] != switchInsn.getFallthroughBlockIndex();
-                int key = ordinalsMap.getInt(indexMap.get(switchInsn.getKey(i)));
-                keys.add(key);
-                targetMap.put(key, switchInsn.targetBlockIndices()[i]);
-              }
-              keys.sort(Comparator.naturalOrder());
-              int[] targets = new int[keys.size()];
-              for (int i = 0; i < keys.size(); i++) {
-                targets[i] = targetMap.get(keys.getInt(i));
-              }
+            keys.sort(Comparator.naturalOrder());
+            int[] targets = new int[keys.size()];
+            for (int i = 0; i < keys.size(); i++) {
+              targets[i] = targetMap.get(keys.getInt(i));
+            }
 
-              Switch newSwitch = new Switch(ordinalInvoke.outValue(), keys.toIntArray(),
-                  targets, switchInsn.getFallthroughBlockIndex());
-              // Replace the switch itself.
-              it.replaceCurrentInstruction(newSwitch);
-              // If the original input to the switch is now unused, remove it too. It is not dead
-              // as it might have side-effects but we ignore these here.
-              if (arrayGet.outValue().numberOfUsers() == 0) {
-                arrayGet.inValues().forEach(v -> v.removeUser(arrayGet));
-                arrayGet.getBlock().removeInstruction(arrayGet);
-              }
-              if (staticGet.outValue().numberOfUsers() == 0) {
-                assert staticGet.inValues().isEmpty();
-                staticGet.getBlock().removeInstruction(staticGet);
-              }
+            Switch newSwitch = new Switch(info.ordinalInvoke.outValue(), keys.toIntArray(),
+                targets, switchInsn.getFallthroughBlockIndex());
+            // Replace the switch itself.
+            it.replaceCurrentInstruction(newSwitch);
+            // If the original input to the switch is now unused, remove it too. It is not dead
+            // as it might have side-effects but we ignore these here.
+            Instruction arrayGet = info.arrayGet;
+            if (arrayGet.outValue().numberOfUsers() == 0) {
+              arrayGet.inValues().forEach(v -> v.removeUser(arrayGet));
+              arrayGet.getBlock().removeInstruction(arrayGet);
+            }
+            Instruction staticGet = info.staticGet;
+            if (staticGet.outValue().numberOfUsers() == 0) {
+              assert staticGet.inValues().isEmpty();
+              staticGet.getBlock().removeInstruction(staticGet);
             }
           }
         }
       }
     }
-  }
-
-
-  /**
-   * Extracts the mapping from ordinal values to switch case constants.
-   * <p>
-   * This is done by pattern-matching on the class initializer of the synthetic switch map class.
-   * For a switch
-   *
-   * <blockquote><pre>
-   * switch (day) {
-   *   case WEDNESDAY:
-   *   case FRIDAY:
-   *     System.out.println("3 or 5");
-   *     break;
-   *   case SUNDAY:
-   *     System.out.println("7");
-   *     break;
-   *   default:
-   *     System.out.println("other");
-   * }
-   * </pre></blockquote>
-   *
-   * the generated companing class initializer will have the form
-   *
-   * <blockquote><pre>
-   * class Switches$1 {
-   *   static {
-   *   $SwitchMap$switchmaps$Days[Days.WEDNESDAY.ordinal()] = 1;
-   *   $SwitchMap$switchmaps$Days[Days.FRIDAY.ordinal()] = 2;
-   *   $SwitchMap$switchmaps$Days[Days.SUNDAY.ordinal()] = 3;
-   * }
-   * </pre></blockquote>
-   *
-   * Note that one map per class is generated, so the map might contain additional entries as used
-   * by other switches in the class.
-   */
-  private Int2ReferenceMap<DexField> extractIndexMapFrom(DexField field) {
-    DexClass clazz = appInfo.definitionFor(field.getHolder());
-    if (!clazz.accessFlags.isSynthetic()) {
-      return null;
-    }
-    DexEncodedMethod initializer = clazz.getClassInitializer();
-    if (initializer == null || initializer.getCode() == null) {
-      return null;
-    }
-    IRCode code = initializer.getCode().buildIR(initializer, new InternalOptions());
-    Int2ReferenceMap<DexField> switchMap = new Int2ReferenceArrayMap<>();
-    for (BasicBlock block : code.blocks) {
-      InstructionListIterator it = block.listIterator();
-      Instruction insn = it.nextUntil(i -> i.isStaticGet() && i.asStaticGet().getField() == field);
-      if (insn == null) {
-        continue;
-      }
-      for (Instruction use : insn.outValue().uniqueUsers()) {
-        if (use.isArrayPut()) {
-          Instruction index = use.asArrayPut().source().definition;
-          if (index == null || !index.isConstNumber()) {
-            return null;
-          }
-          int integerIndex = index.asConstNumber().getIntValue();
-          Instruction value = use.asArrayPut().index().definition;
-          if (value == null || !value.isInvokeVirtual()) {
-            return null;
-          }
-          InvokeVirtual invoke = value.asInvokeVirtual();
-          DexClass holder = appInfo.definitionFor(invoke.getInvokedMethod().holder);
-          if (holder == null ||
-              (!holder.accessFlags.isEnum() && holder.type != dexItemFactory.enumType)) {
-            return null;
-          }
-          Instruction enumGet = invoke.arguments().get(0).definition;
-          if (enumGet == null || !enumGet.isStaticGet()) {
-            return null;
-          }
-          DexField enumField = enumGet.asStaticGet().getField();
-          if (!appInfo.definitionFor(enumField.getHolder()).accessFlags.isEnum()) {
-            return null;
-          }
-          if (switchMap.put(integerIndex, enumField) != null) {
-            return null;
-          }
-        } else {
-          return null;
-        }
-      }
-    }
-    return switchMap;
-  }
-
-  /**
-   * Extracts the ordinal values for an Enum class from the classes static initializer.
-   * <p>
-   * An Enum class has a field for each value. In the class initializer, each field is initialized
-   * to a singleton object that represents the value. This code matches on the corresponding call
-   * to the constructor (instance initializer) and extracts the value of the second argument, which
-   * is the ordinal.
-   */
-  private Reference2IntMap<DexField> extractOrdinalsMapFor(DexType enumClass) {
-    DexClass clazz = appInfo.definitionFor(enumClass);
-    if (clazz == null || clazz.isLibraryClass()) {
-      // We have to keep binary compatibility in tact for libraries.
-      return null;
-    }
-    DexEncodedMethod initializer = clazz.getClassInitializer();
-    if (!clazz.accessFlags.isEnum() || initializer == null || initializer.getCode() == null) {
-      return null;
-    }
-    if (initializer.getCode().isDexCode()) {
-      // If the initializer have been optimized we cannot extract the ordinals map reliably.
-      return null;
-    }
-    IRCode code = initializer.getCode().buildIR(initializer, new InternalOptions());
-    Reference2IntMap<DexField> ordinalsMap = new Reference2IntArrayMap<>();
-    ordinalsMap.defaultReturnValue(-1);
-    InstructionIterator it = code.instructionIterator();
-    while (it.hasNext()) {
-      Instruction insn = it.next();
-      if (!insn.isStaticPut()) {
-        continue;
-      }
-      StaticPut staticPut = insn.asStaticPut();
-      if (staticPut.getField().type != enumClass) {
-        continue;
-      }
-      Instruction newInstance = staticPut.inValue().definition;
-      if (newInstance == null || !newInstance.isNewInstance()) {
-        continue;
-      }
-      Instruction ordinal = null;
-      for (Instruction ctorCall : newInstance.outValue().uniqueUsers()) {
-        if (!ctorCall.isInvokeDirect()) {
-          continue;
-        }
-        InvokeDirect invoke = ctorCall.asInvokeDirect();
-        if (!dexItemFactory.isConstructor(invoke.getInvokedMethod())
-            || invoke.arguments().size() < 3) {
-          continue;
-        }
-        ordinal = invoke.arguments().get(2).definition;
-        break;
-      }
-      if (ordinal == null || !ordinal.isConstNumber()) {
-        return null;
-      }
-      if (ordinalsMap.put(staticPut.getField(), ordinal.asConstNumber().getIntValue()) != -1) {
-        return null;
-      }
-    }
-    return ordinalsMap;
   }
 
   /**
@@ -1287,7 +1099,7 @@ public class CodeRewriter {
           }
         }
         assert theIf == block.exit();
-        replaceLastInstruction(block, new Goto());
+        block.replaceLastInstruction(new Goto());
         assert block.exit().isGoto();
         assert block.exit().asGoto().getTarget() == target;
       }
@@ -1310,7 +1122,7 @@ public class CodeRewriter {
         int left = leftValue.getConstInstruction().asConstNumber().getIntValue();
         if (left == 0) {
           If ifz = new If(theIf.getType().forSwappedOperands(), rightValue);
-          replaceLastInstruction(block, ifz);
+          block.replaceLastInstruction(ifz);
           assert block.exit() == ifz;
         }
       } else {
@@ -1318,17 +1130,11 @@ public class CodeRewriter {
         int right = rightValue.getConstInstruction().asConstNumber().getIntValue();
         if (right == 0) {
           If ifz = new If(theIf.getType(), leftValue);
-          replaceLastInstruction(block, ifz);
+          block.replaceLastInstruction(ifz);
           assert block.exit() == ifz;
         }
       }
     }
-  }
-
-  private void replaceLastInstruction(BasicBlock block, Instruction instruction) {
-    InstructionListIterator iterator = block.listIterator(block.getInstructions().size());
-    iterator.previous();
-    iterator.replaceCurrentInstruction(instruction);
   }
 
   public void rewriteLongCompareAndRequireNonNull(IRCode code, InternalOptions options) {

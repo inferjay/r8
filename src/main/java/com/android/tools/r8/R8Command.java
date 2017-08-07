@@ -87,6 +87,7 @@ public class R8Command extends BaseCommand {
       minimalMainDex = value;
       return self();
     }
+
     /**
      * Add proguard configuration file resources.
      */

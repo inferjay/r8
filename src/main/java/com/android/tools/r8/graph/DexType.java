@@ -139,6 +139,11 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
 
   private boolean isSubtypeOfClass(DexType other, AppInfo appInfo) {
     DexType self = this;
+    if (other.hierarchyLevel == UNKNOWN_LEVEL) {
+      // We have no definition for this class, hence it is not part of the
+      // hierarchy.
+      return false;
+    }
     while (other.hierarchyLevel < self.hierarchyLevel) {
       DexClass holder = appInfo.definitionFor(self);
       assert holder != null && !holder.isInterface();

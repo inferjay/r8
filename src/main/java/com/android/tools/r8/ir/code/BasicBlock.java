@@ -44,6 +44,12 @@ public class BasicBlock {
     return localsAtEntry;
   }
 
+  public void replaceLastInstruction(Instruction instruction) {
+    InstructionListIterator iterator = listIterator(getInstructions().size());
+    iterator.previous();
+    iterator.replaceCurrentInstruction(instruction);
+  }
+
   public enum ThrowingInfo {
     NO_THROW, CAN_THROW
   }

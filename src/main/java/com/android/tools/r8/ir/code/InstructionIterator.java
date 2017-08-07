@@ -4,9 +4,7 @@
 
 package com.android.tools.r8.ir.code;
 
-import java.util.Iterator;
-
-public interface InstructionIterator extends Iterator<Instruction> {
+public interface InstructionIterator extends NextUntilIterator<Instruction> {
   /**
    * Replace the current instruction (aka the {@link Instruction} returned by the previous call to
    * {@link #next} with the passed in <code>newInstruction</code>.

@@ -32,6 +32,7 @@ import com.android.tools.r8.ir.optimize.PeepholeOptimizer;
 import com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.android.tools.r8.logging.Log;
+import com.android.tools.r8.shaking.protolite.ProtoLitePruner;
 import com.android.tools.r8.utils.CfgPrinter;
 import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
@@ -64,9 +65,10 @@ public class IRConverter {
   private final MemberValuePropagation memberValuePropagation;
   private final LensCodeRewriter lensCodeRewriter;
   private final Inliner inliner;
+  private final ProtoLitePruner protoLiteRewriter;
   private CallGraph callGraph;
-  private OptimizationFeedback ignoreOptimizationFeedback = new OptimizationFeedbackIgnore();
 
+  private OptimizationFeedback ignoreOptimizationFeedback = new OptimizationFeedbackIgnore();
   private DexString highestSortingString;
 
   private IRConverter(
@@ -94,16 +96,22 @@ public class IRConverter {
         (enableDesugaring && enableInterfaceMethodDesugaring())
             ? new InterfaceMethodRewriter(this) : null;
     if (enableWholeProgramOptimizations) {
-      assert appInfo.withSubtyping() != null;
+      assert appInfo.hasSubtyping();
       this.inliner = new Inliner(appInfo.withSubtyping(), graphLense, options);
       this.outliner = new Outliner(appInfo, options);
       this.memberValuePropagation = new MemberValuePropagation(appInfo);
       this.lensCodeRewriter = new LensCodeRewriter(graphLense, appInfo.withSubtyping());
+      if (appInfo.hasLiveness()) {
+        this.protoLiteRewriter = new ProtoLitePruner(appInfo.withLiveness());
+      } else {
+        this.protoLiteRewriter = null;
+      }
     } else {
       this.inliner = null;
       this.outliner = null;
       this.memberValuePropagation = null;
       this.lensCodeRewriter = null;
+      this.protoLiteRewriter = null;
     }
   }
 
@@ -427,15 +435,20 @@ public class IRConverter {
     printC1VisualizerHeader(method);
     printMethod(code, "Initial IR (SSA)");
 
-    if (lensCodeRewriter != null) {
-      lensCodeRewriter.rewrite(code, method);
-    } else {
-      assert graphLense.isIdentityLense();
+    if (!method.isProcessed()) {
+      if (protoLiteRewriter != null && protoLiteRewriter.appliesTo(method)) {
+        protoLiteRewriter.rewriteProtoLiteSpecialMethod(code, method);
+      }
+      if (lensCodeRewriter != null) {
+        lensCodeRewriter.rewrite(code, method);
+      } else {
+        assert graphLense.isIdentityLense();
+      }
     }
     if (memberValuePropagation != null) {
       memberValuePropagation.rewriteWithConstantValues(code);
     }
-    if (options.removeSwitchMaps) {
+    if (options.removeSwitchMaps && appInfo.hasLiveness()) {
       // TODO(zerny): Should we support removeSwitchMaps in debug mode? b/62936642
       assert !options.debug;
       codeRewriter.removeSwitchMaps(code);

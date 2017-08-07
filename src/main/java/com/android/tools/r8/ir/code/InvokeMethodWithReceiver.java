@@ -34,6 +34,9 @@ public abstract class InvokeMethodWithReceiver extends InvokeMethod {
     return this;
   }
 
+  public Value getReceiver() {
+    return inValues.get(0);
+  }
 
   @Override
   public final InlineAction computeInlining(InliningOracle decider) {

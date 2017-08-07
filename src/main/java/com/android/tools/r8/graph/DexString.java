@@ -321,4 +321,28 @@ public class DexString extends IndexedDexItem implements PresortedComparable<Dex
     builder.append("]");
     return builder.toString();
   }
+
+  public boolean beginsWith(DexString prefix) {
+    if (content.length < prefix.content.length) {
+      return false;
+    }
+    for (int i = 0; i < prefix.content.length - 1; i++) {
+      if (content[i] != prefix.content[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public boolean endsWith(DexString suffix) {
+    if (content.length < suffix.content.length) {
+      return false;
+    }
+    for (int i = content.length - suffix.content.length, j = 0; i < content.length; i++, j++) {
+      if (content[i] != suffix.content[j]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

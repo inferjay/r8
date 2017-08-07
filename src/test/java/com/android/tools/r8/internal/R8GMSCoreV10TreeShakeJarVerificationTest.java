@@ -20,7 +20,6 @@ public class R8GMSCoreV10TreeShakeJarVerificationTest
 
   private void configureDeterministic(InternalOptions options) {
     options.skipMinification = true;
-    options.removeSwitchMaps = false;
   }
 
   @Test

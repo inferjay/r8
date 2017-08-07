@@ -9,16 +9,11 @@ import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8RunArtTestsTest.CompilerUnderTest;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
-import com.android.tools.r8.utils.InternalOptions;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 public class R8GMSCoreV10DeployJarVerificationTest extends GMSCoreDeployJarVerificationTest {
-
-  private void configureDeterministic(InternalOptions options) {
-    options.removeSwitchMaps = false;
-  }
 
   @Test
   public void buildFromDeployJar()
@@ -26,10 +21,10 @@ public class R8GMSCoreV10DeployJarVerificationTest extends GMSCoreDeployJarVerif
       throws ExecutionException, IOException, ProguardRuleParserException, CompilationException {
     AndroidApp app1 = buildFromDeployJar(
         CompilerUnderTest.R8, CompilationMode.RELEASE,
-        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false, this::configureDeterministic);
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
     AndroidApp app2 = buildFromDeployJar(
         CompilerUnderTest.R8, CompilationMode.RELEASE,
-        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false, this::configureDeterministic);
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
 
     // Verify that the result of the two compilations was the same.
     assertIdenticalApplications(app1, app2);
