@@ -752,7 +752,10 @@ public abstract class R8RunArtTestsTest {
       "122-npe",
 
       // Calls some internal art methods that cannot tolerate inlining.
-      "466-get-live-vreg"
+      "466-get-live-vreg",
+
+      // Requires a certain call pattern to surface an Art bug.
+      "534-checker-bce-deoptimization"
   );
 
   private static List<String> failuresToTriage = ImmutableList.of(
