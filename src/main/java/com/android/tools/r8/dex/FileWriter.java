@@ -5,8 +5,6 @@ package com.android.tools.r8.dex;
 
 import static com.android.tools.r8.utils.LebUtils.sizeAsUleb128;
 
-import com.google.common.collect.Sets;
-
 import com.android.tools.r8.code.Instruction;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.AppInfo;
@@ -51,12 +49,11 @@ import com.android.tools.r8.naming.MemberNaming.Signature;
 import com.android.tools.r8.naming.NamingLens;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LebUtils;
-
+import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntMap;
-
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -297,7 +294,7 @@ public class FileWriter {
       }
 
     } else {
-      if (method.accessFlags.isConstructor()) {
+      if (method.isInstanceInitializer()) {
         throw new CompilationError(
             "Interface must not have constructors: " + method.method.toSourceString());
       }

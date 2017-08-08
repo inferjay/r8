@@ -148,7 +148,6 @@ public class DexProgramClass extends DexClass implements Supplier<DexProgramClas
   public void addStaticMethod(DexEncodedMethod staticMethod) {
     assert staticMethod.accessFlags.isStatic();
     assert !staticMethod.accessFlags.isPrivate();
-    assert !staticMethod.accessFlags.isConstructor();
     directMethods = Arrays.copyOf(directMethods, directMethods.length + 1);
     directMethods[directMethods.length - 1] = staticMethod;
   }

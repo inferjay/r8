@@ -379,7 +379,7 @@ public class SimpleClassMerger {
 
     private DexEncodedMethod renameConstructors(DexEncodedMethod method) {
       // Only rename instance initializers.
-      if (!method.accessFlags.isConstructor() || method.accessFlags.isStatic()) {
+      if (!method.isInstanceInitializer()) {
         return method;
       }
       DexType holder = method.method.holder;
