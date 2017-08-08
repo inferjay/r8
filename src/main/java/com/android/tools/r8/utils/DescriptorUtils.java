@@ -148,6 +148,15 @@ public class DescriptorUtils {
     return classDescriptor.substring(1, classDescriptor.length() - 1);
   }
 
+  /**
+   * Convert package name to a binary name.
+   *
+   * @param packageName a package name i.e., "java.lang"
+   * @return java pacakge name in a binary name format, i.e., java/lang
+   */
+  public static String getPackageBinaryNameFromJavaType(String packageName) {
+    return packageName.replace(JAVA_PACKAGE_SEPARATOR, DESCRIPTOR_PACKAGE_SEPARATOR);
+  }
 
   /**
    * Convert a class binary name to a descriptor.

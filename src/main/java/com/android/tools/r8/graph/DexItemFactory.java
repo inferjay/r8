@@ -87,6 +87,7 @@ public class DexItemFactory {
   public final DexString assertionsDisabled = createString("$assertionsDisabled");
 
   public final DexString stringDescriptor = createString("Ljava/lang/String;");
+  public final DexString stringArrayDescriptor = createString("[Ljava/lang/String;");
   public final DexString objectDescriptor = createString("Ljava/lang/Object;");
   public final DexString classDescriptor = createString("Ljava/lang/Class;");
   public final DexString enumDescriptor = createString("Ljava/lang/Enum;");
@@ -124,6 +125,7 @@ public class DexItemFactory {
   public final DexType boxedNumberType = createType(boxedNumberDescriptor);
 
   public final DexType stringType = createType(stringDescriptor);
+  public final DexType stringArrayType = createType(stringArrayDescriptor);
   public final DexType objectType = createType(objectDescriptor);
   public final DexType enumType = createType(enumDescriptor);
   public final DexType annotationType = createType(annotationDescriptor);
