@@ -4850,7 +4850,7 @@ public class JctfTestSpecifications {
     if (testMatch(failuresToTriage, name, compilerUnderTest, dexVm, compilationMode)) {
       outcome = Outcome.FAILS_WITH_ART;
     }
-    if (testMatch(requiresInliningDisabled, name, compilerUnderTest, dexVm, compilationMode)) {
+    if (testMatch(timeoutsWithArt, name, compilerUnderTest, dexVm, compilationMode)) {
       assert outcome == null;
       outcome = Outcome.TIMEOUTS_WITH_ART;
     }
