@@ -252,12 +252,13 @@ public class Inliner {
     // Before that method invokes another instance initialization method of myClass or its direct
     // superclass on this, the only operation the method can perform on this is assigning fields
     // declared within myClass.
-    //
 
     // Allow inlining a constructor into a constructor of the same class, as the constructor code
     // is expected to adhere to the VM specification.
-    if (method.accessFlags.isConstructor()
-        && method.method.holder == invoke.getInvokedMethod().holder) {
+    DexType methodHolder = method.method.holder;
+    boolean methodIsConstructor =
+        method.accessFlags.isConstructor() && !method.accessFlags.isStatic();
+    if (methodIsConstructor && methodHolder == invoke.asInvokeMethod().getInvokedMethod().holder) {
       return true;
     }
 
@@ -265,6 +266,8 @@ public class Inliner {
     // un-initialized object is not an argument of an invoke of <init>.
     // Also, we cannot inline a constructor if it initializes final fields, as such is only allowed
     // from within a constructor of the corresponding class.
+    // Lastly, we can only inline a constructor, if its own <init> call is on the method's class. If
+    // we inline into a constructor, calls to super.<init> are also OK.
     InstructionIterator iterator = code.instructionIterator();
     Instruction instruction = iterator.next();
     // A constructor always has the un-initialized object as the first argument.
@@ -277,12 +280,23 @@ public class Inliner {
         if (instruction.isInvokeDirect() && !seenSuperInvoke) {
           DexMethod target = instruction.asInvokeDirect().getInvokedMethod();
           seenSuperInvoke = appInfo.dexItemFactory.isConstructor(target);
+          if (seenSuperInvoke
+              // Calls to init on same class are always OK.
+              && target.holder != methodHolder
+              // If we are inlining into a constructor, calls to superclass init are OK.
+              && (!methodHolder.isImmediateSubtypeOf(target.holder) || !methodIsConstructor)) {
+            return false;
+          }
         }
         if (!seenSuperInvoke) {
           return false;
         }
       }
       if (instruction.isInstancePut()) {
+        // Fields may not be initialized outside of a constructor.
+        if (!methodIsConstructor) {
+          return false;
+        }
         DexField field = instruction.asInstancePut().getField();
         DexEncodedField target = appInfo.lookupInstanceTarget(field.getHolder(), field);
         if (target != null && target.accessFlags.isFinal()) {
