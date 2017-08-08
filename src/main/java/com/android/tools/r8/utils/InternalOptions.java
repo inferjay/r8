@@ -84,6 +84,7 @@ public class InternalOptions {
   public boolean allowParameterName = false;
 
   public boolean debug = false;
+  public boolean singleStepDebug = false;
   public final TestingOptions testing = new TestingOptions();
 
   // TODO(zerny): These stateful dictionaries do not belong here.

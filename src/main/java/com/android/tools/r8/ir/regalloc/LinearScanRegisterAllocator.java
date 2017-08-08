@@ -432,6 +432,17 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
       ListIterator<Instruction> instructionIterator,
       Int2ReferenceMap<DebugLocalInfo> initialLocals,
       Int2ReferenceMap<DebugLocalInfo> finalLocals) {
+    if (!options.singleStepDebug) {
+      while (instructionIterator.hasNext()) {
+        if (instructionIterator.next().getNumber() != -1) {
+          break;
+        }
+      }
+      return Int2ReferenceMaps.emptyMap();
+    }
+    // TODO(zerny): Investigate supporting accurate single stepping through spill instructions.
+    // The current code should preferably be updated to account for moving locals and not just
+    // end their scope.
     int spillCount;
     int firstClobberedMove = -1;
     Int2ReferenceMap<DebugLocalInfo> clobberedLocals = Int2ReferenceMaps.emptyMap();

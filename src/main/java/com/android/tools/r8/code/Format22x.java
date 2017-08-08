@@ -46,11 +46,11 @@ abstract class Format22x extends Base2Format {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", v" + BBBB);
+    return formatString("v" + AA + ", v" + (int)BBBB);
   }
 
   public String toSmaliString(ClassNameMapper naming) {
-    return formatSmaliString("v" + AA + ", v" + BBBB);
+    return formatSmaliString("v" + AA + ", v" + (int)BBBB);
   }
 
   @Override
