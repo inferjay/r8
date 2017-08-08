@@ -81,6 +81,9 @@ final class LambdaClass {
         : factory.createMethod(lambdaClassType, constructorProto, rewriter.classConstructorName);
     this.instanceField = !stateless ? null
         : factory.createField(lambdaClassType, lambdaClassType, rewriter.instanceFieldName);
+
+    // We have to register this new class as a subtype of object.
+    factory.objectType.addDirectSubtype(type);
   }
 
   // Generate unique lambda class type for lambda descriptor and instantiation point context.

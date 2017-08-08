@@ -74,6 +74,8 @@ public class PrintUsageTest {
             .addLibraryFiles(Paths.get(ANDROID_JAR))
             .build();
     ToolHelper.runR8(command, options -> {
+      // Disable inlining to make this test not depend on inlining decisions.
+      options.inlineAccessors = false;
       options.printUsage = true;
       options.printUsageFile = out.resolve(test + PRINT_USAGE_FILE_SUFFIX);
     });
@@ -152,12 +154,11 @@ public class PrintUsageTest {
 
   private static void inspectShaking9(PrintUsageInspector inspector) {
     Optional<ClassSubject> superClass = inspector.clazz("shaking9.Superclass");
-    assertTrue(superClass.isPresent());
-    assertTrue(superClass.get().method("void", "<init>", Collections.emptyList()));
+    assertFalse(superClass.isPresent());
     Optional<ClassSubject> subClass = inspector.clazz("shaking9.Subclass");
     assertTrue(subClass.isPresent());
     assertTrue(subClass.get().method("void", "aMethod", Collections.emptyList()));
-    assertTrue(subClass.get().method("void", "<init>", Collections.emptyList()));
+    assertFalse(subClass.get().method("void", "<init>", Collections.emptyList()));
   }
 
   private static void inspectShaking12(PrintUsageInspector inspector) {
