@@ -113,7 +113,7 @@ public class TreePruner {
   }
 
   private boolean isDefaultConstructor(DexEncodedMethod method) {
-    return method.accessFlags.isConstructor() && !method.accessFlags.isStatic()
+    return method.isInstanceInitializer()
         && method.method.proto.parameters.isEmpty();
   }
 

@@ -98,22 +98,21 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     return compilationState != CompilationState.NOT_PROCESSED;
   }
 
-  public boolean cannotInline() {
-    return compilationState == CompilationState.NOT_PROCESSED
-        || compilationState == CompilationState.PROCESSED_NOT_INLINING_CANDIDATE;
+  public boolean isInstanceInitializer() {
+    return accessFlags.isConstructor() && !accessFlags.isStatic();
+  }
+
+  public boolean isClassInitializer() {
+    return accessFlags.isConstructor() && accessFlags.isStatic();
   }
 
   public boolean isInliningCandidate(DexEncodedMethod container, boolean alwaysInline,
       AppInfoWithSubtyping appInfo) {
-    if (container.accessFlags.isStatic() && container.accessFlags.isConstructor()) {
+    if (isClassInitializer()) {
       // This will probably never happen but never inline a class initializer.
       return false;
     }
     if (alwaysInline) {
-      // Only inline constructor iff holder classes are equal.
-      if (!accessFlags.isStatic() && accessFlags.isConstructor()) {
-        return container.method.getHolder() == method.getHolder();
-      }
       return true;
     }
     switch (compilationState) {
@@ -307,10 +306,10 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
             itemFactory.stringType),
             itemFactory.constructorMethodName);
     DexCode code;
-    if (accessFlags.isConstructor() && !accessFlags.isStatic()) {
+    if (isInstanceInitializer()) {
       // The Java VM Spec requires that a constructor calls an initializer from the super class
       // or another constructor from the current class. For simplicity we do the latter by just
-      // calling outself. This is ok, as the constructor always throws before the recursive call.
+      // calling ourself. This is ok, as the constructor always throws before the recursive call.
       code = generateCodeFromTemplate(3, 2, new ConstStringJumbo(0, tag),
           new ConstStringJumbo(1, message),
           new InvokeStatic(2, logMethod, 0, 1, 0, 0, 0),

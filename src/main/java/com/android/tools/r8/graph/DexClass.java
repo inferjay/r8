@@ -175,12 +175,8 @@ public abstract class DexClass extends DexItem {
   }
 
   public DexEncodedMethod getClassInitializer() {
-    for (DexEncodedMethod method : directMethods()) {
-      if (method.accessFlags.isConstructor() && method.accessFlags.isStatic()) {
-        return method;
-      }
-    }
-    return null;
+    return Arrays.stream(directMethods()).filter(DexEncodedMethod::isClassInitializer).findAny()
+        .orElse(null);
   }
 
   public Resource.Kind getOrigin() {

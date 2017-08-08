@@ -256,8 +256,7 @@ public class Inliner {
     // Allow inlining a constructor into a constructor of the same class, as the constructor code
     // is expected to adhere to the VM specification.
     DexType methodHolder = method.method.holder;
-    boolean methodIsConstructor =
-        method.accessFlags.isConstructor() && !method.accessFlags.isStatic();
+    boolean methodIsConstructor = method.isInstanceInitializer();
     if (methodIsConstructor && methodHolder == invoke.asInvokeMethod().getInvokedMethod().holder) {
       return true;
     }
@@ -370,8 +369,8 @@ public class Inliner {
                 performInlining(target, inlinee, callGraph);
               }
               // Make sure constructor inlining is legal.
-              if (target.accessFlags.isConstructor()
-                  && !target.accessFlags.isStatic()
+              assert !target.isClassInitializer();
+              if (target.isInstanceInitializer()
                   && !legalConstructorInline(method, invoke, inlinee)) {
                 continue;
               }

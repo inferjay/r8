@@ -200,7 +200,7 @@ public class ProguardMemberRule {
   public boolean matches(DexEncodedMethod method, RootSetBuilder builder) {
     switch (getRuleType()) {
       case ALL_METHODS:
-        if (method.accessFlags.isConstructor() && method.accessFlags.isStatic()) {
+        if (method.isClassInitializer()) {
           break;
         }
       case ALL:
