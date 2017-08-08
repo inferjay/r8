@@ -453,4 +453,9 @@ public class DexType extends IndexedDexItem implements PresortedComparable<DexTy
     }
     return getPackageOrName(false);
   }
+
+  public boolean isImmediateSubtypeOf(DexType type) {
+    assert hierarchyLevel != UNKNOWN_LEVEL;
+    return type.directSubtypes.contains(this);
+  }
 }

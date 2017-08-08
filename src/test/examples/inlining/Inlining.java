@@ -52,13 +52,38 @@ class InlineConstructor {
     this.a = a;
   }
 
-  @CheckDiscarded
   InlineConstructor(long a) {
     this((int) a);
   }
 
+  InlineConstructor(int a, int loopy) {
+    this.a = a;
+    // Make this too big to inline.
+    if (loopy > 10) {
+      throw new RuntimeException("Too big!");
+    }
+    for (int i = 1; i < loopy; i++) {
+      this.a = this.a * i;
+    }
+  }
+
+  @CheckDiscarded
+  InlineConstructor() {
+    this(42, 9);
+  }
+
   static InlineConstructor create() {
     return new InlineConstructor(10L);
+  }
+
+  static InlineConstructor createMore() {
+    new InlineConstructor(0, 0);
+    new InlineConstructor(0, 0);
+    new InlineConstructor(0, 0);
+    new InlineConstructor(0, 0);
+    new InlineConstructor(0, 0);
+    new InlineConstructor(0, 0);
+    return new InlineConstructor();
   }
 }
 
@@ -152,6 +177,8 @@ public class Inlining {
 
     InlineConstructor ic = InlineConstructor.create();
     Assert(ic != null);
+    InlineConstructor ic2 = InlineConstructor.createMore();
+    Assert(ic2 != null);
     InlineConstructorOfInner icoi = new InlineConstructorOfInner();
     Assert(icoi != null);
 
