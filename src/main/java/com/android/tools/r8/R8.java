@@ -432,7 +432,7 @@ public class R8 {
         outputApp.writeProguardSeeds(closer, seedsOut);
       }
     }
-    if (options.printMainDexList && outputApp.hasMainDexList()) {
+    if (outputApp.hasMainDexListOutput()) {
       try (Closer closer = Closer.create()) {
         OutputStream mainDexOut =
             FileUtils.openPathWithDefault(

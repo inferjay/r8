@@ -52,7 +52,9 @@ public class AndroidApp {
   private final Resource proguardMap;
   private final Resource proguardSeeds;
   private final Resource packageDistribution;
-  private final Resource mainDexList;
+  private final List<Resource> mainDexListResources;
+  private final List<String> mainDexClasses;
+  private final Resource mainDexListOutput;
 
   // See factory methods and AndroidApp.Builder below.
   private AndroidApp(
@@ -64,7 +66,9 @@ public class AndroidApp {
       Resource proguardMap,
       Resource proguardSeeds,
       Resource packageDistribution,
-      Resource mainDexList) {
+      List<Resource> mainDexListResources,
+      List<String> mainDexClasses,
+      Resource mainDexListOutput) {
     this.programResources = programResources;
     this.programFileArchiveReaders = programFileArchiveReaders;
     this.classpathResourceProviders = classpathResourceProviders;
@@ -73,7 +77,9 @@ public class AndroidApp {
     this.proguardMap = proguardMap;
     this.proguardSeeds = proguardSeeds;
     this.packageDistribution = packageDistribution;
-    this.mainDexList = mainDexList;
+    this.mainDexListResources = mainDexListResources;
+    this.mainDexClasses = mainDexClasses;
+    this.mainDexListOutput = mainDexListOutput;
   }
 
   /**
@@ -242,14 +248,35 @@ public class AndroidApp {
    * True if the main dex list resource exists.
    */
   public boolean hasMainDexList() {
-    return mainDexList != null;
+    return !mainDexListResources.isEmpty();
   }
 
   /**
-   * Get the input stream of the main dex list resource if it exists.
+   * Get the main dex list resources if any.
    */
-  public InputStream getMainDexList(Closer closer) throws IOException {
-    return mainDexList == null ? null : closer.register(mainDexList.getStream());
+  public List<Resource> getMainDexListResources() {
+    return mainDexListResources;
+  }
+
+  /**
+   * Get the main dex classes if any.
+   */
+  public List<String> getMainDexClasses() {
+    return mainDexClasses;
+  }
+
+  /**
+   * True if the main dex list resource exists.
+   */
+  public boolean hasMainDexListOutput() {
+    return mainDexListOutput != null;
+  }
+
+  /**
+   * Get the main dex list output resources if any.
+   */
+  public InputStream getMainDexListOutput(Closer closer) throws IOException {
+    return mainDexListOutput == null ? null : closer.register(mainDexListOutput.getStream());
   }
 
   /**
@@ -361,7 +388,7 @@ public class AndroidApp {
   }
 
   public void writeMainDexList(Closer closer, OutputStream out) throws IOException {
-    InputStream input = getMainDexList(closer);
+    InputStream input = getMainDexListOutput(closer);
     assert input != null;
     out.write(ByteStreams.toByteArray(input));
   }
@@ -385,7 +412,9 @@ public class AndroidApp {
     private Resource proguardMap;
     private Resource proguardSeeds;
     private Resource packageDistribution;
-    private Resource mainDexList;
+    private List<Resource> mainDexListResources = new ArrayList<>();
+    private List<String> mainDexListClasses = new ArrayList<>();
+    private Resource mainDexListOutput;
 
     // See AndroidApp::builder().
     private Builder() {
@@ -401,7 +430,9 @@ public class AndroidApp {
       proguardMap = app.proguardMap;
       proguardSeeds = app.proguardSeeds;
       packageDistribution = app.packageDistribution;
-      mainDexList = app.mainDexList;
+      mainDexListResources = app.mainDexListResources;
+      mainDexListClasses = app.mainDexClasses;
+      mainDexListOutput = app.mainDexListOutput;
     }
 
     /**
@@ -585,22 +616,49 @@ public class AndroidApp {
     }
 
     /**
-     * Set the main-dex list file.
+     * Add a main-dex list file.
      */
-    public Builder setMainDexListFile(Path file) {
-      mainDexList = file == null ? null : Resource.fromFile(null, file);
+    public Builder addMainDexListFiles(Path... files) throws IOException {
+      return addMainDexListFiles(Arrays.asList(files));
+    }
+
+    public Builder addMainDexListFiles(Collection<Path> files) throws IOException {
+      for (Path file : files) {
+        if (!Files.exists(file)) {
+          throw new FileNotFoundException("Non-existent input file: " + file);
+        }
+        // TODO(sgjesse): Should we just read the file here? This will sacrifice the parallelism
+        // in ApplicationReader where all input resources are read in parallel.
+        mainDexListResources.add(Resource.fromFile(null, file));
+      }
+      return this;
+    }
+
+
+    /**
+     * Add main-dex classes.
+     */
+    public Builder addMainDexClasses(String... classes) {
+      return addMainDexClasses(Arrays.asList(classes));
+    }
+
+    /**
+     * Add main-dex classes.
+     */
+    public Builder addMainDexClasses(Collection<String> classes) {
+      mainDexListClasses.addAll(classes);
       return this;
     }
 
     public boolean hasMainDexList() {
-      return mainDexList != null;
+      return !(mainDexListResources.isEmpty() && mainDexListClasses.isEmpty());
     }
 
     /**
-     * Set the main-dex list data.
+     * Set the main-dex list output data.
      */
-    public Builder setMainDexListData(byte[] content) {
-      mainDexList = content == null ? null : Resource.fromBytes(null, content);
+    public Builder setMainDexListOutputData(byte[] content) {
+      mainDexListOutput = content == null ? null : Resource.fromBytes(null, content);
       return this;
     }
 
@@ -617,7 +675,9 @@ public class AndroidApp {
           proguardMap,
           proguardSeeds,
           packageDistribution,
-          mainDexList);
+          mainDexListResources,
+          mainDexListClasses,
+          mainDexListOutput);
     }
 
     private void addProgramFile(Path file) throws IOException {

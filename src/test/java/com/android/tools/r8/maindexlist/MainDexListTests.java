@@ -5,6 +5,7 @@ package com.android.tools.r8.maindexlist;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -216,7 +217,9 @@ public class MainDexListTests extends TestBase {
     FileUtils.writeTextFile(mainDexList, list);
     Set<DexType> types = MainDexList.parse(mainDexList, factory);
     for (String entry : list) {
-      assertTrue(types.contains(factory.createType("L" + entry.replace(".class", "") + ";")));
+      DexType type = factory.createType("L" + entry.replace(".class", "") + ";");
+      assertTrue(types.contains(type));
+      assertSame(type, MainDexList.parse(entry, factory));
     }
   }
 
@@ -312,7 +315,7 @@ public class MainDexListTests extends TestBase {
           .addProgramFiles(input)
           .setOutputPath(out);
       if (mainLists.get(i) != null) {
-        builder.setMainDexListFile(mainLists.get(i));
+        builder.addMainDexListFiles(mainLists.get(i));
       }
       ToolHelper.runD8(builder.build());
     }
@@ -398,8 +401,16 @@ public class MainDexListTests extends TestBase {
     }
   }
 
+  private enum MultiDexTestMode {
+    SINGLE_FILE,
+    MULTIPLE_FILES,
+    STRINGS,
+    FILES_AND_STRINGS
+  }
+
   private void doVerifyMainDexContains(
-      List<String> mainDex, Path app, boolean singleDexApp, boolean minimalMainDex)
+      List<String> mainDex, Path app, boolean singleDexApp, boolean minimalMainDex,
+      MultiDexTestMode testMode)
       throws IOException, CompilationException, ExecutionException, ProguardRuleParserException {
     AndroidApp originalApp = AndroidApp.fromProgramFiles(app);
     DexInspector originalInspector = new DexInspector(originalApp);
@@ -408,18 +419,57 @@ public class MainDexListTests extends TestBase {
           originalInspector.clazz(clazz).isPresent());
     }
     Path outDir = temp.newFolder().toPath();
-    Path mainDexList = temp.newFile().toPath();
-    FileUtils.writeTextFile(mainDexList, ListUtils.map(mainDex, MainDexListTests::typeToEntry));
-    R8Command command =
+    R8Command.Builder builder =
         R8Command.builder()
             .addProgramFiles(app)
-            .setMainDexListFile(mainDexList)
             .setMinimalMainDex(minimalMainDex && mainDex.size() > 0)
             .setOutputPath(outDir)
             .setTreeShaking(false)
-            .setMinification(false)
-            .build();
-    ToolHelper.runR8(command);
+            .setMinification(false);
+
+    switch (testMode) {
+      case SINGLE_FILE:
+        Path mainDexList = temp.newFile().toPath();
+        FileUtils.writeTextFile(mainDexList, ListUtils.map(mainDex, MainDexListTests::typeToEntry));
+        builder.addMainDexListFiles(mainDexList);
+        break;
+      case MULTIPLE_FILES: {
+        // Partion the main dex list into several files.
+        List<List<String>> partitions = Lists.partition(mainDex, Math.max(mainDex.size() / 3, 1));
+        List<Path> mainDexListFiles = new ArrayList<>();
+        for (List<String> partition : partitions) {
+          Path partialMainDexList = temp.newFile().toPath();
+          FileUtils.writeTextFile(partialMainDexList,
+              ListUtils.map(partition, MainDexListTests::typeToEntry));
+          mainDexListFiles.add(partialMainDexList);
+        }
+        builder.addMainDexListFiles(mainDexListFiles);
+        break;
+      }
+      case STRINGS:
+        builder.addMainDexClasses(mainDex);
+        break;
+      case FILES_AND_STRINGS: {
+        // Partion the main dex list add some parts through files and the other parts using strings.
+        List<List<String>> partitions = Lists.partition(mainDex, Math.max(mainDex.size() / 3, 1));
+        List<Path> mainDexListFiles = new ArrayList<>();
+        for (int i = 0; i < partitions.size(); i++) {
+          List<String> partition = partitions.get(i);
+          if (i % 2 == 0) {
+            Path partialMainDexList = temp.newFile().toPath();
+            FileUtils.writeTextFile(partialMainDexList,
+                ListUtils.map(partition, MainDexListTests::typeToEntry));
+            mainDexListFiles.add(partialMainDexList);
+          } else {
+            builder.addMainDexClasses(mainDex);
+          }
+        }
+        builder.addMainDexListFiles(mainDexListFiles);
+        break;
+      }
+    }
+
+    ToolHelper.runR8(builder.build());
     if (!singleDexApp && !minimalMainDex) {
       assertTrue("Output run only produced one dex file.",
           1 < Files.list(outDir).filter(FileUtils::isDexFile).count());
@@ -438,8 +488,10 @@ public class MainDexListTests extends TestBase {
 
   private void verifyMainDexContains(List<String> mainDex, Path app, boolean singleDexApp)
       throws Throwable {
-    doVerifyMainDexContains(mainDex, app, singleDexApp, false);
-    doVerifyMainDexContains(mainDex, app, singleDexApp, true);
+    for (MultiDexTestMode multiDexTestMode : MultiDexTestMode.values()) {
+      doVerifyMainDexContains(mainDex, app, singleDexApp, false, multiDexTestMode);
+      doVerifyMainDexContains(mainDex, app, singleDexApp, true, multiDexTestMode);
+    }
   }
 
   public static AndroidApp generateApplication(List<String> classes, int minApi, int methodCount)

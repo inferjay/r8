@@ -16,6 +16,7 @@ import com.android.tools.r8.D8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ProcessResult;
 import com.google.common.collect.ImmutableList;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -157,32 +158,37 @@ public class D8CommandTest {
 
   @Test
   public void mainDexList() throws Throwable {
-    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
-    D8Command command = parse("--main-dex-list", mailDexList.toString());
+    Path mainDexList1 = temp.newFile("main-dex-list-1.txt").toPath();
+    Path mainDexList2 = temp.newFile("main-dex-list-2.txt").toPath();
+
+    D8Command command = parse("--main-dex-list", mainDexList1.toString());
+    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+
+    command = parse(
+        "--main-dex-list", mainDexList1.toString(), "--main-dex-list", mainDexList2.toString());
     assertTrue(ToolHelper.getApp(command).hasMainDexList());
   }
 
   @Test
-  public void multipleMainDexList() throws Throwable {
-    thrown.expect(CompilationException.class);
-    Path mailDexList1 = temp.getRoot().toPath().resolve("main-dex-list-1.txt");
-    Path mailDexList2 = temp.getRoot().toPath().resolve("main-dex-list-2.txt");
-    parse("--main-dex-list", mailDexList1.toString(), "--main-dex-list", mailDexList2.toString());
+  public void nonExistingMainDexList() throws Throwable {
+    thrown.expect(FileNotFoundException.class);
+    Path mainDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    parse("--main-dex-list", mainDexList.toString());
   }
 
   @Test
   public void mainDexListWithFilePerClass() throws Throwable {
     thrown.expect(CompilationException.class);
-    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
-    D8Command command = parse("--main-dex-list", mailDexList.toString(), "--file-per-class");
+    Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
+    D8Command command = parse("--main-dex-list", mainDexList.toString(), "--file-per-class");
     assertTrue(ToolHelper.getApp(command).hasMainDexList());
   }
 
   @Test
   public void mainDexListWithIntermediate() throws Throwable {
     thrown.expect(CompilationException.class);
-    Path mailDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
-    D8Command command = parse("--main-dex-list", mailDexList.toString(), "--intermediate");
+    Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
+    D8Command command = parse("--main-dex-list", mainDexList.toString(), "--intermediate");
     assertTrue(ToolHelper.getApp(command).hasMainDexList());
   }
 

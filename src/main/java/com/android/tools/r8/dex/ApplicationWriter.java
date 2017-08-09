@@ -186,7 +186,7 @@ public class ApplicationWriter {
       }
       byte[] mainDexList = writeMainDexList();
       if (mainDexList != null) {
-        builder.setMainDexListData(mainDexList);
+        builder.setMainDexListOutputData(mainDexList);
       }
       return builder.build();
     } finally {

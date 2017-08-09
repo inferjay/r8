@@ -29,6 +29,7 @@ import com.android.tools.r8.naming.ProguardMapReader;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.ClassProvider;
 import com.android.tools.r8.utils.ClasspathClassCollection;
+import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.LibraryClassCollection;
 import com.android.tools.r8.utils.MainDexList;
@@ -45,6 +46,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 public class ApplicationReader {
 
@@ -149,13 +151,20 @@ public class ApplicationReader {
     if (inputApp.hasMainDexList()) {
       futures.add(executorService.submit(() -> {
         try {
-          InputStream input = inputApp.getMainDexList(closer);
-          builder.addToMainDexList(MainDexList.parse(input, itemFactory));
+          for (Resource resource : inputApp.getMainDexListResources()) {
+            InputStream input = closer.register(resource.getStream());
+            builder.addToMainDexList(MainDexList.parse(input, itemFactory));
+          }
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
       }));
     }
+    builder.addToMainDexList(
+        inputApp.getMainDexClasses()
+            .stream()
+            .map(clazz -> itemFactory.createType(DescriptorUtils.javaTypeToDescriptor(clazz)))
+            .collect(Collectors.toList()));
   }
 
   private final class ClassReader {

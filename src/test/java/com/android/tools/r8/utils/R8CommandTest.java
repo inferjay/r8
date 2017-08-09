@@ -16,8 +16,10 @@ import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ProcessResult;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.google.common.collect.ImmutableList;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -90,8 +92,32 @@ public class R8CommandTest {
 
   @Test
   public void mainDexRules() throws Throwable {
-    Path mailDexRules = temp.newFile("main-dex.rules").toPath();
-    parse("--main-dex-rules", mailDexRules.toString());
+    Path mainDexRules1 = temp.newFile("main-dex-1.rules").toPath();
+    Path mainDexRules2 = temp.newFile("main-dex-2.rules").toPath();
+    parse("--main-dex-rules", mainDexRules1.toString());
+    parse("--main-dex-rules", mainDexRules1.toString(), "--main-dex-rules", mainDexRules2.toString());
+  }
+
+  @Test
+  public void nonExistingMainDexRules() throws Throwable {
+    thrown.expect(NoSuchFileException.class);
+    Path mainDexRules = temp.getRoot().toPath().resolve("main-dex.rules");
+    parse("--main-dex-rules", mainDexRules.toString());
+  }
+
+  @Test
+  public void mainDexList() throws Throwable {
+    Path mainDexList1 = temp.newFile("main-dex-list-1.txt").toPath();
+    Path mainDexList2 = temp.newFile("main-dex-list-2.txt").toPath();
+    parse("--main-dex-list", mainDexList1.toString());
+    parse("--main-dex-list", mainDexList1.toString(), "--main-dex-list", mainDexList2.toString());
+  }
+
+  @Test
+  public void nonExistingMainDexList() throws Throwable {
+    thrown.expect(FileNotFoundException.class);
+    Path mainDexList = temp.getRoot().toPath().resolve("main-dex-list.txt");
+    parse("--main-dex-list", mainDexList.toString());
   }
 
   @Test
@@ -101,9 +127,27 @@ public class R8CommandTest {
   }
 
   @Test
+  public void mainDexListOutput() throws Throwable {
+    Path mainDexRules = temp.newFile("main-dex.rules").toPath();
+    Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
+    Path mainDexListOutput = temp.newFile("main-dex-out.txt").toPath();
+    parse("--main-dex-rules", mainDexRules.toString(),
+        "--main-dex-list-output", mainDexListOutput.toString());
+    parse("--main-dex-list", mainDexList.toString(),
+        "--main-dex-list-output", mainDexListOutput.toString());
+  }
+
+  @Test
+  public void mainDexListOutputWithoutAnyMainDexSpecification() throws Throwable {
+    thrown.expect(CompilationException.class);
+    Path mainDexListOutput = temp.newFile("main-dex-out.txt").toPath();
+    parse("--main-dex-list-output", mainDexListOutput.toString());
+  }
+
+  @Test
   public void mainDexRulesWithMinimalMainDex() throws Throwable {
-    Path mailDexRules = temp.newFile("main-dex.rules").toPath();
-    parse("--main-dex-rules", mailDexRules.toString(), "--minimal-main-dex");
+    Path mainDexRules = temp.newFile("main-dex.rules").toPath();
+    parse("--main-dex-rules", mainDexRules.toString(), "--minimal-main-dex");
   }
 
   @Test

@@ -450,13 +450,15 @@ public class CompatDx {
     ExecutorService executor = ThreadUtils.getExecutorService(numberOfThreads);
     D8Output result;
     try {
-       result = D8.run(
-          D8Command.builder()
-              .addProgramFiles(inputs)
-              .setMode(mode)
-              .setMinApiLevel(dexArgs.minApiLevel)
-              .setMainDexListFile(mainDexList)
-              .build());
+      D8Command.Builder builder = D8Command.builder();
+      builder
+          .addProgramFiles(inputs)
+          .setMode(mode)
+          .setMinApiLevel(dexArgs.minApiLevel);
+      if (mainDexList != null) {
+        builder.addMainDexListFiles(mainDexList);
+      }
+      result = D8.run(builder.build());
     } finally {
       executor.shutdown();
     }
