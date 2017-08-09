@@ -61,7 +61,7 @@ public abstract class Instruction {
   }
 
   public void setOutValue(Value value) {
-    assert outValue == null || !outValue.hasUsersInfo() || outValue.numberOfAllUsers() == 0;
+    assert outValue == null || !outValue.hasUsersInfo() || !outValue.isUsed();
     outValue = value;
     if (outValue != null) {
       outValue.definition = this;

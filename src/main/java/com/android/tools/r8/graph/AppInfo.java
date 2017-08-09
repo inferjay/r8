@@ -331,6 +331,10 @@ public class AppInfo {
     return null;
   }
 
+  public void registerNewType(DexType newType, DexType superType) {
+    // We do not track subtyping relationships in the basic AppInfo. So do nothing.
+  }
+
   public List<DexClass> getSuperTypeClasses(DexType type) {
     List<DexClass> result = new ArrayList<>();
     do {

@@ -137,10 +137,10 @@ public class MemberValuePropagation {
         ProguardMemberRuleLookup lookup = lookupMemberRule(definition);
         if (lookup != null) {
           if (lookup.type == RuleType.ASSUME_NO_SIDE_EFFECTS
-              && (invoke.outValue() == null || invoke.outValue().numberOfAllUsers() == 0)) {
+              && (invoke.outValue() == null || !invoke.outValue().isUsed())) {
             iterator.remove();
             invokeReplaced = true;
-          } else {
+          } else if (invoke.outValue() != null && invoke.outValue().isUsed()) {
             // Check to see if a constant value can be assumed.
             Instruction replacement =
                 constantReplacementFromProguardRule(lookup.rule, code, invoke);

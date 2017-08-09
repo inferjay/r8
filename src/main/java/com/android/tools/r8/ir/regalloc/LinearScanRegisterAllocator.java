@@ -1955,7 +1955,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
           // For instructions that define values which have no use create a live range covering
           // the instruction. This will typically be instructions that can have side effects even
           // if their output is not used.
-          if (definition.numberOfAllUsers() == 0) {
+          if (!definition.isUsed()) {
             addLiveRange(definition, block, instruction.getNumber() + INSTRUCTION_NUMBER_DELTA);
           }
           live.remove(definition);

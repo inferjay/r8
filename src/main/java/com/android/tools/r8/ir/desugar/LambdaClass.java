@@ -83,9 +83,7 @@ final class LambdaClass {
         : factory.createField(lambdaClassType, lambdaClassType, rewriter.instanceFieldName);
 
     // We have to register this new class as a subtype of object.
-    if (rewriter.appInfo.hasSubtyping()) {
-      factory.objectType.addDirectSubtype(type);
-    }
+    rewriter.appInfo.registerNewType(type, factory.objectType);
   }
 
   // Generate unique lambda class type for lambda descriptor and instantiation point context.

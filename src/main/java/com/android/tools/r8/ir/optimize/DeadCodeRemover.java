@@ -105,7 +105,7 @@ public class DeadCodeRemover {
       // Remove unused invoke results.
       if (current.isInvoke()
           && current.outValue() != null
-          && current.outValue().numberOfAllUsers() == 0) {
+          && !current.outValue().isUsed()) {
         current.setOutValue(null);
       }
       // Never remove instructions that can have side effects, except for const-class.
