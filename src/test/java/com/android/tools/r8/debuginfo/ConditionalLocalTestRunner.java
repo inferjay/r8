@@ -29,13 +29,13 @@ public class ConditionalLocalTestRunner extends DebugInfoTestBase {
   private void checkConditonalLocal(DebugInfoInspector info) {
     String self = ConditionalLocalTest.class.getCanonicalName();
     String Integer = "java.lang.Integer";
-    info.checkStartLine(6);
-    info.checkLineHasExactLocals(6, "this", self, "x", "int");
-    info.checkLineHasExactLocals(7, "this", self, "x", "int");
-    info.checkLineHasExactLocals(8, "this", self, "x", "int", "obj", Integer);
-    info.checkLineHasExactLocals(9, "this", self, "x", "int", "obj", Integer, "l", "long");
-    info.checkLineHasExactLocals(10, "this", self, "x", "int", "obj", Integer, "l", "long");
-    info.checkNoLine(11);
-    info.checkLineHasExactLocals(12, "this", self, "x", "int");
+    info.checkStartLine(9);
+    info.checkLineHasExactLocals(9, "this", self, "x", "int");
+    info.checkLineHasExactLocals(10, "this", self, "x", "int");
+    info.checkLineHasExactLocals(11, "this", self, "x", "int", "obj", Integer);
+    info.checkLineHasExactLocals(12, "this", self, "x", "int", "obj", Integer, "l", "long");
+    info.checkLineHasExactLocals(13, "this", self, "x", "int", "obj", Integer, "l", "long");
+    info.checkNoLine(14);
+    info.checkLineHasExactLocals(15, "this", self, "x", "int");
   }
 }
