@@ -3,9 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.shaking;
 
-import com.google.common.base.Equivalence.Wrapper;
-import com.google.common.collect.Sets;
-
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexAnnotationSet;
@@ -24,9 +21,11 @@ import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.shaking.ProguardTypeMatcher.MatchSpecificType;
 import com.android.tools.r8.utils.MethodSignatureEquivalence;
 import com.android.tools.r8.utils.ThreadUtils;
-
+import com.google.common.base.Equivalence.Wrapper;
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -185,12 +184,23 @@ public class RootSetBuilder {
             }
             case KEEP: {
               markClass(clazz, rule);
-              markClass(clazz, rule);
               markMatchingVisibleMethods(clazz, memberKeepRules, rule, null);
               markMatchingFields(clazz, memberKeepRules, rule, null);
               break;
             }
           }
+        } else if (rule instanceof ProguardCheckDiscardRule) {
+          if (memberKeepRules.isEmpty()) {
+            markClass(clazz, rule);
+          } else {
+            markMatchingFields(clazz, memberKeepRules, rule, clazz.type);
+            markMatchingMethods(clazz, memberKeepRules, rule, clazz.type);
+          }
+        } else if (rule instanceof ProguardWhyAreYouKeepingRule
+            || rule instanceof ProguardKeepPackageNamesRule) {
+          markClass(clazz, rule);
+          markMatchingVisibleMethods(clazz, memberKeepRules, rule, null);
+          markMatchingFields(clazz, memberKeepRules, rule, null);
         } else if (rule instanceof ProguardAssumeNoSideEffectRule) {
           markMatchingVisibleMethods(clazz, memberKeepRules, rule, null);
           markMatchingFields(clazz, memberKeepRules, rule, null);
@@ -247,11 +257,22 @@ public class RootSetBuilder {
       Collection<ProguardMemberRule> memberKeepRules, ProguardConfigurationRule rule,
       DexType onlyIfClassKept) {
     Set<Wrapper<DexMethod>> methodsMarked = new HashSet<>();
+    Arrays.stream(clazz.directMethods()).forEach(method ->
+        markMethod(method, memberKeepRules, rule, methodsMarked, onlyIfClassKept));
     while (clazz != null) {
-      clazz.forEachMethod(method ->
+      Arrays.stream(clazz.virtualMethods()).forEach(method ->
           markMethod(method, memberKeepRules, rule, methodsMarked, onlyIfClassKept));
       clazz = application.definitionFor(clazz.superType);
     }
+  }
+
+  private void markMatchingMethods(DexClass clazz,
+      Collection<ProguardMemberRule> memberKeepRules, ProguardConfigurationRule rule,
+      DexType onlyIfClassKept) {
+    Arrays.stream(clazz.directMethods()).forEach(method ->
+        markMethod(method, memberKeepRules, rule, null, onlyIfClassKept));
+    Arrays.stream(clazz.virtualMethods()).forEach(method ->
+        markMethod(method, memberKeepRules, rule, null, onlyIfClassKept));
   }
 
   private void markMatchingFields(DexClass clazz,
@@ -375,7 +396,8 @@ public class RootSetBuilder {
   private void markMethod(DexEncodedMethod method, Collection<ProguardMemberRule> rules,
       ProguardConfigurationRule context, Set<Wrapper<DexMethod>> methodsMarked,
       DexType onlyIfClassKept) {
-    if (methodsMarked.contains(MethodSignatureEquivalence.get().wrap(method.method))) {
+    if ((methodsMarked != null)
+        && methodsMarked.contains(MethodSignatureEquivalence.get().wrap(method.method))) {
       return;
     }
     for (ProguardMemberRule rule : rules) {
@@ -383,6 +405,9 @@ public class RootSetBuilder {
         if (Log.ENABLED) {
           Log.verbose(getClass(), "Marking method `%s` due to `%s { %s }`.", method, context,
               rule);
+        }
+        if (methodsMarked != null) {
+          methodsMarked.add(MethodSignatureEquivalence.get().wrap(method.method));
         }
         addItemToSets(method, context, rule, onlyIfClassKept);
       }
@@ -461,24 +486,19 @@ public class RootSetBuilder {
       if (!modifiers.allowsObfuscation) {
         noObfuscation.add(item);
       }
-      if (modifiers.whyAreYouKeeping) {
-        assert onlyIfClassKept == null;
-        reasonAsked.add(item);
-      }
-      if (modifiers.keepPackageNames) {
-        assert onlyIfClassKept == null;
-        keepPackageName.add(item);
-      }
       if (modifiers.includeDescriptorClasses) {
         includeDescriptorClasses(item, keepRule);
       }
-      if (modifiers.checkDiscarded) {
-        checkDiscarded.add(item);
-      }
     } else if (context instanceof ProguardAssumeNoSideEffectRule) {
       noSideEffects.put(item, rule);
+    } else if (context instanceof ProguardWhyAreYouKeepingRule) {
+      reasonAsked.add(item);
+    } else if (context instanceof ProguardKeepPackageNamesRule) {
+      keepPackageName.add(item);
     } else if (context instanceof ProguardAssumeValuesRule) {
       assumedValues.put(item, rule);
+    } else if (context instanceof ProguardCheckDiscardRule) {
+      checkDiscarded.add(item);
     }
   }
 
