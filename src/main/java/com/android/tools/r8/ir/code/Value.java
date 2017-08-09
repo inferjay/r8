@@ -219,6 +219,12 @@ public class Value {
     return numberOfUsers() + numberOfPhiUsers() + numberOfDebugUsers();
   }
 
+  public boolean isUsed() {
+    return !users.isEmpty()
+        || !phiUsers.isEmpty()
+        || ((debugData != null) && !debugData.debugUsers.isEmpty());
+  }
+
   public void addUser(Instruction user) {
     users.add(user);
     uniqueUsers = null;
@@ -503,7 +509,7 @@ public class Value {
 
   public boolean isDead(InternalOptions options) {
     // Totally unused values are trivially dead.
-    return numberOfAllUsers() == 0 || isDead(new HashSet<>(), options);
+    return !isUsed() || isDead(new HashSet<>(), options);
   }
 
   protected boolean isDead(Set<Value> active, InternalOptions options) {

@@ -196,7 +196,7 @@ public class ProtoLitePruner extends ProtoLiteBase {
           // Remove now unneeded constructor calls.
           InvokeStatic invokeStatic = insn.asInvokeStatic();
           DexMethod invokedMethod = invokeStatic.getInvokedMethod();
-          if ((invokeStatic.outValue().numberOfAllUsers() == 0)
+          if ((!invokeStatic.outValue().isUsed())
               && invokedMethod.proto.returnType.isSubtypeOf(protobufListType, appInfo)) {
             it.remove();
           }

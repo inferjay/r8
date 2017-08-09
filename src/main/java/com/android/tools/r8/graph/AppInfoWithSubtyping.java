@@ -227,6 +227,12 @@ public class AppInfoWithSubtyping extends AppInfo {
   }
 
   @Override
+  public void registerNewType(DexType newType, DexType superType) {
+    // Register the relationship between this type and its superType.
+    superType.addDirectSubtype(newType);
+  }
+
+  @Override
   public boolean hasSubtyping() {
     return true;
   }

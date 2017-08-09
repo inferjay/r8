@@ -400,7 +400,7 @@ public class Outliner {
 
       // Allow all new-instance instructions in a outline.
       if (instruction.isNewInstance()) {
-        if (instruction.outValue().numberOfAllUsers() > 0) {
+        if (instruction.outValue().isUsed()) {
           // Track the new-instance value to make sure the <init> call is part of the outline.
           pendingNewInstanceIndex = index;
         }
@@ -711,7 +711,7 @@ public class Outliner {
           }
         }
         assert m.proto.shorty.toString().length() - 1 == in.size();
-        if (returnValue != null && returnValue.numberOfAllUsers() == 0) {
+        if (returnValue != null && !returnValue.isUsed()) {
           returnValue = null;
         }
         Invoke outlineInvoke = new InvokeStatic(m, returnValue, in);
