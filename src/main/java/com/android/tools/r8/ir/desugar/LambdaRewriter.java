@@ -5,6 +5,7 @@
 package com.android.tools.r8.ir.desugar;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexApplication.Builder;
 import com.android.tools.r8.graph.DexCallSite;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -57,6 +58,7 @@ public class LambdaRewriter {
   static final String LAMBDA_INSTANCE_FIELD_NAME = "INSTANCE";
 
   final IRConverter converter;
+  final AppInfo appInfo;
   final DexItemFactory factory;
 
   final DexMethod metafactoryMethod;
@@ -78,7 +80,6 @@ public class LambdaRewriter {
   //
   // NOTE: synchronize concurrent access on `knownCallSites`.
   private final Map<DexCallSite, LambdaDescriptor> knownCallSites = new IdentityHashMap<>();
-
   // Maps lambda class type into lambda class representation. Since lambda class
   // type uniquely defines lambda class, effectively canonicalizes lambda classes.
   // NOTE: synchronize concurrent access on `knownLambdaClasses`.
@@ -93,6 +94,7 @@ public class LambdaRewriter {
     assert converter != null;
     this.converter = converter;
     this.factory = converter.application.dexItemFactory;
+    this.appInfo = converter.appInfo;
 
     DexType metafactoryType = factory.createType(METAFACTORY_TYPE_DESCR);
     DexType callSiteType = factory.createType(CALLSITE_TYPE_DESCR);
