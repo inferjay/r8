@@ -28,6 +28,18 @@ public class MainDexList {
     }
   }
 
+  public static DexType parse(String clazz, DexItemFactory itemFactory) {
+    if (!clazz.endsWith(CLASS_EXTENSION)) {
+      throw new CompilationError("Illegal main-dex-list entry '" + clazz + "'.");
+    }
+    String name = clazz.substring(0, clazz.length() - CLASS_EXTENSION.length());
+    if (name.contains("" + JAVA_PACKAGE_SEPARATOR)) {
+      throw new CompilationError("Illegal main-dex-list entry '" + clazz + "'.");
+    }
+    String descriptor = "L" + name + ";";
+    return itemFactory.createType(descriptor);
+  }
+
   public static Set<DexType> parse(InputStream input, DexItemFactory itemFactory) {
     Set<DexType> result = Sets.newIdentityHashSet();
     try {
@@ -35,15 +47,7 @@ public class MainDexList {
           new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
       String line;
       while ((line = file.readLine()) != null) {
-        if (!line.endsWith(CLASS_EXTENSION)) {
-          throw new CompilationError("Illegal main-dex-list entry '" + line + "'.");
-        }
-        String name = line.substring(0, line.length() - CLASS_EXTENSION.length());
-        if (name.contains("" + JAVA_PACKAGE_SEPARATOR)) {
-          throw new CompilationError("Illegal main-dex-list entry '" + line + "'.");
-        }
-        String descriptor = "L" + name + ";";
-        result.add(itemFactory.createType(descriptor));
+        result.add(parse(line, itemFactory));
       }
     } catch (IOException e) {
       throw new CompilationError("Cannot load main-dex-list.");

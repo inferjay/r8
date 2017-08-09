@@ -131,7 +131,6 @@ public class D8Command extends BaseCommand {
   public static Builder parse(String[] args) throws CompilationException, IOException {
     CompilationMode modeSet = null;
     Path outputPath = null;
-    String mainDexList = null;
     Builder builder = builder();
     try {
       for (int i = 0; i < args.length; i++) {
@@ -168,11 +167,7 @@ public class D8Command extends BaseCommand {
         } else if (arg.equals("--classpath")) {
           builder.addClasspathFiles(Paths.get(args[++i]));
         } else if (arg.equals("--main-dex-list")) {
-          if (mainDexList != null) {
-            throw new CompilationException("Only one --main-dex-list supported");
-          }
-          mainDexList = args[++i];
-          builder.setMainDexListFile(Paths.get(mainDexList));
+          builder.addMainDexListFiles(Paths.get(args[++i]));
         } else if (arg.equals("--min-api")) {
           builder.setMinApiLevel(Integer.valueOf(args[++i]));
         } else if (arg.equals("--intermediate")) {
