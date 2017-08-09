@@ -17,15 +17,23 @@ import com.android.tools.r8.graph.UseRegistry;
 import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.Invoke.Type;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
+import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.ThreadUtils;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +52,10 @@ import java.util.stream.Collectors;
  * Recursive calls are not present.
  */
 public class CallGraph {
+
+  private CallGraph(InternalOptions options) {
+    this.shuffle = options.testing.irOrdering;
+  }
 
   private static class Node {
 
@@ -121,6 +133,7 @@ public class CallGraph {
 
   private final Map<DexEncodedMethod, Node> nodes = new LinkedHashMap<>();
   private final Map<DexEncodedMethod, Set<DexEncodedMethod>> breakers = new HashMap<>();
+  private final Function<List<DexEncodedMethod>, List<DexEncodedMethod>> shuffle;
 
   // Returns whether the method->callee edge has been removed from the call graph
   // to break a cycle in the call graph.
@@ -133,8 +146,8 @@ public class CallGraph {
   private Set<DexEncodedMethod> doubleCallSite = Sets.newIdentityHashSet();
 
   public static CallGraph build(DexApplication application, AppInfoWithSubtyping appInfo,
-      GraphLense graphLense) {
-    CallGraph graph = new CallGraph();
+      GraphLense graphLense, InternalOptions options) {
+    CallGraph graph = new CallGraph(options);
     DexClass[] classes = application.classes().toArray(new DexClass[application.classes().size()]);
     Arrays.sort(classes, (DexClass a, DexClass b) -> a.type.slowCompareTo(b.type));
     for (DexClass clazz : classes) {
@@ -185,7 +198,9 @@ public class CallGraph {
 
   private static boolean allMethodsExists(DexApplication application, CallGraph graph) {
     for (DexProgramClass clazz : application.classes()) {
-      clazz.forEachMethod(method -> { assert graph.nodes.get(method) != null; });
+      clazz.forEachMethod(method -> {
+        assert graph.nodes.get(method) != null;
+      });
     }
     return true;
   }
@@ -197,19 +212,19 @@ public class CallGraph {
    * Please note that there are no cycles in this graph (see {@link #breakCycles}).
    * <p>
    *
-   * @return  List of {@link DexEncodedMethod}.
+   * @return List of {@link DexEncodedMethod}.
    */
-  List<DexEncodedMethod> extractLeaves() {
+  private List<DexEncodedMethod> extractLeaves() {
     if (isEmpty()) {
-      return null;
+      return Collections.emptyList();
     }
     // First identify all leaves before removing them from the graph.
     List<Node> leaves = nodes.values().stream().filter(Node::isLeaf).collect(Collectors.toList());
-    leaves.forEach( leaf -> {
-      leaf.callers.forEach( caller -> caller.callees.remove(leaf));
+    leaves.forEach(leaf -> {
+      leaf.callers.forEach(caller -> caller.callees.remove(leaf));
       nodes.remove(leaf.method);
     });
-    return leaves.stream().map( leaf -> leaf.method).collect(Collectors.toList());
+    return shuffle.apply(leaves.stream().map(leaf -> leaf.method).collect(Collectors.toList()));
   }
 
   private int traverse(Node node, Set<Node> stack, Set<Node> marked) {
@@ -253,7 +268,7 @@ public class CallGraph {
     int numberOfCycles = 0;
     Set<Node> stack = Sets.newIdentityHashSet();
     Set<Node> marked = Sets.newIdentityHashSet();
-    for(Node node : nodes.values()) {
+    for (Node node : nodes.values()) {
       numberOfCycles += traverse(node, stack, marked);
     }
     return numberOfCycles;
@@ -277,6 +292,21 @@ public class CallGraph {
 
   public boolean isEmpty() {
     return nodes.size() == 0;
+  }
+
+  public void forEachMethod(Consumer<DexEncodedMethod> consumer, ExecutorService executorService)
+      throws ExecutionException {
+    while (!isEmpty()) {
+      List<DexEncodedMethod> methods = extractLeaves();
+      assert methods.size() > 0;
+      List<Future<?>> futures = new ArrayList<>();
+      for (DexEncodedMethod method : methods) {
+        futures.add(executorService.submit(() -> {
+          consumer.accept(method);
+        }));
+      }
+      ThreadUtils.awaitFutures(futures);
+    }
   }
 
   public void dump() {

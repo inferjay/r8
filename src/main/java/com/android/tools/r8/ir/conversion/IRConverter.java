@@ -266,7 +266,7 @@ public class IRConverter {
     removeLambdaDeserializationMethods();
 
     timing.begin("Build call graph");
-    callGraph = CallGraph.build(application, appInfo.withSubtyping(), graphLense);
+    callGraph = CallGraph.build(application, appInfo.withSubtyping(), graphLense, options);
     timing.end();
 
     // The process is in two phases.
@@ -278,22 +278,10 @@ public class IRConverter {
     // Process the application identifying outlining candidates.
     timing.begin("IR conversion phase 1");
     OptimizationFeedback directFeedback = new OptimizationFeedbackDirect();
-    while (!callGraph.isEmpty()) {
-      List<DexEncodedMethod> methods = callGraph.extractLeaves();
-      assert methods.size() > 0;
-      // For testing we have the option to determine the processing order of the methods.
-      if (options.testing.irOrdering != null) {
-        methods = options.testing.irOrdering.apply(methods);
-      }
-      List<Future<?>> futures = new ArrayList<>();
-      for (DexEncodedMethod method : methods) {
-        futures.add(executorService.submit(() -> {
+    callGraph.forEachMethod(method -> {
           processMethod(method, directFeedback,
               outliner == null ? Outliner::noProcessing : outliner::identifyCandidates);
-        }));
-      }
-      ThreadUtils.awaitFutures(futures);
-    }
+    }, executorService);
     timing.end();
 
     // Build a new application with jumbo string info.
@@ -314,13 +302,20 @@ public class IRConverter {
       // add the outline support class IF needed.
       DexProgramClass outlineClass = prepareOutlining();
       if (outlineClass != null) {
-        // Process the selected methods for outlining.
-        for (DexEncodedMethod method : outliner.getMethodsSelectedForOutlining()) {
+        // We need a new call graph to ensure deterministic order and also processing inside out
+        // to get maximal inlining. Use a identity lense, as the code has been rewritten.
+        callGraph = CallGraph
+            .build(application, appInfo.withSubtyping(), GraphLense.getIdentityLense(), options);
+        Set<DexEncodedMethod> outlineMethods = outliner.getMethodsSelectedForOutlining();
+        callGraph.forEachMethod(method -> {
+          if (!outlineMethods.contains(method)) {
+            return;
+          }
           // This is the second time we compile this method first mark it not processed.
           assert !method.getCode().isOutlineCode();
           processMethod(method, ignoreOptimizationFeedback, outliner::applyOutliningCandidate);
           assert method.isProcessed();
-        }
+        }, executorService);
         builder.addSynthesizedClass(outlineClass, true);
         clearDexMethodCompilationState(outlineClass);
       }

@@ -142,7 +142,9 @@ public class InternalOptions {
   }
 
   public static class TestingOptions {
-    public Function<List<DexEncodedMethod>, List<DexEncodedMethod>> irOrdering;
+
+    public Function<List<DexEncodedMethod>, List<DexEncodedMethod>> irOrdering
+        = Function.identity();
   }
 
   public static class AttributeRemovalOptions {

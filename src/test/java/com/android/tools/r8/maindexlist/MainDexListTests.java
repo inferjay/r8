@@ -232,7 +232,7 @@ public class MainDexListTests extends TestBase {
   @Test
   public void checkDeterminism() throws Exception {
     // Synthesize a dex containing a few empty classes including some in the default package.
-    // Everything can fit easaly in a single dex file.
+    // Everything can fit easily in a single dex file.
     String[] classes = {
         "A",
         "B",
