@@ -349,6 +349,8 @@ public class BasicBlockInstructionIterator implements InstructionIterator, Instr
     List<Value> arguments = inlinee.collectArguments();
     assert invoke.inValues().size() == arguments.size();
     for (int i = 0; i < invoke.inValues().size(); i++) {
+      // TODO(zerny): Support inlining in --debug mode.
+      assert arguments.get(i).getDebugInfo() == null;
       if ((i == 0) && (downcast != null)) {
         Value invokeValue = invoke.inValues().get(0);
         Value receiverValue = arguments.get(0);

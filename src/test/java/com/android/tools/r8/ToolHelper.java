@@ -640,18 +640,36 @@ public class ToolHelper {
       Consumer<ArtCommandBuilder> extras,
       DexVm version)
       throws IOException {
-    // Run art on original.
-    for (String file : files1) {
-      assertTrue("file1 " + file + " must exists", Files.exists(Paths.get(file)));
+    return checkArtOutputIdentical(
+        version,
+        mainClass,
+        extras,
+        ImmutableList.of(ListUtils.map(files1, Paths::get), ListUtils.map(files2, Paths::get)));
+  }
+
+  public static String checkArtOutputIdentical(
+      DexVm version,
+      String mainClass,
+      Consumer<ArtCommandBuilder> extras,
+      Collection<Collection<Path>> programs)
+      throws IOException {
+    for (Collection<Path> program : programs) {
+      for (Path path : program) {
+        assertTrue("File " + path + " must exist", Files.exists(path));
+      }
     }
-    String output1 = ToolHelper.runArtNoVerificationErrors(files1, mainClass, extras, version);
-    // Run art on R8 processed version.
-    for (String file : files2) {
-      assertTrue("file2 " + file + " must exists", Files.exists(Paths.get(file)));
+    String output = null;
+    for (Collection<Path> program : programs) {
+      String result =
+          ToolHelper.runArtNoVerificationErrors(
+              ListUtils.map(program, Path::toString), mainClass, extras, version);
+      if (output != null) {
+        assertEquals(output, result);
+      } else {
+        output = result;
+      }
     }
-    String output2 = ToolHelper.runArtNoVerificationErrors(files2, mainClass, extras, version);
-    assertEquals(output1, output2);
-    return output1;
+    return output;
   }
 
   public static void runDex2Oat(Path file, Path outFile) throws IOException {

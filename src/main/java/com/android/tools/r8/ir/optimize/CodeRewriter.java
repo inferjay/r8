@@ -509,7 +509,7 @@ public class CodeRewriter {
       Instruction current = iterator.next();
       if (current.isInvokeMethod()) {
         InvokeMethod invoke = current.asInvokeMethod();
-        if (invoke.outValue() != null) {
+        if (invoke.outValue() != null && invoke.outValue().getLocalInfo() == null) {
           DexEncodedMethod target = invoke.computeSingleTarget(appInfo.withSubtyping());
           // We have a set of library classes with optimization information - consider those
           // as well.

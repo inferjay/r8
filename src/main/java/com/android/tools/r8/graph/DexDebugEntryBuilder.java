@@ -5,6 +5,8 @@ package com.android.tools.r8.graph;
 
 import com.android.tools.r8.ir.code.MoveType;
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +46,7 @@ public class DexDebugEntryBuilder {
   private boolean prologueEnd = false;
   private boolean epilogueBegin = false;
   private final Map<Integer, LocalEntry> locals = new HashMap<>();
+  private final Int2ReferenceMap<DebugLocalInfo> arguments = new Int2ReferenceArrayMap<>();
 
   // Delayed construction of an entry. Is finalized once locals information has been collected.
   private DexDebugEntry pending = null;
@@ -65,7 +68,7 @@ public class DexDebugEntryBuilder {
     if (!method.accessFlags.isStatic()) {
       DexString name = factory.thisName;
       DexType type = method.method.getHolder();
-      startLocal(argumentRegister, name, type, null);
+      startArgument(argumentRegister, name, type);
       argumentRegister += MoveType.fromDexType(type).requiredRegisters();
     }
     DexType[] types = method.method.proto.parameters.values;
@@ -73,14 +76,18 @@ public class DexDebugEntryBuilder {
     for (int i = 0; i < types.length; i++) {
       // If null, the parameter has a parameterized type and the local is introduced in the stream.
       if (names[i] != null) {
-        startLocal(argumentRegister, names[i], types[i], null);
-        argumentRegister += MoveType.fromDexType(types[i]).requiredRegisters();
+        startArgument(argumentRegister, names[i], types[i]);
       }
+      argumentRegister += MoveType.fromDexType(types[i]).requiredRegisters();
     }
     currentLine = info.startLine;
     for (DexDebugEvent event : info.events) {
       event.addToBuilder(this);
     }
+  }
+
+  public Int2ReferenceMap<DebugLocalInfo> getArguments() {
+    return arguments;
   }
 
   public void setFile(DexString file) {
@@ -102,6 +109,12 @@ public class DexDebugEntryBuilder {
 
   public void beginEpilogue() {
     epilogueBegin = true;
+  }
+
+  public void startArgument(int register, DexString name, DexType type) {
+    DebugLocalInfo argument = canonicalize(name, type, null);
+    arguments.put(register, argument);
+    getEntry(register).set(argument);
   }
 
   public void startLocal(int register, DexString name, DexType type, DexString signature) {

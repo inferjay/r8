@@ -175,6 +175,9 @@ public class DexCode extends Code {
 
   public String toString(DexEncodedMethod method, ClassNameMapper naming) {
     StringBuilder builder = new StringBuilder();
+    if (method != null) {
+      builder.append(method.toSourceString()).append("\n");
+    }
     builder.append("registers: ").append(registerSize);
     builder.append(", inputs: ").append(incomingRegisterSize);
     builder.append(", outputs: ").append(outgoingRegisterSize).append("\n");
