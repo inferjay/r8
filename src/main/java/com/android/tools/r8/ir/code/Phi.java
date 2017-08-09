@@ -231,8 +231,11 @@ public class Phi extends Value {
     StringBuilder builder = new StringBuilder();
     builder.append("v");
     builder.append(number);
+    if (getLocalInfo() != null) {
+      builder.append("(").append(getLocalInfo()).append(")");
+    }
     builder.append(" <- phi");
-    StringUtils.append(builder, ListUtils.map(operands, (Value operand) -> "v" + operand.number));
+    StringUtils.append(builder, ListUtils.map(operands, Value::toString));
     return builder.toString();
   }
 

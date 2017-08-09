@@ -623,15 +623,24 @@ public abstract class DebugTestBase {
               ));
         }
 
+        private void failNoLocal(String localName) {
+          Assert.fail(
+              "line " + getLineNumber() + ": Expected local '" + localName + "' not present");
+        }
+
         public void checkLocal(String localName) {
           Optional<Variable> localVar = JUnit3Wrapper
               .getVariableAt(mirror, getLocation(), localName);
-          Assert.assertTrue("No local '" + localName + "'", localVar.isPresent());
+          if (!localVar.isPresent()) {
+            failNoLocal(localName);
+          }
         }
 
         public void checkLocal(String localName, Value expectedValue) {
           Optional<Variable> localVar = getVariableAt(mirror, getLocation(), localName);
-          Assert.assertTrue("No local '" + localName + "'", localVar.isPresent());
+          if (!localVar.isPresent()) {
+            failNoLocal(localName);
+          }
 
           // Get value
           CommandPacket commandPacket = new CommandPacket(

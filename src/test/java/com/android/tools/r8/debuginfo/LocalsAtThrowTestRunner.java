@@ -22,11 +22,11 @@ public class LocalsAtThrowTestRunner extends DebugInfoTestBase {
     assertEquals(expected, runOnArt(d8App, clazz.getCanonicalName()));
     assertEquals(expected, runOnArt(dxApp, clazz.getCanonicalName()));
 
-    checkBackBranchToSelf(inspectMethod(d8App, clazz, "int", "localsAtThrow", "int"));
-    checkBackBranchToSelf(inspectMethod(dxApp, clazz, "int", "localsAtThrow", "int"));
+    checkLocalsAtThrow(inspectMethod(d8App, clazz, "int", "localsAtThrow", "int"));
+    checkLocalsAtThrow(inspectMethod(dxApp, clazz, "int", "localsAtThrow", "int"));
   }
 
-  private void checkBackBranchToSelf(DebugInfoInspector info) {
+  private void checkLocalsAtThrow(DebugInfoInspector info) {
     info.checkStartLine(9);
     info.checkLineHasExactLocals(9, "x", "int");
     info.checkLineHasExactLocals(10, "x", "int", "a", "int");

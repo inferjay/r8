@@ -348,4 +348,79 @@ public class LocalsTest extends DebugTestBase {
         run());
   }
 
+  @Test
+  public void testStepEmptyForLoopBody1() throws Throwable {
+    runDebugTest(
+        "Locals",
+        breakpoint("Locals", "stepEmptyForLoopBody1"),
+        run(),
+        checkLocal("n", Value.createInt(3)),
+        checkNoLocal("i"),
+        stepOver(),
+        checkLocal("n", Value.createInt(3)),
+        checkLocal("i", Value.createInt(3)),
+        run());
+  }
+
+  @Test
+  public void testStepEmptyForLoopBody2() throws Throwable {
+    runDebugTest(
+        "Locals",
+        breakpoint("Locals", "stepEmptyForLoopBody2"),
+        run(),
+        checkLocal("n", Value.createInt(3)),
+        checkNoLocal("i"),
+        stepOver(),
+        checkLocal("n", Value.createInt(3)),
+        checkLocal("i", Value.createInt(3)),
+        run());
+  }
+
+  @Test
+  public void testStepNonEmptyForLoopBody() throws Throwable {
+    final int LOOP_HEADER_LINE = 207;
+    final int LOOP_BODY_LINE = 208;
+    final int RETURN_LINE = 209;
+    final Value N = Value.createInt(3);
+    final Value I0 = Value.createInt(0);
+    final Value I1 = Value.createInt(1);
+    final Value I2 = Value.createInt(2);
+    final Value I3 = Value.createInt(3);
+    runDebugTest(
+        "Locals",
+        breakpoint("Locals", "stepNonEmptyForLoopBody"),
+        run(),
+        checkLine(SOURCE_FILE, LOOP_HEADER_LINE),
+        checkLocal("n", N),
+        checkNoLocal("i"),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_BODY_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I0),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_HEADER_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I0),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_BODY_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I1),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_HEADER_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I1),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_BODY_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I2),
+        stepOver(),
+        checkLine(SOURCE_FILE, LOOP_HEADER_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I2),
+        stepOver(),
+        checkLine(SOURCE_FILE, RETURN_LINE),
+        checkLocal("n", N),
+        checkLocal("i", I3),
+        run());
+  }
 }
