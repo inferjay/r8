@@ -314,7 +314,7 @@ public class DexCode extends Code {
 
     public static final int NO_INDEX = -1;
 
-    private final int handlerOffset;
+    public final int handlerOffset;
     public /* offset */ int startAddress;
     public /* offset */ int instructionCount;
     public int handlerIndex;
@@ -378,7 +378,7 @@ public class DexCode extends Code {
     public static final int NO_HANDLER = -1;
 
     public final TypeAddrPair[] pairs;
-    public /* offset */ int catchAllAddr;
+    public final /* offset */ int catchAllAddr;
 
     public TryHandler(TypeAddrPair[] pairs, int catchAllAddr) {
       this.pairs = pairs;

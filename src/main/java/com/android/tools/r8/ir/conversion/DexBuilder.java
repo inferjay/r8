@@ -85,9 +85,6 @@ public class DexBuilder {
   // List of generated FillArrayData dex instructions.
   private final List<FillArrayDataInfo> fillArrayDataInfos = new ArrayList<>();
 
-  // First jumbo string if known.
-  private final DexString firstJumboString;
-
   // Set of if instructions that have offsets that are so large that they cannot be encoded in
   // the if instruction format.
   private Set<BasicBlock> ifsNeedingRewrite = Sets.newIdentityHashSet();
@@ -116,18 +113,6 @@ public class DexBuilder {
     this.ir = ir;
     this.registerAllocator = registerAllocator;
     this.dexItemFactory = dexItemFactory;
-    this.firstJumboString = null;
-  }
-
-  public DexBuilder(IRCode ir, RegisterAllocator registerAllocator,
-      DexItemFactory dexItemFactory, DexString firstJumboString) {
-    assert ir != null;
-    assert registerAllocator != null;
-    assert dexItemFactory != null;
-    this.ir = ir;
-    this.registerAllocator = registerAllocator;
-    this.dexItemFactory = dexItemFactory;
-    this.firstJumboString = firstJumboString;
   }
 
   private void reset() {
@@ -141,15 +126,6 @@ public class DexBuilder {
     outRegisterCount = 0;
     highestSortingReferencedString = null;
     nextBlock = null;
-  }
-
-  public boolean isJumboString(DexString string) {
-    if (firstJumboString == null) {
-      return false;
-    }
-    // We have to use compareTo here, as slowCompareTo will return the wrong order when minification
-    // is used.
-    return firstJumboString.compareTo(string) <= 0;
   }
 
   /**

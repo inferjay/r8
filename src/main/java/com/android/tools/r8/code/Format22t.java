@@ -11,11 +11,11 @@ import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.naming.ClassNameMapper;
 import java.nio.ShortBuffer;
 
-abstract class Format22t extends Base2Format {
+public abstract class Format22t extends Base2Format {
 
   public final byte A;
   public final byte B;
-  public final /* offset */ short CCCC;
+  public /* offset */ short CCCC;
 
   // vB | vA | op | +CCCC
   Format22t(int high, BytecodeStream stream) {

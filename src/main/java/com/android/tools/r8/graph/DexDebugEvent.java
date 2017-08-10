@@ -31,10 +31,9 @@ abstract public class DexDebugEvent extends DexItem {
 
   public abstract void addToBuilder(DexDebugEntryBuilder builder);
 
-
   public static class AdvancePC extends DexDebugEvent {
 
-    final int delta;
+    public final int delta;
 
     public void writeOn(DebugBytecodeWriter writer, ObjectToOffsetMapping mapping) {
       writer.putByte(Constants.DBG_ADVANCE_PC);
@@ -348,6 +347,16 @@ abstract public class DexDebugEvent extends DexItem {
       int line = Constants.DBG_LINE_BASE + (adjustedOpcode % Constants.DBG_LINE_RANGE);
       int address = adjustedOpcode / Constants.DBG_LINE_RANGE;
       builder.setPosition(address, line);
+    }
+
+    public int getPCDelta() {
+      int adjustedOpcode = value - Constants.DBG_FIRST_SPECIAL;
+      return adjustedOpcode / Constants.DBG_LINE_RANGE;
+    }
+
+    public int getLineDelta() {
+      int adjustedOpcode = value - Constants.DBG_FIRST_SPECIAL;
+      return Constants.DBG_LINE_BASE + (adjustedOpcode % Constants.DBG_LINE_RANGE);
     }
 
     public String toString() {

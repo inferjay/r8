@@ -171,14 +171,6 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
     code = builder.build(method.getArity());
   }
 
-  // Replaces the dex code in the method by setting code to result of compiling the IR.
-  public void setCode(IRCode ir, RegisterAllocator registerAllocator,
-      DexItemFactory dexItemFactory, DexString firstJumboString) {
-    final DexBuilder builder =
-        new DexBuilder(ir, registerAllocator, dexItemFactory, firstJumboString);
-    code = builder.build(method.getArity());
-  }
-
   public String toString() {
     return "Encoded method " + method;
   }
@@ -204,6 +196,10 @@ public class DexEncodedMethod extends KeyedDexItem<DexMethod> {
 
   public Code getCode() {
     return code;
+  }
+
+  public void setDexCode(DexCode code) {
+    this.code = code;
   }
 
   public void removeCode() {

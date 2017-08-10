@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.code;
 
-import com.android.tools.r8.code.ConstStringJumbo;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.ir.conversion.DexBuilder;
@@ -30,11 +29,7 @@ public class ConstString extends ConstInstruction {
   public void buildDex(DexBuilder builder) {
     builder.registerStringReference(value);
     int dest = builder.allocatedRegister(dest(), getNumber());
-    if (builder.isJumboString(value)) {
-      builder.add(this, new ConstStringJumbo(dest, value));
-    } else {
-      builder.add(this, new com.android.tools.r8.code.ConstString(dest, value));
-    }
+    builder.add(this, new com.android.tools.r8.code.ConstString(dest, value));
   }
 
   @Override

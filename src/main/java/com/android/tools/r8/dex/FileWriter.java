@@ -41,7 +41,6 @@ import com.android.tools.r8.graph.KeyedDexItem;
 import com.android.tools.r8.graph.ObjectToOffsetMapping;
 import com.android.tools.r8.graph.PresortedComparable;
 import com.android.tools.r8.graph.ProgramClassVisitor;
-import com.android.tools.r8.ir.conversion.IRConverter;
 import com.android.tools.r8.logging.Log;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.naming.MemberNaming.MethodSignature;
@@ -153,14 +152,16 @@ public class FileWriter {
     return this;
   }
 
-  private void rewriteCodeWithJumboStrings(IRConverter converter, DexEncodedMethod method) {
+  private void rewriteCodeWithJumboStrings(DexEncodedMethod method) {
     if (method.getCode() == null) {
       return;
     }
     DexCode code = method.getCode().asDexCode();
     if (code.highestSortingString != null) {
       if (mapping.getOffsetFor(code.highestSortingString) > Constants.MAX_NON_JUMBO_INDEX) {
-        converter.processJumboStrings(method, mapping.getFirstJumboString());
+        JumboStringRewriter rewriter =
+            new JumboStringRewriter(method, mapping.getFirstJumboString(), options.itemFactory);
+        rewriter.rewrite();
       }
     }
   }
@@ -176,9 +177,8 @@ public class FileWriter {
       return this;
     }
     // At least one method needs a jumbo string.
-    IRConverter converter = new IRConverter(application, appInfo, options, false);
     for (DexProgramClass clazz : classes) {
-      clazz.forEachMethod(method -> rewriteCodeWithJumboStrings(converter, method));
+      clazz.forEachMethod(method -> rewriteCodeWithJumboStrings(method));
     }
     return this;
   }

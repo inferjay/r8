@@ -10,7 +10,7 @@ import java.nio.ShortBuffer;
 
 abstract class Format20t extends Base2Format {
 
-  public final /* offset */ short AAAA;
+  public /* offset */ short AAAA;
 
   // øø | op | +AAAA
   Format20t(int high, BytecodeStream stream) {

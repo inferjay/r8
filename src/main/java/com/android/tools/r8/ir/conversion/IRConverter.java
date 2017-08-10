@@ -325,10 +325,6 @@ public class IRConverter {
     return builder.build();
   }
 
-  public void processJumboStrings(DexEncodedMethod method, DexString firstJumboString) {
-    convertMethodJumboStringsOnly(method, firstJumboString);
-  }
-
   private void clearDexMethodCompilationState() {
     application.classes().forEach(this::clearDexMethodCompilationState);
   }
@@ -532,44 +528,6 @@ public class IRConverter {
         highestSortingString = highestSortingReferencedString;
       }
     }
-  }
-
-  // Convert a method ensuring that strings sorting equal or higher than the argument
-  // firstJumboString are encoded as jumbo strings.
-  // TODO(sgjesse): Consider replacing this with a direct dex2dex converter instead of going
-  // through IR.
-  private void convertMethodJumboStringsOnly(
-      DexEncodedMethod method, DexString firstJumboString) {
-    // This is only used for methods already converted to Dex, but missing jumbo strings.
-    assert method.getCode() != null && method.getCode().isDexCode();
-    if (options.verbose) {
-      System.out.println("Processing jumbo strings: " + method.toSourceString());
-    }
-    if (Log.ENABLED) {
-      Log.debug(getClass(), "Original code for %s:\n%s",
-          method.toSourceString(), logCode(options, method));
-    }
-    IRCode code = method.buildIR(options);
-    if (Log.ENABLED) {
-      Log.debug(getClass(), "Initial (SSA) flow graph for %s:\n%s",
-          method.toSourceString(), code);
-    }
-    // Compilation header if printing CFGs for this method.
-    printC1VisualizerHeader(method);
-    printMethod(code, "Initial IR (SSA)");
-
-    // Methods passed through here should have been through IR processing already and
-    // therefore, we skip most of the IR processing.
-
-    // Perform register allocation.
-    RegisterAllocator registerAllocator = performRegisterAllocation(code, method);
-    method.setCode(code, registerAllocator, appInfo.dexItemFactory, firstJumboString);
-
-    if (Log.ENABLED) {
-      Log.debug(getClass(), "Resulting dex code for %s:\n%s",
-          method.toSourceString(), logCode(options, method));
-    }
-    printMethod(code, "Final IR (non-SSA)");
   }
 
   private RegisterAllocator performRegisterAllocation(IRCode code, DexEncodedMethod method) {

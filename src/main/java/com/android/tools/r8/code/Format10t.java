@@ -10,7 +10,7 @@ import java.nio.ShortBuffer;
 
 abstract class Format10t extends Base1Format {
 
-  public final /* offset */ byte AA;
+  public /* offset */ byte AA;
 
   // +AA | op
   Format10t(int high, BytecodeStream stream) {

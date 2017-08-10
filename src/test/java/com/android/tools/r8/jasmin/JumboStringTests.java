@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class JumboStringTests extends JasminTestBase {
@@ -30,7 +29,6 @@ public class JumboStringTests extends JasminTestBase {
       EXTRA_STRINGS_PER_CLASSES_COUNT + MIN_STRING_COUNT / CLASSES_COUNT;
 
   @Test
-  @Ignore("b/35701208")
   public void test() throws Exception {
     JasminBuilder builder = new JasminBuilder();
     LinkedHashMap<String, MethodSignature> classes = new LinkedHashMap<>(CLASSES_COUNT);

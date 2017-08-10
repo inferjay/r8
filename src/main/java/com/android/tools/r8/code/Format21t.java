@@ -11,10 +11,10 @@ import com.android.tools.r8.ir.conversion.IRBuilder;
 import com.android.tools.r8.naming.ClassNameMapper;
 import java.nio.ShortBuffer;
 
-abstract class Format21t extends Base2Format {
+public abstract class Format21t extends Base2Format {
 
   public final short AA;
-  public final /* offset */ short BBBB;
+  public /* offset */ short BBBB;
 
   // AA | op | +BBBB
   Format21t(int high, BytecodeStream stream) {
