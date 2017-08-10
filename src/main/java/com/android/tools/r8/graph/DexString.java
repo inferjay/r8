@@ -21,7 +21,7 @@ public class DexString extends IndexedDexItem implements PresortedComparable<Dex
     this.content = content;
   }
 
-  DexString(String string) {
+  public DexString(String string) {
     this.size = string.length();
     this.content = encode(string);
   }

@@ -581,7 +581,7 @@ public class MainDexListTests extends TestBase {
     DexApplication application = builder.build();
     AppInfoWithSubtyping appInfo = new AppInfoWithSubtyping(application);
     ApplicationWriter writer = new ApplicationWriter(
-        application, appInfo, options, null, NamingLens.getIdentityLens(), null);
+        application, appInfo, options, null, null, NamingLens.getIdentityLens(), null);
     ExecutorService executor = ThreadUtils.getExecutorService(options);
     try {
       return writer.write(null, executor);

@@ -4,6 +4,7 @@
 package com.android.tools.r8.graph;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.dex.Marker;
 import com.android.tools.r8.graph.DexDebugEvent.AdvanceLine;
 import com.android.tools.r8.graph.DexDebugEvent.AdvancePC;
 import com.android.tools.r8.graph.DexDebugEvent.Default;
@@ -285,6 +286,18 @@ public class DexItemFactory {
   public DexString createString(String source) {
     assert !sorted;
     return canonicalize(strings, new DexString(source));
+  }
+
+  // Debugging support to extract marking string.
+  synchronized public Marker extractMarker() {
+    // This is slow but it is not needed for any production code yet.
+    for (DexString dexString : strings.keySet()) {
+      Marker result = Marker.parse(dexString.toString());
+      if (result != null) {
+        return result;
+      }
+    }
+    return null;
   }
 
   public DexType createType(DexString descriptor) {

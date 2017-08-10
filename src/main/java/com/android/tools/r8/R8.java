@@ -8,6 +8,8 @@ import static com.android.tools.r8.R8Command.USAGE_MESSAGE;
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.dex.Marker;
+import com.android.tools.r8.dex.Marker.Tool;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.graph.AppInfo;
@@ -77,6 +79,14 @@ public class R8 {
     options.itemFactory.resetSortedIndices();
   }
 
+  // Compute the marker to be placed in the main dex file.
+  private static Marker getMarker(InternalOptions options) {
+    if (options.customizedMarker != null) {
+      return options.customizedMarker;
+    }
+    return new Marker(Tool.R8);
+  }
+
   public static AndroidApp writeApplication(
       ExecutorService executorService,
       DexApplication application,
@@ -88,8 +98,9 @@ public class R8 {
       InternalOptions options)
       throws ExecutionException {
     try {
+      Marker marker = getMarker(options);
       return new ApplicationWriter(
-          application, appInfo, options, deadCode, namingLens, proguardSeedsData)
+          application, appInfo, options, marker, deadCode, namingLens, proguardSeedsData)
           .write(packageDistribution, executorService);
     } catch (IOException e) {
       throw new RuntimeException("Cannot write dex application", e);

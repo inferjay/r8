@@ -318,7 +318,12 @@ public class VirtualFile {
       // 1. Place the remaining files based on their packages in sorted order.
 
       // Start with 1 file. The package populator will add more if needed.
-      nameToFileMap.put(0, new VirtualFile(0, writer.namingLens));
+      VirtualFile main = new VirtualFile(0, writer.namingLens);
+      nameToFileMap.put(0, main);
+      if (writer.markerString != null) {
+        main.transaction.addString(writer.markerString);
+        main.commitTransaction();
+      }
 
       // First fill required classes into the main dex file.
       fillForMainDexList(classes);
@@ -925,7 +930,7 @@ public class VirtualFile {
         } else {
           assert clazz.superType != null;
           // We don't have a package, add this to a list of classes that we will add last.
-          assert current.transaction.isEmpty();
+          assert current.transaction.classes.isEmpty();
           nonPackageClasses.add(clazz);
           continue;
         }

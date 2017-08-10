@@ -212,15 +212,15 @@ public class Inliner {
 
     public final DexEncodedMethod target;
     public final Invoke invoke;
-    public final Reason reason;
+    final Reason reason;
 
-    public InlineAction(DexEncodedMethod target, Invoke invoke, Reason reason) {
+    InlineAction(DexEncodedMethod target, Invoke invoke, Reason reason) {
       this.target = target;
       this.invoke = invoke;
       this.reason = reason;
     }
 
-    public boolean forceInline() {
+    boolean forceInline() {
       return reason != Reason.SIMPLE;
     }
 
@@ -311,16 +311,6 @@ public class Inliner {
       }
     }
     return true;
-  }
-
-  /// Computer the receiver value for the holder method.
-  private Value receiverValue(DexEncodedMethod method, IRCode code) {
-    // Ignore static methods.
-    if (method.accessFlags.isStatic()) {
-      return null;
-    }
-    // Find the outValue of the first argument instruction in the first block.
-    return code.collectArguments().get(0);
   }
 
   public void performInlining(DexEncodedMethod method, IRCode code, CallGraph callGraph) {

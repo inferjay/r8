@@ -4,6 +4,7 @@
 package com.android.tools.r8.utils;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.dex.Marker;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
@@ -44,6 +45,9 @@ public class InternalOptions {
   public boolean verbose = false;
   // Silencing output.
   public boolean quiet = false;
+
+  // Hidden marker for classes.dex
+  public Marker customizedMarker;
 
   public List<String> methodsFilter = ImmutableList.of();
   public int minApiLevel = Constants.DEFAULT_ANDROID_API;

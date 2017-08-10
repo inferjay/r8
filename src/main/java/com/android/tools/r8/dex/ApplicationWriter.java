@@ -14,6 +14,7 @@ import com.android.tools.r8.graph.DexCode;
 import com.android.tools.r8.graph.DexDebugInfo;
 import com.android.tools.r8.graph.DexEncodedArray;
 import com.android.tools.r8.graph.DexProgramClass;
+import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.DexTypeList;
 import com.android.tools.r8.graph.DexValue;
@@ -43,6 +44,7 @@ public class ApplicationWriter {
   public final NamingLens namingLens;
   public final byte[] proguardSeedsData;
   public final InternalOptions options;
+  public DexString markerString;
 
   private static class SortAnnotations extends MixedSectionCollection {
 
@@ -105,6 +107,7 @@ public class ApplicationWriter {
       DexApplication application,
       AppInfo appInfo,
       InternalOptions options,
+      Marker marker,
       byte[] deadCode,
       NamingLens namingLens,
       byte[] proguardSeedsData) {
@@ -113,6 +116,9 @@ public class ApplicationWriter {
     this.appInfo = appInfo;
     assert options != null;
     this.options = options;
+    this.markerString = (marker == null)
+        ? null
+        : application.dexItemFactory.createString(marker.toString());
     this.deadCode = deadCode;
     this.namingLens = namingLens;
     this.proguardSeedsData = proguardSeedsData;
@@ -123,6 +129,8 @@ public class ApplicationWriter {
     application.timing.begin("DexApplication.write");
     try {
       application.dexItemFactory.sort(namingLens);
+      assert this.markerString == null || application.dexItemFactory.extractMarker() != null;
+
       SortAnnotations sortAnnotations = new SortAnnotations();
       application.classes().forEach((clazz) -> clazz.addDependencies(sortAnnotations));
 
@@ -148,7 +156,8 @@ public class ApplicationWriter {
         distributor =
             new VirtualFile.PackageMapDistributor(this, packageDistribution, executorService);
       } else {
-        distributor = new VirtualFile.FillFilesDistributor(this, options.minimalMainDex);
+        boolean minimal = options.minimalMainDex && !application.mainDexList.isEmpty();
+        distributor = new VirtualFile.FillFilesDistributor(this, minimal);
       }
       Map<Integer, VirtualFile> newFiles = distributor.run();
 

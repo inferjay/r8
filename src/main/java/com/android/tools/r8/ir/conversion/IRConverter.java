@@ -50,7 +50,7 @@ import java.util.function.BiConsumer;
 
 public class IRConverter {
 
-  public static final int PEEPHOLE_OPTIMIZATION_PASSES = 2;
+  private static final int PEEPHOLE_OPTIMIZATION_PASSES = 2;
 
   private final Timing timing;
   public final DexApplication application;

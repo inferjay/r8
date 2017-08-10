@@ -29,7 +29,7 @@ public class InliningOracle {
   private final CallGraph callGraph;
   private final InliningInfo info;
 
-  public InliningOracle(
+  InliningOracle(
       Inliner inliner,
       DexEncodedMethod method,
       CallGraph callGraph) {
@@ -39,7 +39,7 @@ public class InliningOracle {
     info = Log.ENABLED ? new InliningInfo(method) : null;
   }
 
-  public void finish() {
+  void finish() {
     if (Log.ENABLED) {
       System.out.println(info.toString());
     }

@@ -7,6 +7,8 @@ import static com.android.tools.r8.D8Command.USAGE_MESSAGE;
 
 import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.ApplicationWriter;
+import com.android.tools.r8.dex.Marker;
+import com.android.tools.r8.dex.Marker.Tool;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.MainDexError;
 import com.android.tools.r8.graph.AppInfo;
@@ -152,6 +154,14 @@ public final class D8 {
     }
   }
 
+  // Compute the marker to be placed in the main dex file.
+  private static Marker getMarker(InternalOptions options) {
+    if (options.customizedMarker != null) {
+      return options.customizedMarker;
+    }
+    return new Marker(Tool.D8);
+  }
+
   private static CompilationResult runForTesting(
       AndroidApp inputApp, InternalOptions options, ExecutorService executor) throws IOException {
     try {
@@ -174,11 +184,11 @@ public final class D8 {
         options.methodsFilter.forEach((m) -> System.out.println("  - " + m));
         return null;
       }
-
+      Marker marker = getMarker(options);
       CompilationResult output =
           new CompilationResult(
               new ApplicationWriter(
-                  app, appInfo, options, null, NamingLens.getIdentityLens(), null)
+                  app, appInfo, options, marker, null, NamingLens.getIdentityLens(), null)
                   .write(null, executor),
               app,
               appInfo);

@@ -101,6 +101,7 @@ configurations {
 
 dependencies {
     compile 'net.sf.jopt-simple:jopt-simple:4.6'
+    compile 'com.googlecode.json-simple:json-simple:1.1.1'
     compile group: 'com.google.guava', name: 'guava', version: '19.0'
     compile group: 'it.unimi.dsi', name: 'fastutil', version: '7.2.0'
     compile group: 'org.apache.commons', name: 'commons-compress', version: '1.12'
@@ -391,6 +392,20 @@ task DexSegments(type: Jar) {
     }
     // In order to build without dependencies, pass the exclude_deps property using:
     // gradle -Pexclude_deps DexSegments
+    if (!project.hasProperty('exclude_deps')) {
+        // Also include dependencies
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+task ExtractMarker(type: Jar) {
+    from sourceSets.main.output
+    baseName 'extractmarker'
+    manifest {
+      attributes 'Main-Class': 'com.android.tools.r8.ExtractMarker'
+    }
+    // In order to build without dependencies, pass the exclude_deps property using:
+    // gradle -Pexclude_deps ExtractMarker
     if (!project.hasProperty('exclude_deps')) {
         // Also include dependencies
         from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
