@@ -349,6 +349,10 @@ public class VirtualFile {
     public Map<Integer, VirtualFile> run() throws ExecutionException, IOException {
       VirtualFile mainDexFile = new VirtualFile(0, writer.namingLens);
       nameToFileMap.put(0, mainDexFile);
+      if (writer.markerString != null) {
+        mainDexFile.transaction.addString(writer.markerString);
+        mainDexFile.commitTransaction();
+      }
 
       for (DexProgramClass programClass : classes) {
         mainDexFile.addClass(programClass);

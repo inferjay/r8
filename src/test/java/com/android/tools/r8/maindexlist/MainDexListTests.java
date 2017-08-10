@@ -62,7 +62,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -271,21 +273,31 @@ public class MainDexListTests extends TestBase {
     for (CompilationMode mode : CompilationMode.values()) {
 
       // Build with all different main dex lists.
-      List<Path> testDirs = new ArrayList<>();
+      Map<Path, String> testDirs = new HashMap<>();  // Map Path to test scenario.
       if (allClasses) {
         // If all classes are passed add a run without a main-dex list as well.
-        testDirs.add(runD8WithMainDexList(mode, input, null, true));
+        testDirs.put(
+            runD8WithMainDexList(mode, input, null, true),
+            mode.toString() + ": without a main-dex list");
       }
-      testDirs.add(runD8WithMainDexList(mode, input, mainDexClasses, true));
-      testDirs.add(runD8WithMainDexList(mode, input, mainDexClasses, false));
+      testDirs.put(
+          runD8WithMainDexList(mode, input, mainDexClasses, true),
+          mode.toString() + ": main-dex list files");
+      testDirs.put(
+          runD8WithMainDexList(mode, input, mainDexClasses, false),
+          mode.toString() + ": main-dex classes");
       if (mainDexClasses != null) {
-        testDirs.add(runD8WithMainDexList(mode, input, Lists.reverse(mainDexClasses), true));
-        testDirs.add(runD8WithMainDexList(mode, input, Lists.reverse(mainDexClasses), false));
+        testDirs.put(
+            runD8WithMainDexList(mode, input, Lists.reverse(mainDexClasses), true),
+            mode.toString() + ": main-dex list files (reversed)");
+        testDirs.put(
+            runD8WithMainDexList(mode, input, Lists.reverse(mainDexClasses), false),
+            mode.toString() + ": main-dex classes (reversed)");
       }
 
       byte[] ref = null;
       byte[] ref2 = null;
-      for (Path testDir : testDirs) {
+      for (Path testDir : testDirs.keySet()) {
         Path primaryDexFile = testDir.resolve(FileUtils.DEFAULT_DEX_FILENAME);
         Path secondaryDexFile = testDir.resolve("classes2.dex");
         assertTrue(Files.exists(primaryDexFile));
@@ -295,14 +307,14 @@ public class MainDexListTests extends TestBase {
         if (ref == null) {
           ref = content;
         } else {
-          assertArrayEquals(ref, content);
+          assertArrayEquals("primary: " + testDirs.get(testDir), ref, content);
         }
         if (hasSecondaryDexFile) {
           content = Files.readAllBytes(primaryDexFile);
           if (ref2 == null) {
             ref2 = content;
           } else {
-            assertArrayEquals(ref2, content);
+            assertArrayEquals("secondary: " + testDirs.get(testDir), ref2, content);
           }
         }
       }
