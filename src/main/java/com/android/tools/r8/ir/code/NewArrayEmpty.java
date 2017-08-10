@@ -5,8 +5,10 @@ package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.code.NewArray;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 
 public class NewArrayEmpty extends Instruction {
 
@@ -67,5 +69,10 @@ public class NewArrayEmpty extends Instruction {
   @Override
   public NewArrayEmpty asNewArrayEmpty() {
     return this;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.classIsVisible(holder, type, info);
   }
 }

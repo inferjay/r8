@@ -7,8 +7,10 @@ package com.android.tools.r8.ir.code;
 import com.android.tools.r8.code.MoveObject;
 import com.android.tools.r8.code.MoveObjectFrom16;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 
 public class CheckCast extends Instruction {
 
@@ -93,5 +95,10 @@ public class CheckCast extends Instruction {
   @Override
   public String toString() {
     return super.toString() + "; " + type;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.classIsVisible(holder, type, info);
   }
 }

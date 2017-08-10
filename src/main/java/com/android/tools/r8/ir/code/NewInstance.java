@@ -4,8 +4,10 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 
 public class NewInstance extends Instruction {
 
@@ -68,5 +70,10 @@ public class NewInstance extends Instruction {
   @Override
   public NewInstance asNewInstance() {
     return this;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.classIsVisible(holder, clazz, info);
   }
 }

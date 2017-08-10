@@ -9,6 +9,7 @@ import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import java.util.List;
 
 public class InvokeNewArray extends Invoke {
@@ -92,5 +93,10 @@ public class InvokeNewArray extends Invoke {
   @Override
   public InvokeNewArray asInvokeNewArray() {
     return this;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.classIsVisible(holder, type, info);
   }
 }

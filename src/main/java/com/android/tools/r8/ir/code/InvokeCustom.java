@@ -7,7 +7,9 @@ import com.android.tools.r8.code.InvokeCustomRange;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexCallSite;
 import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import java.util.List;
 
 public final class InvokeCustom extends Invoke {
@@ -87,5 +89,10 @@ public final class InvokeCustom extends Invoke {
 
   public InvokeCustom asInvokeCustom() {
     return this;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.NEVER;
   }
 }

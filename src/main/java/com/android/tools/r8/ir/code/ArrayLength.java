@@ -5,7 +5,10 @@
 package com.android.tools.r8.ir.code;
 
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 
 public class ArrayLength extends Instruction {
@@ -78,5 +81,10 @@ public class ArrayLength extends Instruction {
   public int compareNonValueParts(Instruction other) {
     assert other.isArrayLength();
     return 0;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.ALWAYS;
   }
 }
