@@ -229,7 +229,8 @@ class ClassNameMinifier {
     }
 
     ClassNamingState(String packageName, String separator) {
-      this.packagePrefix = ("L" + packageName + (packageName.isEmpty() ? "" : separator))
+      this.packagePrefix = ("L" + DescriptorUtils.getPackageBinaryNameFromJavaType(packageName)
+          + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
       this.dictionaryIterator = dictionary.iterator();
     }

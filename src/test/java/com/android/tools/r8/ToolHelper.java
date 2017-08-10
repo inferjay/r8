@@ -11,10 +11,17 @@ import com.android.tools.r8.dex.ApplicationReader;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexApplication;
+import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.shaking.ProguardConfiguration;
+import com.android.tools.r8.shaking.ProguardConfigurationParser;
+import com.android.tools.r8.shaking.ProguardConfigurationRule;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
+import com.android.tools.r8.shaking.RootSetBuilder;
+import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
+import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -419,6 +426,17 @@ public class ToolHelper {
             new InternalOptions(),
             new Timing("ToolHelper buildApplication"))
         .read();
+  }
+
+  public static ProguardConfiguration loadProguardConfiguration(
+      DexItemFactory factory, List<Path> configPaths)
+      throws IOException, ProguardRuleParserException {
+    if (configPaths.isEmpty()) {
+      return ProguardConfiguration.defaultConfiguration(factory);
+    }
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(factory);
+    parser.parse(configPaths);
+    return parser.getConfig();
   }
 
   public static R8Command.Builder prepareR8CommandBuilder(AndroidApp app) {

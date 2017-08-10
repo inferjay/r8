@@ -131,5 +131,24 @@ public class Minifier {
           || virtualTargetHolder != null && virtualTargetHolder.isLibraryClass()
           || staticTargetHolder != null && staticTargetHolder.isLibraryClass();
     }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      renaming.forEach((item, str) -> {
+        if (item instanceof DexType) {
+          builder.append("[c] ");
+        } else if (item instanceof DexMethod) {
+          builder.append("[m] ");
+        } else if (item instanceof DexField) {
+          builder.append("[f] ");
+        }
+        builder.append(item.toSourceString());
+        builder.append(" -> ");
+        builder.append(str.toSourceString());
+        builder.append('\n');
+      });
+      return builder.toString();
+    }
   }
 }
