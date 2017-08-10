@@ -481,7 +481,7 @@ public class MainDexListTests extends TestBase {
         failedToFindClassInExpectedFile(outDir, clazz);
       }
     }
-    if (minimalMainDex) {
+    if (minimalMainDex && mainDex.size() > 0) {
       inspector.forAllClasses(clazz -> assertMainDexClass(clazz, mainDex));
     }
   }

@@ -245,9 +245,16 @@ public class AndroidApp {
   }
 
   /**
-   * True if the main dex list resource exists.
+   * True if the main dex list resources exists.
    */
   public boolean hasMainDexList() {
+    return !(mainDexListResources.isEmpty() && mainDexClasses.isEmpty());
+  }
+
+  /**
+   * True if the main dex list resources exists.
+   */
+  public boolean hasMainDexListResources() {
     return !mainDexListResources.isEmpty();
   }
 

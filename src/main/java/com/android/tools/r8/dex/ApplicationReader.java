@@ -155,14 +155,14 @@ public class ApplicationReader {
             InputStream input = closer.register(resource.getStream());
             builder.addToMainDexList(MainDexList.parse(input, itemFactory));
           }
-          builder.addToMainDexList(
-              inputApp.getMainDexClasses()
-                  .stream()
-                  .map(clazz -> itemFactory.createType(DescriptorUtils.javaTypeToDescriptor(clazz)))
-                  .collect(Collectors.toList()));
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
+        builder.addToMainDexList(
+            inputApp.getMainDexClasses()
+                .stream()
+                .map(clazz -> itemFactory.createType(DescriptorUtils.javaTypeToDescriptor(clazz)))
+                .collect(Collectors.toList()));
       }));
     }
   }

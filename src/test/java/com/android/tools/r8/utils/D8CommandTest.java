@@ -50,7 +50,7 @@ public class D8CommandTest {
   private void verifyEmptyCommand(D8Command command) throws IOException {
     assertEquals(0, ToolHelper.getApp(command).getDexProgramResources().size());
     assertEquals(0, ToolHelper.getApp(command).getClassProgramResources().size());
-    assertFalse(ToolHelper.getApp(command).hasMainDexList());
+    assertFalse(ToolHelper.getApp(command).hasMainDexListResources());
     assertFalse(ToolHelper.getApp(command).hasProguardMap());
     assertFalse(ToolHelper.getApp(command).hasProguardSeeds());
     assertFalse(ToolHelper.getApp(command).hasPackageDistribution());
@@ -162,11 +162,11 @@ public class D8CommandTest {
     Path mainDexList2 = temp.newFile("main-dex-list-2.txt").toPath();
 
     D8Command command = parse("--main-dex-list", mainDexList1.toString());
-    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+    assertTrue(ToolHelper.getApp(command).hasMainDexListResources());
 
     command = parse(
         "--main-dex-list", mainDexList1.toString(), "--main-dex-list", mainDexList2.toString());
-    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+    assertTrue(ToolHelper.getApp(command).hasMainDexListResources());
   }
 
   @Test
@@ -181,7 +181,7 @@ public class D8CommandTest {
     thrown.expect(CompilationException.class);
     Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
     D8Command command = parse("--main-dex-list", mainDexList.toString(), "--file-per-class");
-    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+    assertTrue(ToolHelper.getApp(command).hasMainDexListResources());
   }
 
   @Test
@@ -189,7 +189,7 @@ public class D8CommandTest {
     thrown.expect(CompilationException.class);
     Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
     D8Command command = parse("--main-dex-list", mainDexList.toString(), "--intermediate");
-    assertTrue(ToolHelper.getApp(command).hasMainDexList());
+    assertTrue(ToolHelper.getApp(command).hasMainDexListResources());
   }
 
   @Test
