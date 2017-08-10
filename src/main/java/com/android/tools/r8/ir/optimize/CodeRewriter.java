@@ -17,6 +17,7 @@ import com.android.tools.r8.ir.code.ArrayPut;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.Binop;
 import com.android.tools.r8.ir.code.CatchHandlers;
+import com.android.tools.r8.ir.code.CheckCast;
 import com.android.tools.r8.ir.code.Cmp;
 import com.android.tools.r8.ir.code.Cmp.Bias;
 import com.android.tools.r8.ir.code.ConstNumber;
@@ -541,42 +542,45 @@ public class CodeRewriter {
     assert code.isConsistentGraph();
   }
 
-  // For supporting assert javac adds the static field $assertionsDisabled to all classes which
-  // have methods with assertions. This is used to support the Java VM -ea flag.
-  //
-  //  The class:
-  //
-  //  class A {
-  //    void m() {
-  //      assert xxx;
-  //    }
-  //  }
-  //
-  //  Is compiled into:
-  //
-  //  class A {
-  //    static boolean $assertionsDisabled;
-  //    static {
-  //      $assertionsDisabled = A.class.desiredAssertionStatus();
-  //    }
-  //
-  //    // method with "assert xxx";
-  //    void m() {
-  //      if (!$assertionsDisabled) {
-  //        if (xxx) {
-  //          throw new AssertionError(...);
-  //        }
-  //      }
-  //    }
-  //  }
-  //
-  //  With the rewriting below (and other rewritings) the resulting code is:
-  //
-  //  class A {
-  //    void m() {
-  //    }
-  //  }
-  //
+
+  /**
+   * For supporting assert javac adds the static field $assertionsDisabled to all classes which
+   * have methods with assertions. This is used to support the Java VM -ea flag.
+   *
+   * The class:
+   * <pre>
+   * class A {
+   *   void m() {
+   *     assert xxx;
+   *   }
+   * }
+   * </pre>
+   * Is compiled into:
+   * <pre>
+   * class A {
+   *   static boolean $assertionsDisabled;
+   *   static {
+   *     $assertionsDisabled = A.class.desiredAssertionStatus();
+   *   }
+   *
+   *   // method with "assert xxx";
+   *   void m() {
+   *     if (!$assertionsDisabled) {
+   *       if (xxx) {
+   *         throw new AssertionError(...);
+   *       }
+   *     }
+   *   }
+   * }
+   * </pre>
+   * With the rewriting below (and other rewritings) the resulting code is:
+   * <pre>
+   * class A {
+   *   void m() {
+   *   }
+   * }
+   * </pre>
+   */
   public void disableAssertions(IRCode code) {
     InstructionIterator iterator = code.instructionIterator();
     while (iterator.hasNext()) {
@@ -595,6 +599,28 @@ public class CodeRewriter {
         StaticGet staticGet = current.asStaticGet();
         if (staticGet.getField().name == dexItemFactory.assertionsDisabled) {
           iterator.replaceCurrentInstruction(code.createTrue());
+        }
+      }
+    }
+  }
+
+  /**
+   * Due to inlining, we might see chains of casts on subtypes. It suffices to cast to the lowest
+   * subtype, as that will fail if a cast on a supertype would have failed.
+   */
+  public void removeCastChains(IRCode code) {
+    InstructionIterator it = code.instructionIterator();
+    while (it.hasNext()) {
+      Instruction current = it.next();
+      if (current.isCheckCast()
+          && current.outValue() != null && current.outValue().isUsed()
+          && current.outValue().numberOfPhiUsers() == 0) {
+        CheckCast checkCast = current.asCheckCast();
+        if (checkCast.outValue().uniqueUsers().stream().allMatch(
+            user -> user.isCheckCast()
+                && user.asCheckCast().getType().isSubtypeOf(checkCast.getType(), appInfo))) {
+          checkCast.outValue().replaceUsers(checkCast.inValues().get(0));
+          it.remove();
         }
       }
     }
@@ -1240,7 +1266,7 @@ public class CodeRewriter {
   }
 
   private Value addConstString(IRCode code, InstructionListIterator iterator, String s) {
-    Value value = code.createValue(MoveType.OBJECT);;
+    Value value = code.createValue(MoveType.OBJECT);
     iterator.add(new ConstString(value, dexItemFactory.createString(s)));
     return value;
   }
@@ -1279,7 +1305,7 @@ public class CodeRewriter {
     iterator.add(new ConstString(value, dexItemFactory.createString("INVOKE ")));
     iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, value)));
 
-    value = code.createValue(MoveType.OBJECT);;
+    value = code.createValue(MoveType.OBJECT);
     iterator.add(
         new ConstString(value, dexItemFactory.createString(method.method.qualifiedName())));
     iterator.add(new InvokeVirtual(print, null, ImmutableList.of(out, value)));

@@ -454,6 +454,7 @@ public class IRConverter {
       assert !options.debug;
       inliner.performInlining(method, code, callGraph);
     }
+    codeRewriter.removeCastChains(code);
     codeRewriter.rewriteLongCompareAndRequireNonNull(code, options);
     codeRewriter.commonSubexpressionElimination(code);
     codeRewriter.simplifyArrayConstruction(code);
