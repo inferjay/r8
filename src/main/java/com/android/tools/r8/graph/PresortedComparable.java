@@ -13,4 +13,8 @@ public interface PresortedComparable<T> extends Presorted, Comparable<T> {
   // Layered comparison methods that make use of indices for subpart comparisons. These rely
   // on subparts already being sorted and having indices assigned.
   int layeredCompareTo(T other, NamingLens namingLens);
+
+  static <T extends PresortedComparable<T>> int slowCompare(T a, T b) {
+    return a.slowCompareTo(b);
+  }
 }

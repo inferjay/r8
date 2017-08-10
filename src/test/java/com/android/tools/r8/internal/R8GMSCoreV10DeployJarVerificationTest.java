@@ -22,14 +22,11 @@ public class R8GMSCoreV10DeployJarVerificationTest extends GMSCoreDeployJarVerif
     AndroidApp app1 = buildFromDeployJar(
         CompilerUnderTest.R8, CompilationMode.RELEASE,
         GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
-    // TODO(sgjesse): Re-enable the deterministic test part when output is stable.
-    if (false) {
-      AndroidApp app2 = buildFromDeployJar(
-          CompilerUnderTest.R8, CompilationMode.RELEASE,
-          GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
+    AndroidApp app2 = buildFromDeployJar(
+        CompilerUnderTest.R8, CompilationMode.RELEASE,
+        GMSCoreCompilationTestBase.GMSCORE_V10_DIR, false);
 
-      // Verify that the result of the two compilations was the same.
-      assertIdenticalApplications(app1, app2);
-    }
+    // Verify that the result of the two compilations was the same.
+    assertIdenticalApplications(app1, app2);
   }
 }
