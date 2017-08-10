@@ -121,12 +121,6 @@ public class R8CommandTest {
   }
 
   @Test
-  public void minimalMainDex() throws Throwable {
-    thrown.expect(CompilationException.class);
-    parse("--minimal-main-dex");
-  }
-
-  @Test
   public void mainDexListOutput() throws Throwable {
     Path mainDexRules = temp.newFile("main-dex.rules").toPath();
     Path mainDexList = temp.newFile("main-dex-list.txt").toPath();
@@ -142,12 +136,6 @@ public class R8CommandTest {
     thrown.expect(CompilationException.class);
     Path mainDexListOutput = temp.newFile("main-dex-out.txt").toPath();
     parse("--main-dex-list-output", mainDexListOutput.toString());
-  }
-
-  @Test
-  public void mainDexRulesWithMinimalMainDex() throws Throwable {
-    Path mainDexRules = temp.newFile("main-dex.rules").toPath();
-    parse("--main-dex-rules", mainDexRules.toString(), "--minimal-main-dex");
   }
 
   @Test
