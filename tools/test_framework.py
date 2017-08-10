@@ -49,9 +49,10 @@ def parse_arguments():
   parser.add_argument('--name',
       required = True,
       help = 'Results will be printed using the specified benchmark name (e.g.'
-          ' <NAME>-<segment>(CodeSize): <bytes>)')
+          ' <NAME>-<segment>(CodeSize): <bytes>), the full size is reported'
+          ' with <NAME>-Total(CodeSize)')
   parser.add_argument('--print-memoryuse',
-      help = 'Prints the line \'<NAME>(MemoryUse):' +
+      help = 'Prints the line \'<NAME>-Total(MemoryUse):' +
              ' <mem>\' at the end where <mem> is the peak' +
              ' peak resident set size (VmHWM) in bytes.',
       default = False,
@@ -99,7 +100,7 @@ def Main():
     dt = time.time() - t0
 
     if args.print_memoryuse:
-      print('{}(MemoryUse): {}'
+      print('{}-Total(MemoryUse): {}'
           .format(args.name, utils.grep_memoryuse(track_memory_file)))
 
     dex_files = [f for f in glob(os.path.join(temp_dir, '*.dex'))]
