@@ -5,6 +5,7 @@ package com.android.tools.r8.shaking;
 
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.naming.DictionaryReader;
+import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.nio.file.Path;
@@ -19,6 +20,7 @@ public class ProguardConfiguration {
 
     private final List<Path> injars = new ArrayList<>();
     private final List<Path> libraryjars = new ArrayList<>();
+    private PackageObfuscationMode packageObfuscationMode = PackageObfuscationMode.NONE;
     private String packagePrefix = null;
     private boolean allowAccessModification = false;
     private boolean ignoreWarnings = false;
@@ -53,7 +55,17 @@ public class ProguardConfiguration {
       this.libraryjars.addAll(libraryJars);
     }
 
+    public PackageObfuscationMode getPackageObfuscationMode() {
+      return packageObfuscationMode;
+    }
+
     public void setPackagePrefix(String packagePrefix) {
+      packageObfuscationMode = PackageObfuscationMode.REPACKAGE;
+      this.packagePrefix = packagePrefix;
+    }
+
+    public void setFlattenPackagePrefix(String packagePrefix) {
+      packageObfuscationMode = PackageObfuscationMode.FLATTEN;
       this.packagePrefix = packagePrefix;
     }
 
@@ -139,6 +151,7 @@ public class ProguardConfiguration {
           dexItemFactory,
           injars,
           libraryjars,
+          packageObfuscationMode,
           packagePrefix,
           allowAccessModification,
           ignoreWarnings,
@@ -164,6 +177,7 @@ public class ProguardConfiguration {
   private final DexItemFactory dexItemFactory;
   private final List<Path> injars;
   private final List<Path> libraryjars;
+  private final PackageObfuscationMode packageObfuscationMode;
   private final String packagePrefix;
   private final boolean allowAccessModification;
   private final boolean ignoreWarnings;
@@ -188,6 +202,7 @@ public class ProguardConfiguration {
       DexItemFactory factory,
       List<Path> injars,
       List<Path> libraryjars,
+      PackageObfuscationMode packageObfuscationMode,
       String packagePrefix,
       boolean allowAccessModification,
       boolean ignoreWarnings,
@@ -210,6 +225,7 @@ public class ProguardConfiguration {
     this.dexItemFactory = factory;
     this.injars = ImmutableList.copyOf(injars);
     this.libraryjars = ImmutableList.copyOf(libraryjars);
+    this.packageObfuscationMode = packageObfuscationMode;
     this.packagePrefix = packagePrefix;
     this.allowAccessModification = allowAccessModification;
     this.ignoreWarnings = ignoreWarnings;
@@ -252,6 +268,10 @@ public class ProguardConfiguration {
 
   public List<Path> getLibraryjars() {
     return libraryjars;
+  }
+
+  public PackageObfuscationMode getPackageObfuscationMode() {
+    return packageObfuscationMode;
   }
 
   public String getPackagePrefix() {
@@ -333,6 +353,7 @@ public class ProguardConfiguration {
       super(factory,
           ImmutableList.of()    /* injars */,
           ImmutableList.of()    /* libraryjars */,
+          PackageObfuscationMode.REPACKAGE, /* TODO(b/36799686): should be NONE once implemented */
           ""                    /* package prefix */,
           false                 /* allowAccessModification */,
           false                 /* ignoreWarnings */,

@@ -14,6 +14,7 @@ import com.android.tools.r8.TestBase;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.graph.DexAccessFlags;
 import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -56,6 +57,18 @@ public class ProguardConfigurationParserTest extends TestBase {
       VALID_PROGUARD_DIR + "keepdirectories.flags";
   private static final String DONT_OBFUSCATE =
       VALID_PROGUARD_DIR + "dontobfuscate.flags";
+  private static final String PACKAGE_OBFUSCATION_1 =
+      VALID_PROGUARD_DIR + "package-obfuscation-1.flags";
+  private static final String PACKAGE_OBFUSCATION_2 =
+      VALID_PROGUARD_DIR + "package-obfuscation-2.flags";
+  private static final String PACKAGE_OBFUSCATION_3 =
+      VALID_PROGUARD_DIR + "package-obfuscation-3.flags";
+  private static final String PACKAGE_OBFUSCATION_4 =
+      VALID_PROGUARD_DIR + "package-obfuscation-4.flags";
+  private static final String PACKAGE_OBFUSCATION_5 =
+      VALID_PROGUARD_DIR + "package-obfuscation-5.flags";
+  private static final String PACKAGE_OBFUSCATION_6 =
+      VALID_PROGUARD_DIR + "package-obfuscation-6.flags";
   private static final String DONT_SHRINK =
       VALID_PROGUARD_DIR + "dontshrink.flags";
   private static final String DONT_SKIP_NON_PUBLIC_LIBRARY_CLASSES =
@@ -257,7 +270,72 @@ public class ProguardConfigurationParserTest extends TestBase {
 
   @Test
   public void parseDontobfuscate() throws IOException, ProguardRuleParserException {
-    new ProguardConfigurationParser(new DexItemFactory()).parse(Paths.get(DONT_OBFUSCATE));
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(DONT_OBFUSCATE));
+    ProguardConfiguration config = parser.getConfig();
+    assertFalse(config.isObfuscating());
+  }
+
+  @Test
+  public void parseRepackageClassesEmpty() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_1));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.REPACKAGE, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("", config.getPackagePrefix());
+  }
+
+  @Test
+  public void parseRepackageClassesNonEmpty() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_2));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.REPACKAGE, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("p.q.r", config.getPackagePrefix());
+  }
+
+  @Test
+  public void parseFlattenPackageHierarchyEmpty() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_3));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.FLATTEN, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("", config.getPackagePrefix());
+  }
+
+  @Test
+  public void parseFlattenPackageHierarchyNonEmpty() throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_4));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.FLATTEN, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("p.q.r", config.getPackagePrefix());
+  }
+
+  @Test
+  public void flattenPackageHierarchyCannotOverrideRepackageClasses()
+      throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_5));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.REPACKAGE, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("top", config.getPackagePrefix());
+  }
+
+  @Test
+  public void repackageClassesOverridesFlattenPackageHierarchy()
+      throws IOException, ProguardRuleParserException {
+    ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
+    parser.parse(Paths.get(PACKAGE_OBFUSCATION_6));
+    ProguardConfiguration config = parser.getConfig();
+    assertEquals(PackageObfuscationMode.REPACKAGE, config.getPackageObfuscationMode());
+    assertNotNull(config.getPackagePrefix());
+    assertEquals("top", config.getPackagePrefix());
   }
 
   @Test

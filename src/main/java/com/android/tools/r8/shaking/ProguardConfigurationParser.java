@@ -14,6 +14,7 @@ import com.android.tools.r8.shaking.ProguardConfiguration.Builder;
 import com.android.tools.r8.shaking.ProguardTypeMatcher.ClassOrType;
 import com.android.tools.r8.shaking.ProguardTypeMatcher.MatchSpecificType;
 import com.android.tools.r8.utils.DescriptorUtils;
+import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.LongInterval;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -131,7 +132,7 @@ public class ProguardConfigurationParser {
              (option = Iterables.find(warnedSingleArgOptions,
                  this::skipOptionWithSingleArg, null)) != null
           || (option = Iterables.find(warnedFlagOptions, this::skipFlag, null)) != null) {
-        System.out.println("WARNING: Ignoring option: -" + option);
+        warnIgnoringOptions(option);
       } else if ((option = Iterables.find(unsupportedFlagOptions, this::skipFlag, null)) != null) {
         throw parseError("Unsupported option: -" + option);
       } else if (acceptString("keepattributes")) {
@@ -150,7 +151,7 @@ public class ProguardConfigurationParser {
         configurationBuilder.addRule(rule);
       } else if (acceptString("dontoptimize")) {
         configurationBuilder.setOptimize(false);
-        System.out.println("WARNING: Ignoring option: -dontoptimize");
+        warnIgnoringOptions("dontoptimize");
       } else if (acceptString("optimizationpasses")) {
         skipWhitespace();
         Integer expectedOptimizationPasses = acceptInteger();
@@ -158,7 +159,7 @@ public class ProguardConfigurationParser {
           throw parseError("Missing n of \"-optimizationpasses n\"");
         }
         configurationBuilder.setOptimizationPasses(expectedOptimizationPasses);
-        System.out.println("WARNING: Ignoring option: -optimizationpasses");
+        warnIgnoringOptions("optimizationpasses");
       } else if (acceptString("dontobfuscate")) {
         configurationBuilder.setObfuscating(false);
       } else if (acceptString("dontshrink")) {
@@ -180,6 +181,9 @@ public class ProguardConfigurationParser {
           configurationBuilder.addDontWarnPattern(pattern);
         } while (acceptChar(','));
       } else if (acceptString("repackageclasses")) {
+        if (configurationBuilder.getPackageObfuscationMode() == PackageObfuscationMode.FLATTEN) {
+          warnOverridingOptions("repackageclasses", "flattenpackagehierarchy");
+        }
         skipWhitespace();
         if (acceptChar('\'')) {
           configurationBuilder.setPackagePrefix(parsePackageNameOrEmptyString());
@@ -187,6 +191,24 @@ public class ProguardConfigurationParser {
         } else {
           configurationBuilder.setPackagePrefix("");
         }
+      } else if (acceptString("flattenpackagehierarchy")) {
+        if (configurationBuilder.getPackageObfuscationMode() == PackageObfuscationMode.REPACKAGE) {
+          warnOverridingOptions("repackageclasses", "flattenpackagehierarchy");
+          skipWhitespace();
+          if (isOptionalArgumentGiven()) {
+            skipSingleArgument();
+          }
+        } else {
+          skipWhitespace();
+          if (acceptChar('\'')) {
+            configurationBuilder.setFlattenPackagePrefix(parsePackageNameOrEmptyString());
+            expectChar('\'');
+          } else {
+            configurationBuilder.setFlattenPackagePrefix("");
+          }
+        }
+        // TODO(b/37764746): warn until package flattening is implemented and in effect.
+        warnIgnoringOptions("flattenpackagehierarchy");
       } else if (acceptString("allowaccessmodification")) {
         configurationBuilder.setAllowAccessModification(true);
       } else if (acceptString("printmapping")) {
@@ -227,6 +249,14 @@ public class ProguardConfigurationParser {
         throw parseError("Unknown option");
       }
       return true;
+    }
+
+    private void warnIgnoringOptions(String optionName) {
+      System.out.println("WARNING: Ignoring option: -" + optionName);
+    }
+
+    private void warnOverridingOptions(String optionName, String victim) {
+      System.out.println("WARNING: option -" + optionName + " overrides -" + victim);
     }
 
     private void parseInclude() throws ProguardRuleParserException {

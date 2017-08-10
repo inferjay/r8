@@ -11,6 +11,7 @@ import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
+import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
@@ -379,6 +380,7 @@ public class R8Command extends BaseCommand {
 
     // TODO(zerny): Consider which other proguard options should be given flags.
     assert internal.packagePrefix.length() == 0;
+    internal.packageObfuscationMode = proguardConfiguration.getPackageObfuscationMode();
     internal.packagePrefix = proguardConfiguration.getPackagePrefix();
     assert internal.allowAccessModification;
     internal.allowAccessModification = proguardConfiguration.getAllowAccessModification();

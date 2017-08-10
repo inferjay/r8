@@ -76,6 +76,7 @@ public class InternalOptions {
   public Path printMainDexListFile;
   public boolean ignoreMissingClasses = false;
   public boolean skipMinification = false;
+  public PackageObfuscationMode packageObfuscationMode = PackageObfuscationMode.NONE;
   public String packagePrefix = "";
   public boolean allowAccessModification = true;
   public boolean inlineAccessors = true;
@@ -132,6 +133,15 @@ public class InternalOptions {
     // Currently the filter is simple string equality on the qualified name.
     String qualifiedName = method.qualifiedName();
     return logArgumentsFilter.indexOf(qualifiedName) >= 0;
+  }
+
+  public enum PackageObfuscationMode {
+    // General package obfuscation.
+    NONE,
+    // Repackaging all classes into the single user-given (or top-level) package.
+    REPACKAGE,
+    // Repackaging all packages into the single user-given (or top-level) package.
+    FLATTEN
   }
 
   public static class OutlineOptions {

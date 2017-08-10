@@ -80,6 +80,7 @@ abstract class NamingTestBase {
 
   private void copyProguardConfigurationToInternalOptions(
       ProguardConfiguration config, InternalOptions options) {
+    options.packageObfuscationMode = config.getPackageObfuscationMode();
     options.packagePrefix = config.getPackagePrefix();
     options.allowAccessModification = config.getAllowAccessModification();
     options.classObfuscationDictionary = config.getClassObfuscationDictionary();
