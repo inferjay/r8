@@ -761,7 +761,10 @@ public abstract class R8RunArtTestsTest {
       "534-checker-bce-deoptimization",
 
       // Requires something to be allocated in a method so that it goes out of scope.
-      "059-finalizer-throw"
+      "059-finalizer-throw",
+
+      // Has tests in submethods, which we should not inline.
+      "625-checker-licm-regressions"
   );
 
   private static List<String> failuresToTriage = ImmutableList.of(
@@ -1091,49 +1094,47 @@ public abstract class R8RunArtTestsTest {
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     assert mode != null;
     switch (compilerUnderTest) {
-      case D8:
-        {
-          assert keepRulesFile == null : "Keep-rules file specified for D8.";
-          D8Command.Builder builder =
-              D8Command.builder()
-                  .setMode(mode)
-                  .addProgramFiles(ListUtils.map(fileNames, Paths::get));
-          Integer minSdkVersion = needMinSdkVersion.get(name);
-          if (minSdkVersion != null) {
-            builder.setMinApiLevel(minSdkVersion);
-          }
-          D8Output output = D8.run(builder.build());
-          output.write(Paths.get(resultPath));
-          break;
+      case D8: {
+        assert keepRulesFile == null : "Keep-rules file specified for D8.";
+        D8Command.Builder builder =
+            D8Command.builder()
+                .setMode(mode)
+                .addProgramFiles(ListUtils.map(fileNames, Paths::get));
+        Integer minSdkVersion = needMinSdkVersion.get(name);
+        if (minSdkVersion != null) {
+          builder.setMinApiLevel(minSdkVersion);
         }
-      case R8:
-        {
-          R8Command.Builder builder =
-              R8Command.builder()
-                  .setMode(mode)
-                  .setOutputPath(Paths.get(resultPath))
-                  .addProgramFiles(ListUtils.map(fileNames, Paths::get))
-                  .setIgnoreMissingClasses(true);
-          Integer minSdkVersion = needMinSdkVersion.get(name);
-          if (minSdkVersion != null) {
-            builder.setMinApiLevel(minSdkVersion);
-          }
-          if (keepRulesFile != null) {
-            builder.addProguardConfigurationFiles(Paths.get(keepRulesFile));
-          }
-          // Add internal flags for testing purposes.
-          ToolHelper.runR8(
-              builder.build(),
-              options -> {
-                if (enableInterfaceMethodDesugaring.contains(name)) {
-                  options.interfaceMethodDesugaring = OffOrAuto.Auto;
-                }
-                if (disableInlining) {
-                  options.inlineAccessors = false;
-                }
-              });
-          break;
+        D8Output output = D8.run(builder.build());
+        output.write(Paths.get(resultPath));
+        break;
+      }
+      case R8: {
+        R8Command.Builder builder =
+            R8Command.builder()
+                .setMode(mode)
+                .setOutputPath(Paths.get(resultPath))
+                .addProgramFiles(ListUtils.map(fileNames, Paths::get))
+                .setIgnoreMissingClasses(true);
+        Integer minSdkVersion = needMinSdkVersion.get(name);
+        if (minSdkVersion != null) {
+          builder.setMinApiLevel(minSdkVersion);
         }
+        if (keepRulesFile != null) {
+          builder.addProguardConfigurationFiles(Paths.get(keepRulesFile));
+        }
+        // Add internal flags for testing purposes.
+        ToolHelper.runR8(
+            builder.build(),
+            options -> {
+              if (enableInterfaceMethodDesugaring.contains(name)) {
+                options.interfaceMethodDesugaring = OffOrAuto.Auto;
+              }
+              if (disableInlining) {
+                options.inlineAccessors = false;
+              }
+            });
+        break;
+      }
       default:
         assert false : compilerUnderTest;
     }
