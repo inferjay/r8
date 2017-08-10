@@ -26,7 +26,6 @@ public class R8Command extends BaseCommand {
   public static class Builder extends BaseCommand.Builder<R8Command, Builder> {
 
     private final List<Path> mainDexRules = new ArrayList<>();
-    private boolean minimalMainDex = false;
     private Path mainDexListOutput = null;
     private final List<Path> proguardConfigFiles = new ArrayList<>();
     private Optional<Boolean> treeShaking = Optional.empty();
@@ -75,17 +74,6 @@ public class R8Command extends BaseCommand {
      */
     public Builder addMainDexRules(List<Path> paths) {
       mainDexRules.addAll(paths);
-      return self();
-    }
-
-    /**
-     * Request minimal main dex generated when main dex rules are used.
-     *
-     * The main purpose of this is to verify that the main dex rules are sufficient
-     * for running on a platform without native multi dex support.
-     */
-    public Builder setMinimalMainDex(boolean value) {
-      minimalMainDex = value;
       return self();
     }
 
@@ -138,10 +126,6 @@ public class R8Command extends BaseCommand {
 
     protected void validate() throws CompilationException {
       super.validate();
-      if (minimalMainDex && mainDexRules.isEmpty() && !getAppBuilder().hasMainDexList()) {
-        throw new CompilationException(
-            "Option --minimal-main-dex require --main-dex-rules and/or --main-dex-list");
-      }
       if (mainDexListOutput != null && mainDexRules.isEmpty() && !getAppBuilder().hasMainDexList()) {
         throw new CompilationException(
             "Option --main-dex-list-output require --main-dex-rules and/or --main-dex-list");
@@ -192,7 +176,6 @@ public class R8Command extends BaseCommand {
           getOutputPath(),
           getOutputMode(),
           mainDexKeepRules,
-          minimalMainDex,
           mainDexListOutput,
           configuration,
           getMode(),
@@ -227,14 +210,11 @@ public class R8Command extends BaseCommand {
       "  --main-dex-rules <file>  # Proguard keep rules for classes to place in the",
       "                           # primary dex file.",
       "  --main-dex-list <file>   # List of classes to place in the primary dex file.",
-      "  --minimal-main-dex       # Only place classes specified by --main-dex-rules",
-      "                           # in the primary dex file.",
       "  --main-dex-list-output <file>  # Output the full main-dex list in <file>.",
       "  --version                # Print the version of r8.",
       "  --help                   # Print this message."));
 
   private final ImmutableList<ProguardConfigurationRule> mainDexKeepRules;
-  private final boolean minimalMainDex;
   private final Path mainDexListOutput;
   private final ProguardConfiguration proguardConfiguration;
   private final boolean useTreeShaking;
@@ -301,8 +281,6 @@ public class R8Command extends BaseCommand {
         builder.addMainDexRules(Paths.get(args[++i]));
       } else if (arg.equals("--main-dex-list")) {
         builder.addMainDexListFiles(Paths.get(args[++i]));
-      } else if (arg.equals("--minimal-main-dex")) {
-        builder.setMinimalMainDex(true);
       } else if (arg.equals("--main-dex-list-output")) {
         builder.setMainDexListOutputPath(Paths.get(args[++i]));
       } else if (arg.equals("--pg-conf")) {
@@ -346,7 +324,6 @@ public class R8Command extends BaseCommand {
       Path outputPath,
       OutputMode outputMode,
       ImmutableList<ProguardConfigurationRule> mainDexKeepRules,
-      boolean minimalMainDex,
       Path mainDexListOutput,
       ProguardConfiguration proguardConfiguration,
       CompilationMode mode,
@@ -359,7 +336,6 @@ public class R8Command extends BaseCommand {
     assert mainDexKeepRules != null;
     assert getOutputMode() == OutputMode.Indexed : "Only regular mode is supported in R8";
     this.mainDexKeepRules = mainDexKeepRules;
-    this.minimalMainDex = minimalMainDex;
     this.mainDexListOutput = mainDexListOutput;
     this.proguardConfiguration = proguardConfiguration;
     this.useTreeShaking = useTreeShaking;
@@ -370,7 +346,6 @@ public class R8Command extends BaseCommand {
   private R8Command(boolean printHelp, boolean printVersion) {
     super(printHelp, printVersion);
     mainDexKeepRules = ImmutableList.of();
-    minimalMainDex = false;
     mainDexListOutput = null;
     proguardConfiguration = null;
     useTreeShaking = false;
@@ -430,7 +405,7 @@ public class R8Command extends BaseCommand {
     internal.classObfuscationDictionary = proguardConfiguration.getClassObfuscationDictionary();
     internal.obfuscationDictionary = proguardConfiguration.getObfuscationDictionary();
     internal.mainDexKeepRules = mainDexKeepRules;
-    internal.minimalMainDex = minimalMainDex;
+    internal.minimalMainDex = internal.debug;
     if (mainDexListOutput != null) {
       internal.printMainDexListFile = mainDexListOutput;
     }

@@ -205,6 +205,7 @@ public class D8Command extends BaseCommand {
     InternalOptions internal = new InternalOptions(new DexItemFactory());
     assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
+    internal.minimalMainDex = internal.debug;
     internal.minApiLevel = getMinApiLevel();
     internal.intermediate = intermediate;
     // Assert and fixup defaults.
