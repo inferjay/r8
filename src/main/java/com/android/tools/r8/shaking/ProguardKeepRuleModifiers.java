@@ -8,51 +8,30 @@ public class ProguardKeepRuleModifiers {
     public boolean allowsShrinking = false;
     public boolean allowsOptimization = false;
     public boolean allowsObfuscation = false;
-    public boolean whyAreYouKeeping = false;
     public boolean includeDescriptorClasses = false;
-    public boolean keepPackageNames = false;
-    public boolean checkDiscarded = false;
-
-    void setFlagsToHaveNoEffect() {
-      allowsShrinking = true;
-      allowsOptimization = true;
-      allowsObfuscation = true;
-      whyAreYouKeeping = false;
-      includeDescriptorClasses = false;
-      keepPackageNames = false;
-    }
 
     private Builder() {}
 
     ProguardKeepRuleModifiers build() {
       return new ProguardKeepRuleModifiers(allowsShrinking, allowsOptimization, allowsObfuscation,
-          whyAreYouKeeping, includeDescriptorClasses, keepPackageNames, checkDiscarded);
+          includeDescriptorClasses);
     }
   }
 
   public final boolean allowsShrinking;
   public final boolean allowsOptimization;
   public final boolean allowsObfuscation;
-  public final boolean whyAreYouKeeping;
   public final boolean includeDescriptorClasses;
-  public final boolean keepPackageNames;
-  public final boolean checkDiscarded;
 
   private ProguardKeepRuleModifiers(
       boolean allowsShrinking,
       boolean allowsOptimization,
       boolean allowsObfuscation,
-      boolean whyAreYouKeeping,
-      boolean includeDescriptorClasses,
-      boolean keepPackageNames,
-      boolean checkDiscarded) {
+      boolean includeDescriptorClasses) {
     this.allowsShrinking = allowsShrinking;
     this.allowsOptimization = allowsOptimization;
     this.allowsObfuscation = allowsObfuscation;
-    this.whyAreYouKeeping = whyAreYouKeeping;
     this.includeDescriptorClasses = includeDescriptorClasses;
-    this.keepPackageNames = keepPackageNames;
-    this.checkDiscarded = checkDiscarded;
   }
   /**
    * Create a new empty builder.
@@ -71,8 +50,7 @@ public class ProguardKeepRuleModifiers {
     return allowsShrinking == that.allowsShrinking
         && allowsOptimization == that.allowsOptimization
         && allowsObfuscation == that.allowsObfuscation
-        && includeDescriptorClasses == that.includeDescriptorClasses
-        && keepPackageNames == that.keepPackageNames;
+        && includeDescriptorClasses == that.includeDescriptorClasses;
   }
 
   @Override
@@ -80,9 +58,7 @@ public class ProguardKeepRuleModifiers {
     return (allowsShrinking ? 1 : 0)
         | (allowsOptimization ? 2 : 0)
         | (allowsObfuscation ? 4 : 0)
-        | (whyAreYouKeeping ? 8 : 0)
-        | (includeDescriptorClasses ? 16 : 0)
-        | (keepPackageNames ? 32 : 0);
+        | (includeDescriptorClasses ? 8 : 0);
   }
 
   @Override
@@ -91,9 +67,7 @@ public class ProguardKeepRuleModifiers {
     appendWithComma(builder, allowsObfuscation, "allowobfuscation");
     appendWithComma(builder, allowsShrinking, "allowshrinking");
     appendWithComma(builder, allowsOptimization, "allowoptimization");
-    appendWithComma(builder, whyAreYouKeeping, "whyareyoukeeping");
     appendWithComma(builder, includeDescriptorClasses, "includedescriptorclasses");
-    appendWithComma(builder, keepPackageNames, "keeppackagenames");
     return builder.toString();
   }
 

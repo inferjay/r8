@@ -2,11 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-package com.android.tools.r8.bridgeremoval.bridgestoremove;
+package com.android.tools.r8.bridgeremoval;
 
 import static org.junit.Assert.assertFalse;
 
 import com.android.tools.r8.TestBase;
+import com.android.tools.r8.bridgeremoval.bridgestoremove.Main;
+import com.android.tools.r8.bridgeremoval.bridgestoremove.Outer;
 import com.android.tools.r8.utils.DexInspector;
 import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Method;

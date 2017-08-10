@@ -137,16 +137,16 @@ public class ProguardConfigurationParser {
       } else if (acceptString("keepattributes")) {
         parseKeepAttributes();
       } else if (acceptString("keeppackagenames")) {
-        ProguardKeepRule rule = parseKeepPackageNamesRule();
+        ProguardKeepPackageNamesRule rule = parseKeepPackageNamesRule();
         configurationBuilder.addRule(rule);
       } else if (acceptString("checkdiscard")) {
-        ProguardKeepRule rule = parseCheckDiscardRule();
+        ProguardCheckDiscardRule rule = parseCheckDiscardRule();
         configurationBuilder.addRule(rule);
       } else if (acceptString("keep")) {
         ProguardKeepRule rule = parseKeepRule();
         configurationBuilder.addRule(rule);
       } else if (acceptString("whyareyoukeeping")) {
-        ProguardKeepRule rule = parseWhyAreYouKeepingRule();
+        ProguardWhyAreYouKeepingRule rule = parseWhyAreYouKeepingRule();
         configurationBuilder.addRule(rule);
       } else if (acceptString("dontoptimize")) {
         configurationBuilder.setOptimize(false);
@@ -351,37 +351,36 @@ public class ProguardConfigurationParser {
       ProguardKeepRule.Builder keepRuleBuilder = ProguardKeepRule.builder();
       parseRuleTypeAndModifiers(keepRuleBuilder);
       parseClassSpec(keepRuleBuilder, false);
+      if (keepRuleBuilder.getMemberRules().isEmpty()) {
+        // If there are no member rules, a default rule for the parameterless constructor
+        // applies. So we add that here.
+        ProguardMemberRule.Builder defaultRuleBuilder = ProguardMemberRule.builder();
+        defaultRuleBuilder.setName(Constants.INSTANCE_INITIALIZER_NAME);
+        defaultRuleBuilder.setRuleType(ProguardMemberType.INIT);
+        defaultRuleBuilder.setArguments(Collections.emptyList());
+        keepRuleBuilder.getMemberRules().add(defaultRuleBuilder.build());
+      }
       return keepRuleBuilder.build();
     }
 
-    private ProguardKeepRule parseWhyAreYouKeepingRule()
+    private ProguardWhyAreYouKeepingRule parseWhyAreYouKeepingRule()
         throws ProguardRuleParserException {
-      ProguardKeepRule.Builder keepRuleBuilder = ProguardKeepRule.builder();
-      keepRuleBuilder.getModifiersBuilder().setFlagsToHaveNoEffect();
-      keepRuleBuilder.getModifiersBuilder().whyAreYouKeeping = true;
-      keepRuleBuilder.setType(ProguardKeepRuleType.KEEP);
+      ProguardWhyAreYouKeepingRule.Builder keepRuleBuilder = ProguardWhyAreYouKeepingRule.builder();
       parseClassSpec(keepRuleBuilder, false);
       return keepRuleBuilder.build();
     }
 
-    private ProguardKeepRule parseKeepPackageNamesRule()
+    private ProguardKeepPackageNamesRule parseKeepPackageNamesRule()
         throws ProguardRuleParserException {
-      ProguardKeepRule.Builder keepRuleBuilder = ProguardKeepRule.builder();
-      keepRuleBuilder.getModifiersBuilder().setFlagsToHaveNoEffect();
-      keepRuleBuilder.getModifiersBuilder().keepPackageNames = true;
-      keepRuleBuilder.setType(ProguardKeepRuleType.KEEP);
+      ProguardKeepPackageNamesRule.Builder keepRuleBuilder = ProguardKeepPackageNamesRule.builder();
       keepRuleBuilder.setClassNames(parseClassNames());
       return keepRuleBuilder.build();
     }
 
-    private ProguardKeepRule parseCheckDiscardRule()
+    private ProguardCheckDiscardRule parseCheckDiscardRule()
         throws ProguardRuleParserException {
-      ProguardKeepRule.Builder keepRuleBuilder = ProguardKeepRule.builder();
-      keepRuleBuilder.getModifiersBuilder().setFlagsToHaveNoEffect();
-      keepRuleBuilder.getModifiersBuilder().checkDiscarded = true;
+      ProguardCheckDiscardRule.Builder keepRuleBuilder = ProguardCheckDiscardRule.builder();
       parseClassSpec(keepRuleBuilder, false);
-      keepRuleBuilder.setType(keepRuleBuilder.getMemberRules().isEmpty() ? ProguardKeepRuleType.KEEP
-          : ProguardKeepRuleType.KEEP_CLASS_MEMBERS);
       return keepRuleBuilder.build();
     }
 
@@ -528,14 +527,6 @@ public class ProguardConfigurationParser {
         }
         skipWhitespace();
         expectChar('}');
-      } else {
-        // If there are no member rules, a default rule for the parameterless constructor
-        // applies. So we add that here.
-        ProguardMemberRule.Builder defaultRuleBuilder = ProguardMemberRule.builder();
-        defaultRuleBuilder.setName(Constants.INSTANCE_INITIALIZER_NAME);
-        defaultRuleBuilder.setRuleType(ProguardMemberType.INIT);
-        defaultRuleBuilder.setArguments(Collections.emptyList());
-        classSpecificationBuilder.getMemberRules().add(defaultRuleBuilder.build());
       }
     }
 
