@@ -92,7 +92,11 @@ public class TreeShakingSpecificTest {
             .addProgramFiles(originalDex)
             .setOutputPath(out)
             .addProguardConfigurationFiles(keepRules, printMapping)
-            .build());
+            .build(),
+        options -> {
+          // Turn off inlining, as we want the mapping that is printed to be stable.
+          options.inlineAccessors = false;
+        });
     Path outputmapping = out.resolve("mapping.txt");
     String actualMapping;
     actualMapping = new String(Files.readAllBytes(outputmapping), StandardCharsets.UTF_8);

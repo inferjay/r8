@@ -839,7 +839,5 @@ public abstract class Instruction {
   }
 
   // Returns the inlining constraint for this instruction.
-  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
-    return Constraint.NEVER;
-  }
+  public abstract Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder);
 }

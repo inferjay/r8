@@ -157,8 +157,8 @@ public abstract class CompilationTestBase {
       throws IOException {
     try (Closer closer = Closer.create()) {
       if (write) {
-        app1.writeToDirectory(Paths.get("app1"), OutputMode.Indexed);
-        app2.writeToDirectory(Paths.get("app2"), OutputMode.Indexed);
+        app1.writeToDirectory(temp.newFolder("app1").toPath(), OutputMode.Indexed);
+        app2.writeToDirectory(temp.newFolder("app2").toPath(), OutputMode.Indexed);
       }
       List<Resource> files1 = app1.getDexProgramResources();
       List<Resource> files2 = app2.getDexProgramResources();

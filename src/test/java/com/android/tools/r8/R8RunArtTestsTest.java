@@ -752,12 +752,16 @@ public abstract class R8RunArtTestsTest {
       "488-checker-inline-recursive-calls",
       "487-checker-inline-calls",
       "122-npe",
+      "141-class-unload",
 
       // Calls some internal art methods that cannot tolerate inlining.
       "466-get-live-vreg",
 
       // Requires a certain call pattern to surface an Art bug.
-      "534-checker-bce-deoptimization"
+      "534-checker-bce-deoptimization",
+
+      // Requires something to be allocated in a method so that it goes out of scope.
+      "059-finalizer-throw"
   );
 
   private static List<String> failuresToTriage = ImmutableList.of(

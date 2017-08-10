@@ -183,6 +183,13 @@ public class Inliner {
       }
     }
 
+    public static Constraint classIsVisible(DexType context, DexType clazz,
+        AppInfoWithSubtyping appInfo) {
+      DexClass definition = appInfo.definitionFor(clazz);
+      return definition == null ? NEVER
+          : deriveConstraint(context, clazz, definition.accessFlags, appInfo);
+    }
+
     public static Constraint min(Constraint one, Constraint other) {
       return one.ordinal() < other.ordinal() ? one : other;
     }
@@ -351,7 +358,7 @@ public class Inliner {
             IRCode inlinee = result
                 .buildIR(code.valueNumberGenerator, appInfo, graphLense, options);
             if (inlinee != null) {
-              // TODO(sgjesse): Get rid of this additional check by improved inlining.
+              // TODO(64432527): Get rid of this additional check by improved inlining.
               if (block.hasCatchHandlers() && inlinee.getNormalExitBlock() == null) {
                 continue;
               }

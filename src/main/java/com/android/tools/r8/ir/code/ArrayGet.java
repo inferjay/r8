@@ -12,7 +12,10 @@ import com.android.tools.r8.code.AgetShort;
 import com.android.tools.r8.code.AgetWide;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.Unreachable;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
+import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.ir.conversion.DexBuilder;
+import com.android.tools.r8.ir.optimize.Inliner.Constraint;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import java.util.Arrays;
 
@@ -113,5 +116,10 @@ public class ArrayGet extends Instruction {
   @Override
   public ArrayGet asArrayGet() {
     return this;
+  }
+
+  @Override
+  public Constraint inliningConstraint(AppInfoWithSubtyping info, DexType holder) {
+    return Constraint.ALWAYS;
   }
 }
