@@ -52,7 +52,8 @@ public class ProguardConfigurationParser {
           "invokebasemethod");
   private static final List<String> ignoredClassDescriptorOptions = ImmutableList
       .of("isclassnamestring",
-          "alwaysinline", "identifiernamestring", "whyarenotsimple");
+          "identifiernamestring",
+          "whyarenotsimple");
 
   private static final List<String> warnedSingleArgOptions = ImmutableList
       .of("renamesourcefileattribute",
@@ -245,6 +246,9 @@ public class ProguardConfigurationParser {
         configurationBuilder.setClassObfuscationDictionary(parseFileName());
       } else if (acceptString("packageobfuscationdictionary")) {
         configurationBuilder.setPackageObfuscationDictionary(parseFileName());
+      } else if (acceptString("alwaysinline")) {
+        ProguardAlwaysInlineRule rule = parseAlwaysInlineRule();
+        configurationBuilder.addRule(rule);
       } else {
         throw parseError("Unknown option");
       }
@@ -410,6 +414,13 @@ public class ProguardConfigurationParser {
     private ProguardCheckDiscardRule parseCheckDiscardRule()
         throws ProguardRuleParserException {
       ProguardCheckDiscardRule.Builder keepRuleBuilder = ProguardCheckDiscardRule.builder();
+      parseClassSpec(keepRuleBuilder, false);
+      return keepRuleBuilder.build();
+    }
+
+    private ProguardAlwaysInlineRule parseAlwaysInlineRule()
+        throws ProguardRuleParserException {
+      ProguardAlwaysInlineRule.Builder keepRuleBuilder = ProguardAlwaysInlineRule.builder();
       parseClassSpec(keepRuleBuilder, false);
       return keepRuleBuilder.build();
     }

@@ -196,6 +196,12 @@ public class Inlining {
     Subclass.callsMethodThatCallsProtectedMethod();
     // Do not inline constructors which set final field.
     System.out.println(new InlineConstructorFinalField());
+
+    // Call method three times to ensure it would not normally be inlined but force inline anyway.
+    int aNumber = longMethodThatWeShouldNotInline("ha", "li", "lo");
+    aNumber += longMethodThatWeShouldNotInline("zi", "za", "zo");
+    aNumber += longMethodThatWeShouldNotInline("do", "de", "da");
+    System.out.println(aNumber);
   }
 
   private static boolean intCmpExpression(A a, A b) {
@@ -322,5 +328,12 @@ public class Inlining {
   @CheckDiscarded
   private static int onlyCalledTwice(int count) {
     return count > 0 ? count + 1 : count - 1;
+  }
+
+  @AlwaysInline
+  @CheckDiscarded
+  private static int longMethodThatWeShouldNotInline(String a, String b, String c) {
+    String result = a + b + c + b + a + c + b;
+    return result.length();
   }
 }

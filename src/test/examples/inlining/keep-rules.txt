@@ -7,3 +7,7 @@
 -keep public class inlining.Inlining {
   public static void main(...);
 }
+
+-alwaysinline class * {
+  @inlining.AlwaysInline <methods>;
+}

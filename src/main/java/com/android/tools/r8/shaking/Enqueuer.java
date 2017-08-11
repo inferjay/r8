@@ -1092,6 +1092,10 @@ public class Enqueuer {
      */
     public final Map<DexItem, ProguardMemberRule> assumedValues;
     /**
+     * All methods that have to be inlined due to a configuration directive.
+     */
+    public final Set<DexItem> alwaysInline;
+    /**
      * Map from the class of an extension to the state it produced.
      */
     public final Map<Class, Object> extensions;
@@ -1118,6 +1122,7 @@ public class Enqueuer {
       this.staticInvokes = joinInvokedMethods(enqueuer.staticInvokes);
       this.noSideEffects = enqueuer.rootSet.noSideEffects;
       this.assumedValues = enqueuer.rootSet.assumedValues;
+      this.alwaysInline = enqueuer.rootSet.alwaysInline;
       this.extensions = enqueuer.extensionsState;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
@@ -1145,6 +1150,7 @@ public class Enqueuer {
       this.directInvokes = previous.directInvokes;
       this.staticInvokes = previous.staticInvokes;
       this.extensions = previous.extensions;
+      this.alwaysInline = previous.alwaysInline;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;
     }
@@ -1170,6 +1176,7 @@ public class Enqueuer {
       this.superInvokes = rewriteItems(previous.superInvokes, lense::lookupMethod);
       this.directInvokes = rewriteItems(previous.directInvokes, lense::lookupMethod);
       this.staticInvokes = rewriteItems(previous.staticInvokes, lense::lookupMethod);
+      this.alwaysInline = previous.alwaysInline;
       this.extensions = previous.extensions;
       assert Sets.intersection(instanceFieldReads, staticFieldReads).size() == 0;
       assert Sets.intersection(instanceFieldWrites, staticFieldWrites).size() == 0;

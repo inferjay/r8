@@ -12,3 +12,7 @@
 -checkdiscard class * {
   @inlining.CheckDiscarded *;
 }
+
+-alwaysinline class * {
+  @inlining.AlwaysInline <methods>;
+}
