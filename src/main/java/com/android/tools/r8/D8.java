@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
  */
 public final class D8 {
 
+  private static final String kVersion = "v0.0.1";
   private static final int STATUS_ERROR = 1;
 
   private D8() {}
@@ -109,7 +110,7 @@ public final class D8 {
       return;
     }
     if (command.isPrintVersion()) {
-      System.out.println("D8 v0.0.1");
+      System.out.println("D8 " + kVersion);
       return;
     }
     run(command);
@@ -159,7 +160,9 @@ public final class D8 {
     if (options.customizedMarker != null) {
       return options.customizedMarker;
     }
-    return new Marker(Tool.D8);
+    return new Marker(Tool.D8)
+        .put("version", kVersion)
+        .put("min-api", options.minApiLevel);
   }
 
   private static CompilationResult runForTesting(

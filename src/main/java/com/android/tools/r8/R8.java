@@ -71,6 +71,7 @@ import java.util.concurrent.Executors;
 
 public class R8 {
 
+  private static final String kVersion = "v0.0.1";
   private final Timing timing = new Timing("R8");
   private final InternalOptions options;
 
@@ -84,7 +85,9 @@ public class R8 {
     if (options.customizedMarker != null) {
       return options.customizedMarker;
     }
-    return new Marker(Tool.R8);
+    return new Marker(Tool.R8)
+        .put("version", kVersion)
+        .put("min-api", options.minApiLevel);
   }
 
   public static AndroidApp writeApplication(
@@ -497,7 +500,7 @@ public class R8 {
       return;
     }
     if (command.isPrintVersion()) {
-      System.out.println("R8 v0.0.1");
+      System.out.println("R8 " + kVersion);
       return;
     }
     run(command);
