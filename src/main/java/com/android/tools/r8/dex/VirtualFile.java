@@ -57,9 +57,6 @@ public class VirtualFile {
 
   // The fill strategy determine how to distribute classes into dex files.
   enum FillStrategy {
-    // Only put classes matches by the main dex rules into the first dex file. Distribute remaining
-    // classes in additional dex files filling each dex file as much as possible.
-    MINIMAL_MAIN_DEX,
     // Distribute classes in as few dex files as possible filling each dex file as much as possible.
     FILL_MAX,
     // Distribute classes keeping some space for future growth. This is mainly useful together with
@@ -114,7 +111,8 @@ public class VirtualFile {
       if (!next.startsWith(prefix)) {
         throw new RuntimeException("Input filenames lack common prefix.");
       }
-      String numberPart = next.substring(prefix.length(), next.length() - FileUtils.DEX_EXTENSION.length());
+      String numberPart =
+          next.substring(prefix.length(), next.length() - FileUtils.DEX_EXTENSION.length());
       if (Integer.parseInt(numberPart) != index++) {
         throw new RuntimeException("DEX files are not numbered consecutively.");
       }
@@ -243,16 +241,25 @@ public class VirtualFile {
   public abstract static class DistributorBase extends Distributor {
     protected Set<DexProgramClass> classes;
     protected Map<DexProgramClass, String> originalNames;
+    protected final VirtualFile mainDexFile;
 
     DistributorBase(ApplicationWriter writer) {
       super(writer);
+
+      // Create the primary dex file. The distribution will add more if needed.
+      mainDexFile = new VirtualFile(0, writer.namingLens);
+      nameToFileMap.put(0, mainDexFile);
+      if (writer.markerString != null) {
+        mainDexFile.transaction.addString(writer.markerString);
+        mainDexFile.commitTransaction();
+      }
 
       classes = Sets.newHashSet(application.classes());
       originalNames = computeOriginalNameMapping(classes, application.getProguardMap());
     }
 
     protected void fillForMainDexList(Set<DexProgramClass> classes) {
-      if (application.mainDexList != null) {
+      if (!application.mainDexList.isEmpty()) {
         VirtualFile mainDexFile = nameToFileMap.get(0);
         for (DexType type : application.mainDexList) {
           DexClass clazz = application.definitionFor(type);
@@ -306,34 +313,38 @@ public class VirtualFile {
   }
 
   public static class FillFilesDistributor extends DistributorBase {
+    boolean minimalMainDex;
     private final FillStrategy fillStrategy;
 
     FillFilesDistributor(ApplicationWriter writer, boolean minimalMainDex) {
       super(writer);
-      this.fillStrategy = minimalMainDex ? FillStrategy.MINIMAL_MAIN_DEX : FillStrategy.FILL_MAX;
+      this.minimalMainDex = minimalMainDex;
+      this.fillStrategy = FillStrategy.FILL_MAX;
     }
 
     public Map<Integer, VirtualFile> run() throws ExecutionException, IOException {
-      // Strategy for distributing classes for write out:
-      // 1. Place the remaining files based on their packages in sorted order.
-
-      // Start with 1 file. The package populator will add more if needed.
-      VirtualFile main = new VirtualFile(0, writer.namingLens);
-      nameToFileMap.put(0, main);
-      if (writer.markerString != null) {
-        main.transaction.addString(writer.markerString);
-        main.commitTransaction();
-      }
-
       // First fill required classes into the main dex file.
       fillForMainDexList(classes);
+      if (classes.isEmpty()) {
+        // All classes ended up in the main dex file, no more to do.
+        return nameToFileMap;
+      }
+
+      Map<Integer, VirtualFile> filesForDistribution = nameToFileMap;
+      if (minimalMainDex && !mainDexFile.isEmpty()) {
+        assert !nameToFileMap.get(0).isEmpty();
+        // The main dex file is filtered out, so create ensure at least one file for the remaining
+        // classes
+        nameToFileMap.put(1, new VirtualFile(1, writer.namingLens));
+        filesForDistribution = Maps.filterKeys(filesForDistribution, key -> key != 0);
+      }
 
       // Sort the remaining classes based on the original names.
       // This with make classes from the same package be adjacent.
       classes = sortClassesByPackage(classes, originalNames);
 
       new PackageSplitPopulator(
-          nameToFileMap, classes, originalNames, null, application.dexItemFactory,
+          filesForDistribution, classes, originalNames, null, application.dexItemFactory,
           fillStrategy, writer.namingLens)
           .call();
       return nameToFileMap;
@@ -347,13 +358,7 @@ public class VirtualFile {
 
     @Override
     public Map<Integer, VirtualFile> run() throws ExecutionException, IOException {
-      VirtualFile mainDexFile = new VirtualFile(0, writer.namingLens);
-      nameToFileMap.put(0, mainDexFile);
-      if (writer.markerString != null) {
-        mainDexFile.transaction.addString(writer.markerString);
-        mainDexFile.commitTransaction();
-      }
-
+      // Add all classes to the main dex file.
       for (DexProgramClass programClass : classes) {
         mainDexFile.addClass(programClass);
       }
@@ -381,8 +386,10 @@ public class VirtualFile {
       // 1. Place all files in the package distribution file in the proposed files (if any).
       // 2. Place the remaining files based on their packages in sorted order.
 
+      assert nameToFileMap.size() == 1;
+      assert nameToFileMap.containsKey(0);
       int maxReferencedIndex = packageDistribution.maxReferencedIndex();
-      for (int index = 0; index <= maxReferencedIndex; index++) {
+      for (int index = 1; index <= maxReferencedIndex; index++) {
         VirtualFile file = new VirtualFile(index, writer.namingLens);
         nameToFileMap.put(index, file);
       }
@@ -791,14 +798,7 @@ public class VirtualFile {
       this.namingLens = namingLens;
       this.fillStrategy = fillStrategy;
 
-      nextFileId = files.size();
-      if (fillStrategy == FillStrategy.MINIMAL_MAIN_DEX) {
-        // The main dex file is filtered out, so ensure at least one file for the remaining
-        // classes
-        files.put(nextFileId, new VirtualFile(nextFileId, namingLens));
-        this.files = Maps.filterKeys(files, key -> key != 0);
-        nextFileId++;
-      }
+      nextFileId = Collections.max(files.keySet()) + 1;
 
       reset();
     }
@@ -814,7 +814,6 @@ public class VirtualFile {
 
     VirtualFile next() {
       VirtualFile next = activeFiles.next();
-      assert fillStrategy != FillStrategy.MINIMAL_MAIN_DEX || next.getId() != 0;
       return next;
     }
 

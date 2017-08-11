@@ -156,8 +156,7 @@ public class ApplicationWriter {
         distributor =
             new VirtualFile.PackageMapDistributor(this, packageDistribution, executorService);
       } else {
-        boolean minimal = options.minimalMainDex && !application.mainDexList.isEmpty();
-        distributor = new VirtualFile.FillFilesDistributor(this, minimal);
+        distributor = new VirtualFile.FillFilesDistributor(this, options.minimalMainDex);
       }
       Map<Integer, VirtualFile> newFiles = distributor.run();
 
@@ -167,6 +166,7 @@ public class ApplicationWriter {
       for (int i = 0; i < newFiles.size(); i++) {
         VirtualFile newFile = newFiles.get(i);
         assert newFile.getId() == i;
+        assert !newFile.isEmpty();
         if (!newFile.isEmpty()) {
           dexDataFutures.put(newFile, executorService.submit(() -> writeDexFile(newFile)));
         }
