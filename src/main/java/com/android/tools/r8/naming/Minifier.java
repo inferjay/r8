@@ -42,9 +42,13 @@ public class Minifier {
     timing.begin("MinifyClasses");
     Map<DexType, DexString> classRenaming =
         new ClassNameMinifier(
-            appInfo, rootSet, options.packagePrefix, options.classObfuscationDictionary,
+            appInfo,
+            rootSet,
+            options.packageObfuscationMode,
+            options.packagePrefix,
+            options.classObfuscationDictionary,
             options.attributeRemoval.signature)
-            .computeRenaming();
+            .computeRenaming(timing);
     timing.end();
     timing.begin("MinifyMethods");
     Map<DexMethod, DexString> methodRenaming =
@@ -53,7 +57,8 @@ public class Minifier {
     timing.end();
     timing.begin("MinifyFields");
     Map<DexField, DexString> fieldRenaming =
-        new FieldNameMinifier(appInfo, rootSet, options.obfuscationDictionary).computeRenaming();
+        new FieldNameMinifier(appInfo, rootSet, options.obfuscationDictionary)
+            .computeRenaming(timing);
     timing.end();
     return new MinifiedRenaming(classRenaming, methodRenaming, fieldRenaming, appInfo);
   }
