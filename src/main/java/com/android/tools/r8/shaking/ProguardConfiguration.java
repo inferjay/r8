@@ -21,7 +21,7 @@ public class ProguardConfiguration {
     private final List<Path> injars = new ArrayList<>();
     private final List<Path> libraryjars = new ArrayList<>();
     private PackageObfuscationMode packageObfuscationMode = PackageObfuscationMode.NONE;
-    private String packagePrefix = null;
+    private String packagePrefix = "";
     private boolean allowAccessModification = false;
     private boolean ignoreWarnings = false;
     private boolean optimize = true;

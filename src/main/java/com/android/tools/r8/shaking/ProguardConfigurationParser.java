@@ -208,8 +208,6 @@ public class ProguardConfigurationParser {
             configurationBuilder.setFlattenPackagePrefix("");
           }
         }
-        // TODO(b/37764746): warn until package flattening is implemented and in effect.
-        warnIgnoringOptions("flattenpackagehierarchy");
       } else if (acceptString("allowaccessmodification")) {
         configurationBuilder.setAllowAccessModification(true);
       } else if (acceptString("printmapping")) {

@@ -3,10 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.naming;
 
+import static com.android.tools.r8.utils.DescriptorUtils.getClassBinaryNameFromDescriptor;
+import static com.android.tools.r8.utils.DescriptorUtils.getDescriptorFromClassBinaryName;
+import static com.android.tools.r8.utils.DescriptorUtils.getPackageBinaryNameFromJavaType;
+
 import com.android.tools.r8.graph.DexAnnotation;
 import com.android.tools.r8.graph.DexClass;
-import com.android.tools.r8.graph.DexEncodedField;
-import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.graph.DexType;
@@ -18,8 +20,9 @@ import com.android.tools.r8.naming.signature.GenericSignatureAction;
 import com.android.tools.r8.naming.signature.GenericSignatureParser;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
-import com.android.tools.r8.utils.DescriptorUtils;
+import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.StringUtils;
+import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Collections;
@@ -34,7 +37,7 @@ class ClassNameMinifier {
 
   private final AppInfoWithLiveness appInfo;
   private final RootSet rootSet;
-  private final String packagePrefix;
+  private final PackageObfuscationMode packageObfuscationMode;
   private final Set<DexString> usedTypeNames = Sets.newIdentityHashSet();
 
   private final Map<DexType, DexString> renaming = Maps.newIdentityHashMap();
@@ -42,39 +45,59 @@ class ClassNameMinifier {
   private final List<String> dictionary;
   private final boolean keepInnerClassStructure;
 
+  private final ClassNamingState topLevelState;
+
   private GenericSignatureRewriter genericSignatureRewriter = new GenericSignatureRewriter();
 
   private GenericSignatureParser<DexType> genericSignatureParser =
       new GenericSignatureParser<>(genericSignatureRewriter);
 
-  ClassNameMinifier(AppInfoWithLiveness appInfo, RootSet rootSet, String packagePrefix,
-      List<String> dictionary, boolean keepInnerClassStructure) {
+  ClassNameMinifier(
+      AppInfoWithLiveness appInfo,
+      RootSet rootSet,
+      PackageObfuscationMode packageObfuscationMode,
+      String packagePrefix,
+      List<String> dictionary,
+      boolean keepInnerClassStructure) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
-    this.packagePrefix = packagePrefix;
+    this.packageObfuscationMode = packageObfuscationMode;
     this.dictionary = dictionary;
     this.keepInnerClassStructure = keepInnerClassStructure;
+
+    // Initialize top-level naming state.
+    topLevelState = new ClassNamingState(getPackageBinaryNameFromJavaType(packagePrefix));
+    states.computeIfAbsent("", k -> topLevelState);
   }
 
-  Map<DexType, DexString> computeRenaming() {
+  Map<DexType, DexString> computeRenaming(Timing timing) {
     Iterable<DexProgramClass> classes = appInfo.classes();
     // Collect names we have to keep.
+    timing.begin("reserve");
     for (DexClass clazz : classes) {
       if (rootSet.noObfuscation.contains(clazz)) {
         assert !renaming.containsKey(clazz.type);
         registerClassAsUsed(clazz.type);
       }
     }
+    timing.end();
+
+    timing.begin("rename-classes");
     for (DexClass clazz : classes) {
       if (!renaming.containsKey(clazz.type)) {
         DexString renamed = computeName(clazz);
         renaming.put(clazz.type, renamed);
       }
     }
+    timing.end();
 
+    timing.begin("rename-generic");
     renameTypesInGenericSignatures();
+    timing.end();
 
+    timing.begin("rename-arrays");
     appInfo.dexItemFactory.forAllTypes(this::renameArrayTypeIfNeeded);
+    timing.end();
 
     return Collections.unmodifiableMap(renaming);
   }
@@ -162,27 +185,41 @@ class ClassNameMinifier {
       }
     }
     if (state == null) {
-      String packageName = getPackageNameFor(clazz);
-      state = getStateFor(packageName);
+      state = getStateFor(clazz);
     }
     return state.nextTypeName();
   }
 
-  private String getPackageNameFor(DexClass clazz) {
-    if ((packagePrefix == null) || rootSet.keepPackageName.contains(clazz)) {
-      return clazz.type.getPackageDescriptor();
-    } else {
-      return packagePrefix;
+  private ClassNamingState getStateFor(DexClass clazz) {
+    String packageName = getPackageBinaryNameFromJavaType(clazz.type.getPackageDescriptor());
+    // Check whether the given class should be kept.
+    if (rootSet.keepPackageName.contains(clazz)) {
+      return states.computeIfAbsent(packageName, ClassNamingState::new);
     }
-  }
-
-  private ClassNamingState getStateFor(String packageName) {
-    return states.computeIfAbsent(packageName, ClassNamingState::new);
+    ClassNamingState state = topLevelState;
+    switch (packageObfuscationMode) {
+      case NONE:
+        // TODO(b/36799686): general obfuscation.
+        state = states.computeIfAbsent(packageName, ClassNamingState::new);
+        break;
+      case REPACKAGE:
+        // For repackaging, all classes are repackaged to a single package.
+        state = topLevelState;
+        break;
+      case FLATTEN:
+        // For flattening, all packages are repackaged to a single package.
+        state = states.computeIfAbsent(packageName, k -> {
+          String renamedPackageName =
+              getClassBinaryNameFromDescriptor(topLevelState.nextSuggestedName());
+          return new ClassNamingState(renamedPackageName);
+        });
+        break;
+    }
+    return state;
   }
 
   private ClassNamingState getStateForOuterClass(DexType outer) {
-    String prefix = DescriptorUtils
-        .getClassBinaryNameFromDescriptor(outer.toDescriptorString());
+    String prefix = getClassBinaryNameFromDescriptor(outer.toDescriptorString());
     return states.computeIfAbsent(prefix, k -> {
       // Create a naming state with this classes renaming as prefix.
       DexString renamed = renaming.get(outer);
@@ -196,7 +233,7 @@ class ClassNameMinifier {
           renaming.put(outer, renamed);
         }
       }
-      String binaryName = DescriptorUtils.getClassBinaryNameFromDescriptor(renamed.toString());
+      String binaryName = getClassBinaryNameFromDescriptor(renamed.toString());
       return new ClassNamingState(binaryName, "$");
     });
   }
@@ -229,7 +266,8 @@ class ClassNameMinifier {
     }
 
     ClassNamingState(String packageName, String separator) {
-      this.packagePrefix = ("L" + DescriptorUtils.getPackageBinaryNameFromJavaType(packageName)
+      this.packagePrefix = ("L" + packageName
+          // L or La/b/ (or La/b/C$)
           + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
       this.dictionaryIterator = dictionary.iterator();
@@ -239,10 +277,10 @@ class ClassNameMinifier {
       return packagePrefix;
     }
 
-    protected String nextSuggestedName() {
+    String nextSuggestedName() {
       StringBuilder nextName = new StringBuilder();
       if (dictionaryIterator.hasNext()) {
-        nextName.append(getPackagePrefix()).append(dictionaryIterator.next()).append(';');
+        nextName.append(packagePrefix).append(dictionaryIterator.next()).append(';');
         return nextName.toString();
       } else {
         return StringUtils.numberToIdentifier(packagePrefix, typeCounter++, true);
@@ -278,11 +316,9 @@ class ClassNameMinifier {
 
     @Override
     public DexType parsedTypeName(String name) {
-      DexType type = appInfo.dexItemFactory.createType(
-          DescriptorUtils.getDescriptorFromClassBinaryName(name));
+      DexType type = appInfo.dexItemFactory.createType(getDescriptorFromClassBinaryName(name));
       DexString renamedDescriptor = renaming.getOrDefault(type, type.descriptor);
-      renamedSignature.append(DescriptorUtils.getClassBinaryNameFromDescriptor(
-          renamedDescriptor.toString()));
+      renamedSignature.append(getClassBinaryNameFromDescriptor(renamedDescriptor.toString()));
       return type;
     }
 
@@ -292,14 +328,15 @@ class ClassNameMinifier {
       String enclosingDescriptor = enclosingType.toDescriptorString();
       DexType type =
           appInfo.dexItemFactory.createType(
-              DescriptorUtils.getDescriptorFromClassBinaryName(
-                  DescriptorUtils.getClassBinaryNameFromDescriptor(enclosingDescriptor)
+              getDescriptorFromClassBinaryName(
+                  getClassBinaryNameFromDescriptor(enclosingDescriptor)
                   + '$' + name));
       String enclosingRenamedBinaryName =
-          DescriptorUtils.getClassBinaryNameFromDescriptor(renaming.getOrDefault(enclosingType,
-              enclosingType.descriptor).toString());
-      String renamed = DescriptorUtils.getClassBinaryNameFromDescriptor(
-          renaming.getOrDefault(type, type.descriptor).toString());
+          getClassBinaryNameFromDescriptor(
+              renaming.getOrDefault(enclosingType, enclosingType.descriptor).toString());
+      String renamed =
+          getClassBinaryNameFromDescriptor(
+              renaming.getOrDefault(type, type.descriptor).toString());
       assert renamed.startsWith(enclosingRenamedBinaryName + '$');
       String outName = renamed.substring(enclosingRenamedBinaryName.length() + 1);
       renamedSignature.append(outName);

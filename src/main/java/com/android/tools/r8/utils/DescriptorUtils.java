@@ -117,13 +117,24 @@ public class DescriptorUtils {
   }
 
   /**
-   * Get class name from its descriptor.
+   * Get simple class name from its descriptor.
    *
    * @param classDescriptor a class descriptor i.e. "Ljava/lang/Object;"
    * @return class name i.e. "Object"
    */
   public static String getSimpleClassNameFromDescriptor(String classDescriptor) {
     return getSimpleClassNameFromBinaryName(getClassBinaryNameFromDescriptor(classDescriptor));
+  }
+
+  /**
+   * Get class name from its descriptor.
+   *
+   * @param classDescriptor a class descriptor i.e. "Ljava/lang/Object;"
+   * @return full class name i.e. "java.lang.Object"
+   */
+  public static String getClassNameFromDescriptor(String classDescriptor) {
+    return getClassBinaryNameFromDescriptor(classDescriptor)
+        .replace(DESCRIPTOR_PACKAGE_SEPARATOR, JAVA_PACKAGE_SEPARATOR);
   }
 
   /**
@@ -152,7 +163,7 @@ public class DescriptorUtils {
    * Convert package name to a binary name.
    *
    * @param packageName a package name i.e., "java.lang"
-   * @return java pacakge name in a binary name format, i.e., java/lang
+   * @return java package name in a binary name format, i.e., java/lang
    */
   public static String getPackageBinaryNameFromJavaType(String packageName) {
     return packageName.replace(JAVA_PACKAGE_SEPARATOR, DESCRIPTOR_PACKAGE_SEPARATOR);
@@ -167,7 +178,6 @@ public class DescriptorUtils {
   public static String getDescriptorFromClassBinaryName(String typeBinaryName) {
     return ('L' + typeBinaryName + ';');
   }
-
 
   /**
    * Get class name from its binary name.
