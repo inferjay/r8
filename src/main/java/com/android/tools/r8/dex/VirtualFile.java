@@ -231,6 +231,11 @@ public class VirtualFile {
       for (DexProgramClass clazz : application.classes()) {
         VirtualFile file = new VirtualFile(nameToFileMap.size(), writer.namingLens);
         nameToFileMap.put(nameToFileMap.size(), file);
+        // Write the marker string to all files in files-per-class mode.
+        // TODO(sgjesse): Get rid of this (currently some tests fails without it).
+        if (writer.markerString != null) {
+          file.transaction.addString(writer.markerString);
+        }
         file.addClass(clazz);
         file.commitTransaction();
       }
