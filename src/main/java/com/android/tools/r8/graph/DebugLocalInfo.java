@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.graph;
 
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+
 public class DebugLocalInfo {
   public final DexString name;
   public final DexType type;
@@ -12,6 +14,25 @@ public class DebugLocalInfo {
     this.name = name;
     this.type = type;
     this.signature = signature;
+  }
+
+  public static boolean localsInfoMapsEqual(
+      Int2ReferenceMap<DebugLocalInfo> set0, Int2ReferenceMap<DebugLocalInfo> set1) {
+    if (set0 == null) {
+      return set1 == null;
+    }
+    if (set1 == null) {
+      return false;
+    }
+    if (set0.keySet().size() != set1.keySet().size()) {
+      return false;
+    }
+    for (int i : set0.keySet()) {
+      if (!set0.get(i).equals(set1.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
