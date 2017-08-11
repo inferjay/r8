@@ -203,6 +203,7 @@ public class Inliner {
    */
   public enum Reason {
     FORCE,         // Inlinee is marked for forced inlining (bridge method or renamed constructor).
+    ALWAYS,        // Inlinee is marked for inlining due to alwaysinline directive.
     SINGLE_CALLER, // Inlinee has precisely one caller.
     DUAL_CALLER,   // Inlinee has precisely two callers.
     SIMPLE,        // Inlinee has simple code suitable for inlining.

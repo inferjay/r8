@@ -62,6 +62,10 @@ public class InliningOracle {
     if (target.getOptimizationInfo().forceInline()) {
       return Reason.FORCE;
     }
+    if (inliner.appInfo.hasLiveness()
+        && inliner.appInfo.withLiveness().alwaysInline.contains(target)) {
+      return Reason.ALWAYS;
+    }
     if (callGraph.hasSingleCallSite(target)) {
       return Reason.SINGLE_CALLER;
     }
