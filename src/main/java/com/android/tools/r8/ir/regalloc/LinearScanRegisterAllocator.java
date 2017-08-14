@@ -1587,7 +1587,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
         newActive.add(splitChild);
         // If the constant is split before its first actual use, mark the constant as being
         // spilled. That will allows us to remove it afterwards if it is rematerializable.
-        if (intervals.getValue().isConstant()
+        if (intervals.getValue().isConstNumber()
             && intervals.getStart() == intervals.getValue().definition.getNumber()
             && intervals.getUses().size() == 1) {
           intervals.setSpilled(true);
@@ -1598,7 +1598,9 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
             LiveIntervals splitOfSplit = splitChild.splitBefore(splitChild.getFirstUse());
             splitOfSplit.setRegister(intervals.getRegister());
             inactive.add(splitOfSplit);
-          } else if (intervals.getValue().isConstant()) {
+          } else if (intervals.getValue().isConstNumber()) {
+            // TODO(ager): Do this for all constants. Currently we only rematerialize const
+            // number and therefore we only do it for numbers at this point.
             splitRangesForSpilledConstant(splitChild, registerNumber);
           } else if (intervals.isArgumentInterval()) {
             splitRangesForSpilledArgument(splitChild);
@@ -1627,7 +1629,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     // Spilling a non-pinned, non-rematerializable value. We use the value in the spill
     // register for as long as possible to avoid further moves.
     assert spilled.isSpilled();
-    assert !spilled.getValue().isConstant();
+    assert !spilled.getValue().isConstNumber();
     assert !spilled.isLinked() || spilled.isArgumentInterval();
     if (spilled.isArgumentInterval()) {
       registerNumber = Constants.U16BIT_MAX;
@@ -1658,7 +1660,7 @@ public class LinearScanRegisterAllocator implements RegisterAllocator {
     // spill we are running low on registers and this constant should get out of the way
     // as much as possible.
     assert spilled.isSpilled();
-    assert spilled.getValue().isConstant();
+    assert spilled.getValue().isConstNumber();
     assert !spilled.isLinked() || spilled.isArgumentInterval();
     // Do not split range if constant is reused by one of the eleven following instruction.
     int maxGapSize = 11 * INSTRUCTION_NUMBER_DELTA;

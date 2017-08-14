@@ -143,7 +143,7 @@ public class Cmp extends Binop {
 
   @Override
   public boolean canBeFolded() {
-    return (leftValue().isConstant() && rightValue().isConstant()) || nonOverlapingRanges();
+    return (leftValue().isConstNumber() && rightValue().isConstNumber()) || nonOverlapingRanges();
   }
 
   @Override
@@ -151,7 +151,7 @@ public class Cmp extends Binop {
     assert canBeFolded();
     int result;
     if (type == NumericType.LONG) {
-      if (leftValue().isConstant() && rightValue().isConstant()) {
+      if (leftValue().isConstNumber() && rightValue().isConstNumber()) {
         long left = leftValue().getConstInstruction().asConstNumber().getLongValue();
         long right = rightValue().getConstInstruction().asConstNumber().getLongValue();
         result = Integer.signum(Long.compare(left, right));

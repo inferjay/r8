@@ -64,6 +64,11 @@ public class ConstString extends ConstInstruction {
   }
 
   @Override
+  public boolean isOutConstant() {
+    return true;
+  }
+
+  @Override
   public boolean isConstString() {
     return true;
   }

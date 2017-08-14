@@ -1394,7 +1394,8 @@ public class IRBuilder {
     Value in2 = readNumericRegister(right, type);
     Value out = writeNumericRegister(dest, type, ThrowingInfo.NO_THROW);
     Instruction instruction;
-    if (in2.isConstant() && in2.getConstInstruction().asConstNumber().isIntegerNegativeOne(type)) {
+    if (in2.isConstNumber() &&
+        in2.getConstInstruction().asConstNumber().isIntegerNegativeOne(type)) {
       instruction = new Not(type, out, in1);
     } else {
       instruction = new Xor(type, out, in1, in2);

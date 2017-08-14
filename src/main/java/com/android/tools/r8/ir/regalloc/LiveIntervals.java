@@ -85,7 +85,8 @@ public class LiveIntervals {
   }
 
   public boolean isRematerializable(LinearScanRegisterAllocator registerAllocator) {
-    if (!value.isConstant()) {
+    // TODO(ager): rematerialize const string as well.
+    if (!value.isConstNumber()) {
       return false;
     }
     // If one of the non-spilled splits uses a register that is higher than U8BIT_MAX we cannot
@@ -420,7 +421,7 @@ public class LiveIntervals {
   }
 
   public boolean isConstantNumberInterval() {
-    return value.definition != null && value.isConstant();
+    return value.definition != null && value.isConstNumber();
   }
 
   public int numberOfUsesWithConstraint() {
