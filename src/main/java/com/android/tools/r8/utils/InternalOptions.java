@@ -47,7 +47,22 @@ public class InternalOptions {
   public boolean quiet = false;
 
   // Hidden marker for classes.dex
-  public Marker customizedMarker;
+  private boolean hasMarker = false;
+  private Marker marker;
+
+  public boolean hasMarker() {
+    return hasMarker;
+  }
+
+  public void setMarker(Marker marker) {
+    this.hasMarker = true;
+    this.marker = marker;
+  }
+
+  public Marker getMarker() {
+    assert hasMarker();
+    return marker;
+  }
 
   public List<String> methodsFilter = ImmutableList.of();
   public int minApiLevel = Constants.DEFAULT_ANDROID_API;

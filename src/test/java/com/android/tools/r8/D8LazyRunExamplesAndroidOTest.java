@@ -20,13 +20,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Test;
 
 public class D8LazyRunExamplesAndroidOTest
     extends D8IncrementalRunExamplesAndroidOTest {
+
+  // Please note that all tool specific markers have been eliminated in the resulting
+  // dex applications. This allows for byte-wise comparison of the results.
+
   class D8LazyTestRunner extends D8IncrementalTestRunner {
 
     D8LazyTestRunner(String testName, String packageName, String mainClass) {
@@ -53,7 +56,9 @@ public class D8LazyRunExamplesAndroidOTest
 
   @Override
   D8IncrementalTestRunner test(String testName, String packageName, String mainClass) {
-    return new D8LazyTestRunner(testName, packageName, mainClass);
+    D8IncrementalTestRunner result = new D8LazyTestRunner(testName, packageName, mainClass);
+    result.withOptionConsumer(options -> options.setMarker(null));
+    return result;
   }
 
   @Test
@@ -75,7 +80,10 @@ public class D8LazyRunExamplesAndroidOTest
           .build();
 
       fullBuildResult = ToolHelper.runD8(
-          command, (options) -> options.interfaceMethodDesugaring = OffOrAuto.Auto);
+          command, options -> {
+            options.interfaceMethodDesugaring = OffOrAuto.Auto;
+            options.setMarker(null);
+          });
     }
 
     // Build each class individually using tmpClassesDir as classpath for desugaring.
@@ -94,7 +102,10 @@ public class D8LazyRunExamplesAndroidOTest
       AndroidApp individualResult =
           ToolHelper.runD8(
               builder.build(),
-              (options) -> options.interfaceMethodDesugaring = OffOrAuto.Auto);
+              options -> {
+                options.interfaceMethodDesugaring = OffOrAuto.Auto;
+                options.setMarker(null);
+              });
       individalDexes.add(individualResult.getDexProgramResources().get(0));
     }
     AndroidApp mergedResult = mergeDexResources(minAPILevel, individalDexes);
@@ -111,7 +122,8 @@ public class D8LazyRunExamplesAndroidOTest
     for (Resource resource : individalDexes) {
       builder.addDexProgramData(readFromResource(resource));
     }
-    AndroidApp mergedResult = ToolHelper.runD8(builder.build());
+    AndroidApp mergedResult = ToolHelper.runD8(builder.build(),
+        options -> options.setMarker(null));
     return mergedResult;
   }
 

@@ -82,8 +82,8 @@ public class R8 {
 
   // Compute the marker to be placed in the main dex file.
   private static Marker getMarker(InternalOptions options) {
-    if (options.customizedMarker != null) {
-      return options.customizedMarker;
+    if (options.hasMarker()) {
+      return options.getMarker();
     }
     return new Marker(Tool.R8)
         .put("version", kVersion)

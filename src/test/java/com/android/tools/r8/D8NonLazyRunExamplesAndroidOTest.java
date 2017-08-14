@@ -29,6 +29,10 @@ public class D8NonLazyRunExamplesAndroidOTest
 
   @Override
   D8IncrementalTestRunner test(String testName, String packageName, String mainClass) {
-    return new D8LazyTestRunner(testName, packageName, mainClass);
+    D8IncrementalTestRunner result = new D8LazyTestRunner(testName, packageName, mainClass);
+    // Eliminate the tool specific marker in the resulting dex applications.
+    // This allows for byte-wise comparison of the results.
+    result.withOptionConsumer(options -> options.setMarker(null));
+    return result;
   }
 }
