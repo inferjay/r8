@@ -20,6 +20,7 @@ import com.android.tools.r8.ir.code.CatchHandlers;
 import com.android.tools.r8.ir.code.CheckCast;
 import com.android.tools.r8.ir.code.Cmp;
 import com.android.tools.r8.ir.code.Cmp.Bias;
+import com.android.tools.r8.ir.code.ConstInstruction;
 import com.android.tools.r8.ir.code.ConstNumber;
 import com.android.tools.r8.ir.code.ConstString;
 import com.android.tools.r8.ir.code.DominatorTree;
@@ -32,6 +33,7 @@ import com.android.tools.r8.ir.code.InstructionIterator;
 import com.android.tools.r8.ir.code.InstructionListIterator;
 import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.InvokeMethod;
+import com.android.tools.r8.ir.code.InvokeNewArray;
 import com.android.tools.r8.ir.code.InvokeVirtual;
 import com.android.tools.r8.ir.code.MemberType;
 import com.android.tools.r8.ir.code.MoveType;
@@ -675,7 +677,7 @@ public class CodeRewriter {
         Map<ConstNumber, ConstNumber> oldToNew = new HashMap<>();
         for (int i = 0; i < invoke.inValues().size(); i++) {
           Value value = invoke.inValues().get(i);
-          if (value.isConstant() && value.numberOfUsers() > 1) {
+          if (value.isConstNumber() && value.numberOfUsers() > 1) {
             ConstNumber definition = value.getConstInstruction().asConstNumber();
             Value originalValue = definition.outValue();
             ConstNumber newNumber = oldToNew.get(definition);
@@ -700,7 +702,7 @@ public class CodeRewriter {
       BasicBlock predecessor = block.getPredecessors().get(i);
       for (Phi phi : block.getPhis()) {
         Value operand = phi.getOperand(i);
-        if (!operand.isPhi() && operand.isConstant()) {
+        if (!operand.isPhi() && operand.isConstNumber()) {
           ConstNumber definition = operand.getConstInstruction().asConstNumber();
           ConstNumber newNumber = oldToNew.get(definition);
           Value originalValue = definition.outValue();
@@ -814,18 +816,16 @@ public class CodeRewriter {
     insertAt.add(instruction);
   }
 
-  private short[] computeArrayFilledData(
-      NewArrayEmpty newArray, int size, BasicBlock block, int elementSize) {
-    ConstNumber[] values = computeConstantArrayValues(newArray, block, size);
+  private short[] computeArrayFilledData(ConstInstruction[] values, int size, int elementSize) {
     if (values == null) {
       return null;
     }
     if (elementSize == 1) {
       short[] result = new short[(size + 1) / 2];
       for (int i = 0; i < size; i += 2) {
-        short value = (short) (values[i].getIntValue() & 0xFF);
+        short value = (short) (values[i].asConstNumber().getIntValue() & 0xFF);
         if (i + 1 < size) {
-          value |= (short) ((values[i + 1].getIntValue() & 0xFF) << 8);
+          value |= (short) ((values[i + 1].asConstNumber().getIntValue() & 0xFF) << 8);
         }
         result[i / 2] = value;
       }
@@ -835,7 +835,7 @@ public class CodeRewriter {
     int shortsPerConstant = elementSize / 2;
     short[] result = new short[size * shortsPerConstant];
     for (int i = 0; i < size; i++) {
-      long value = values[i].getRawValue();
+      long value = values[i].asConstNumber().getRawValue();
       for (int part = 0; part < shortsPerConstant; part++) {
         result[i * shortsPerConstant + part] = (short) ((value >> (16 * part)) & 0xFFFFL);
       }
@@ -843,12 +843,12 @@ public class CodeRewriter {
     return result;
   }
 
-  private ConstNumber[] computeConstantArrayValues(
+  private ConstInstruction[] computeConstantArrayValues(
       NewArrayEmpty newArray, BasicBlock block, int size) {
     if (size > MAX_FILL_ARRAY_SIZE) {
       return null;
     }
-    ConstNumber[] values = new ConstNumber[size];
+    ConstInstruction[] values = new ConstInstruction[size];
     int remaining = size;
     Set<Instruction> users = newArray.outValue().uniqueUsers();
     // We allow the array instantiations to cross block boundaries as long as it hasn't encountered
@@ -860,8 +860,9 @@ public class CodeRewriter {
         Instruction instruction = it.next();
         // If we encounter an instruction that can throw an exception we need to bail out of the
         // optimization so that we do not transform half-initialized arrays into fully initialized
-        // arrays on exceptional edges.
-        if (instruction.instructionInstanceCanThrow()) {
+        // arrays on exceptional edges. If the block has no handlers it is not observable so
+        // we perform the rewriting.
+        if (block.hasCatchHandlers() && instruction.instructionInstanceCanThrow()) {
           return null;
         }
         if (!users.contains(instruction)) {
@@ -873,16 +874,15 @@ public class CodeRewriter {
           return null;
         }
         ArrayPut arrayPut = instruction.asArrayPut();
-        if (!arrayPut.source().isConstant()) {
+        if (!(arrayPut.source().isConstant() && arrayPut.index().isConstNumber())) {
           return null;
         }
-        assert arrayPut.index().isConstant();
         int index = arrayPut.index().getConstInstruction().asConstNumber().getIntValue();
         assert index >= 0 && index < values.length;
         if (values[index] != null) {
           return null;
         }
-        ConstNumber value = arrayPut.source().getConstInstruction().asConstNumber();
+        ConstInstruction value = arrayPut.source().getConstInstruction();
         values[index] = value;
         --remaining;
         if (remaining == 0) {
@@ -895,7 +895,7 @@ public class CodeRewriter {
     return null;
   }
 
-  private boolean isPrimitiveNewArrayWithConstantPositiveSize(Instruction instruction) {
+  private boolean isPrimitiveOrStringNewArrayWithPositiveSize(Instruction instruction) {
     if (!(instruction instanceof NewArrayEmpty)) {
       return false;
     }
@@ -903,48 +903,69 @@ public class CodeRewriter {
     if (!newArray.size().isConstant()) {
       return false;
     }
+    assert newArray.size().isConstNumber();
     int size = newArray.size().getConstInstruction().asConstNumber().getIntValue();
     if (size < 1) {
       return false;
     }
-    if (!newArray.type.isPrimitiveArrayType()) {
-      return false;
-    }
-    return true;
+    return newArray.type.isPrimitiveArrayType() || newArray.type == dexItemFactory.stringArrayType;
   }
 
   /**
-   * Replace NewArrayEmpty followed by stores of constants to all entries with NewArrayEmpty
-   * and FillArrayData.
+   * Replace new-array followed by stores of constants to all entries with new-array
+   * and fill-array-data / filled-new-array.
    */
   public void simplifyArrayConstruction(IRCode code) {
     for (BasicBlock block : code.blocks) {
       // Map from the array value to the number of array put instruction to remove for that value.
+      Map<Value, Instruction> instructionToInsertForArray = new HashMap<>();
       Map<Value, Integer> storesToRemoveForArray = new HashMap<>();
       // First pass: identify candidates and insert fill array data instruction.
       InstructionListIterator it = block.listIterator();
       while (it.hasNext()) {
         Instruction instruction = it.next();
-        if (!isPrimitiveNewArrayWithConstantPositiveSize(instruction)) {
+        if (!isPrimitiveOrStringNewArrayWithPositiveSize(instruction)) {
           continue;
         }
         NewArrayEmpty newArray = instruction.asNewArrayEmpty();
         int size = newArray.size().getConstInstruction().asConstNumber().getIntValue();
-        // If there is only one element it is typically smaller to generate the array put
-        // instruction instead of fill array data.
-        if (size == 1) {
+        ConstInstruction[] values = computeConstantArrayValues(newArray, block, size);
+        if (values == null) {
           continue;
         }
-        int elementSize = newArray.type.elementSizeForPrimitiveArrayType();
-        short[] contents = computeArrayFilledData(newArray, size, block, elementSize);
-        if (contents == null) {
-          continue;
+        if (newArray.type == dexItemFactory.stringArrayType) {
+          // Don't replace with filled-new-array if it requires more than 200 consecutive registers.
+          if (size > 200) {
+            continue;
+          }
+          List<Value> stringValues = new ArrayList<>(size);
+          for (ConstInstruction value : values) {
+            stringValues.add(value.outValue());
+          }
+          InvokeNewArray invoke = new InvokeNewArray(
+              dexItemFactory.stringArrayType, newArray.outValue(), stringValues);
+          it.detach();
+          for (Value value : newArray.inValues()) {
+            value.removeUser(newArray);
+          }
+          instructionToInsertForArray.put(newArray.outValue(), invoke);
+        } else {
+          // If there is only one element it is typically smaller to generate the array put
+          // instruction instead of fill array data.
+          if (size == 1) {
+            continue;
+          }
+          int elementSize = newArray.type.elementSizeForPrimitiveArrayType();
+          short[] contents = computeArrayFilledData(values, size, elementSize);
+          if (contents == null) {
+            continue;
+          }
+          int arraySize = newArray.size().getConstInstruction().asConstNumber().getIntValue();
+          NewArrayFilledData fillArray = new NewArrayFilledData(
+              newArray.outValue(), elementSize, arraySize, contents);
+          it.add(fillArray);
         }
         storesToRemoveForArray.put(newArray.outValue(), size);
-        int arraySize = newArray.size().getConstInstruction().asConstNumber().getIntValue();
-        NewArrayFilledData fillArray = new NewArrayFilledData(
-            newArray.outValue(), elementSize, arraySize, contents);
-        it.add(fillArray);
       }
       // Second pass: remove all the array put instructions for the array for which we have
       // inserted a fill array data instruction instead.
@@ -956,9 +977,18 @@ public class CodeRewriter {
             if (instruction.isArrayPut()) {
               Value array = instruction.asArrayPut().array();
               Integer toRemoveCount = storesToRemoveForArray.get(array);
-              if (toRemoveCount != null && toRemoveCount > 0) {
-                storesToRemoveForArray.put(array, toRemoveCount - 1);
-                it.remove();
+              if (toRemoveCount != null) {
+                if (toRemoveCount > 0) {
+                  storesToRemoveForArray.put(array, --toRemoveCount);
+                  it.remove();
+                }
+                if (toRemoveCount == 0) {
+                  storesToRemoveForArray.put(array, --toRemoveCount);
+                  Instruction construction = instructionToInsertForArray.get(array);
+                  if (construction != null) {
+                    it.add(construction);
+                  }
+                }
               }
             }
           }
@@ -1082,8 +1112,8 @@ public class CodeRewriter {
         If theIf = block.exit().asIf();
         List<Value> inValues = theIf.inValues();
         int cond;
-        if (inValues.get(0).isConstant()
-            && (theIf.isZeroTest() || inValues.get(1).isConstant())) {
+        if (inValues.get(0).isConstNumber()
+            && (theIf.isZeroTest() || inValues.get(1).isConstNumber())) {
           // Zero test with a constant of comparison between between two constants.
           if (theIf.isZeroTest()) {
             cond = inValues.get(0).getConstInstruction().asConstNumber().getIntValue();
@@ -1143,8 +1173,8 @@ public class CodeRewriter {
     List<Value> inValues = theIf.inValues();
     Value leftValue = inValues.get(0);
     Value rightValue = inValues.get(1);
-    if (leftValue.isConstant() || rightValue.isConstant()) {
-      if (leftValue.isConstant()) {
+    if (leftValue.isConstNumber() || rightValue.isConstNumber()) {
+      if (leftValue.isConstNumber()) {
         int left = leftValue.getConstInstruction().asConstNumber().getIntValue();
         if (left == 0) {
           If ifz = new If(theIf.getType().forSwappedOperands(), rightValue);
@@ -1152,7 +1182,6 @@ public class CodeRewriter {
           assert block.exit() == ifz;
         }
       } else {
-        assert rightValue.isConstant();
         int right = rightValue.getConstInstruction().asConstNumber().getIntValue();
         if (right == 0) {
           If ifz = new If(theIf.getType(), leftValue);
@@ -1231,7 +1260,7 @@ public class CodeRewriter {
             iterator.previous();
             iterator.add(zero);
 
-            // Then replace the invoke instruction with NewArrayEmpty instruction.
+            // Then replace the invoke instruction with new-array instruction.
             Instruction next = iterator.next();
             assert current == next;
             NewArrayEmpty newArray = new NewArrayEmpty(destValue, zero.outValue(),
