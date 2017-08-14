@@ -21,6 +21,7 @@ import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ListUtils;
+import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
 import com.google.common.collect.ImmutableList;
@@ -61,7 +62,7 @@ public class ToolHelper {
   public static final String EXAMPLES_ANDROID_O_BUILD_DIR = BUILD_DIR + "test/examplesAndroidO/";
   public static final String SMALI_BUILD_DIR = BUILD_DIR + "test/smali/";
 
-  public static final String LINE_SEPARATOR = System.getProperty("line.separator");
+  public static final String LINE_SEPARATOR = StringUtils.LINE_SEPARATOR;
 
   private static final String ANDROID_JAR_PATTERN = "third_party/android_jar/lib-v%d/android.jar";
   private static final int DEFAULT_MIN_SDK = Constants.ANDROID_I_API;

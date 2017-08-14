@@ -6,6 +6,7 @@ package com.android.tools.r8.utils;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.dex.Marker;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.InvalidDebugInfoException;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.shaking.ProguardConfigurationRule;
@@ -104,12 +105,25 @@ public class InternalOptions {
 
   public boolean warningMissingEnclosingMember = false;
 
+  public int warningInvalidDebugInfoCount = 0;
+
+  public void warningInvalidDebugInfo(DexEncodedMethod method, InvalidDebugInfoException e) {
+    warningInvalidDebugInfoCount++;
+  }
+
   public boolean printWarnings() {
     boolean printed = false;
     boolean printOutdatedToolchain = false;
     if (warningInvalidParameterAnnotations != null) {
       System.out.println("Warning: " + warningInvalidParameterAnnotations);
       printed = true;
+    }
+    if (warningInvalidDebugInfoCount > 0) {
+      System.out.println("Warning: stripped invalid locals information from "
+          + warningInvalidDebugInfoCount
+          + (warningInvalidDebugInfoCount == 1 ? " method." : " methods."));
+      printed = true;
+      printOutdatedToolchain = true;
     }
     if (warningMissingEnclosingMember) {
       System.out.println(
