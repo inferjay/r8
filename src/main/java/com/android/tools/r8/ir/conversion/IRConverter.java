@@ -459,7 +459,7 @@ public class IRConverter {
     codeRewriter.commonSubexpressionElimination(code);
     codeRewriter.simplifyArrayConstruction(code);
     codeRewriter.rewriteMoveResult(code);
-    codeRewriter.splitRangeInvokeConstants(code);
+    codeRewriter.splitConstants(code);
     codeRewriter.foldConstants(code);
     codeRewriter.rewriteSwitch(code);
     codeRewriter.simplifyIf(code);
