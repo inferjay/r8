@@ -696,7 +696,7 @@ public class CodeRewriter {
     List<Instruction> toInsertInThisBlock = new ArrayList<>();
     while (it.hasNext()) {
       Instruction instruction = it.next();
-      if (instruction.isConstNumber()) {
+      if (instruction.isConstNumber() && instruction.outValue().numberOfAllUsers() > 0) {
         // Collect the blocks for all users of the constant.
         List<BasicBlock> userBlocks = new LinkedList<>();
         for (Instruction user : instruction.outValue().uniqueUsers()) {

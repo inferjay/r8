@@ -7,7 +7,6 @@ package com.android.tools.r8.smali;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.android.tools.r8.R8;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.code.Const;
 import com.android.tools.r8.code.Const4;
@@ -292,12 +291,11 @@ public class SwitchRewritingTest extends SmaliTestBase {
     DexCode code = method.getCode().asDexCode();
     if (key == 0) {
       assertEquals(5, code.instructions.length);
-      assertTrue(code.instructions[0] instanceof IfEqz);
+      assertTrue(code.instructions[2] instanceof IfEqz);
     } else {
       assertEquals(6, code.instructions.length);
-      assertTrue(some16BitConst(code.instructions[0]));
-      assertTrue(code.instructions[1] instanceof IfEq);
-      assertTrue(code.instructions[2] instanceof Const4);
+      assertTrue(some16BitConst(code.instructions[2]));
+      assertTrue(code.instructions[3] instanceof IfEq);
     }
   }
 
@@ -351,9 +349,9 @@ public class SwitchRewritingTest extends SmaliTestBase {
     DexEncodedMethod method = getMethod(app, signature);
     DexCode code = method.getCode().asDexCode();
     if (twoCaseWillUsePackedSwitch(key1, key2)) {
-      assertTrue(code.instructions[0] instanceof PackedSwitch);
+      assertTrue(code.instructions[3] instanceof PackedSwitch);
     } else {
-      assertTrue(code.instructions[0] instanceof SparseSwitch);
+      assertTrue(code.instructions[3] instanceof SparseSwitch);
     }
   }
 
@@ -423,10 +421,23 @@ public class SwitchRewritingTest extends SmaliTestBase {
     MethodSignature signature = new MethodSignature("Test", "test", "int", ImmutableList.of("int"));
     DexEncodedMethod method = getMethod(app, signature);
     DexCode code = method.getCode().asDexCode();
+    int packedSwithsCount = 0;
+    int sparseSwithsCount = 0;
+    for (Instruction instruction : code.instructions) {
+      if (instruction instanceof PackedSwitch) {
+        packedSwithsCount++;
+      }
+      if (instruction instanceof SparseSwitch) {
+        sparseSwithsCount++;
+      }
+    }
+
     if (keyStep <= 2) {
-      assertTrue(code.instructions[0] instanceof PackedSwitch);
+      assert packedSwithsCount == 1;
+      assert sparseSwithsCount == 0;
     } else {
-      assertTrue(code.instructions[0] instanceof SparseSwitch);
+      assert packedSwithsCount == 0;
+      assert sparseSwithsCount == 1;
     }
   }
 
