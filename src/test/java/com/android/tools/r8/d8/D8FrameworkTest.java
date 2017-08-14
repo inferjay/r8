@@ -68,7 +68,7 @@ public class D8FrameworkTest {
     Marker selfie = Marker.parse(marker.toString());
     assert marker.equals(selfie);
     AndroidApp app = ToolHelper.runD8(command, options -> {
-      options.customizedMarker = marker;
+      options.setMarker(marker);
       options.numberOfThreads = threads;
     });
     DexApplication dexApp =

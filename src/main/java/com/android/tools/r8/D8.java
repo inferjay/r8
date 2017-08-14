@@ -157,8 +157,8 @@ public final class D8 {
 
   // Compute the marker to be placed in the main dex file.
   private static Marker getMarker(InternalOptions options) {
-    if (options.customizedMarker != null) {
-      return options.customizedMarker;
+    if (options.hasMarker()) {
+      return options.getMarker();
     }
     return new Marker(Tool.D8)
         .put("version", kVersion)
