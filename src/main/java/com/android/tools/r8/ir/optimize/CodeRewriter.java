@@ -63,7 +63,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -652,68 +651,35 @@ public class CodeRewriter {
     assert code.isConsistentSSA();
   }
 
-  // Constants are canonicalized in the entry block. We split some of them when it is likely
-  // that having them canonicalized in the entry block will lead to poor code quality.
-  public void splitConstants(IRCode code) {
+  // Split constants that flow into ranged invokes. This gives the register allocator more
+  // freedom in assigning register to ranged invokes which can greatly reduce the number
+  // of register needed (and thereby code size as well).
+  public void splitRangeInvokeConstants(IRCode code) {
     for (BasicBlock block : code.blocks) {
-      // Split constants that flow into phis. It is likely that these constants will have moves
-      // generated for them anyway and we might as well insert a const instruction in the right
-      // predecessor block.
-      splitPhiConstants(code, block);
-      // Split constants that flow into ranged invokes. This gives the register allocator more
-      // freedom in assigning register to ranged invokes which can greatly reduce the number
-      // of register needed (and thereby code size as well).
-      splitRangedInvokeConstants(code, block);
-    }
-  }
-
-  private void splitRangedInvokeConstants(IRCode code, BasicBlock block) {
-    InstructionListIterator it = block.listIterator();
-    while (it.hasNext()) {
-      Instruction current = it.next();
-      if (current.isInvoke() && current.asInvoke().requiredArgumentRegisters() > 5) {
-        Invoke invoke = current.asInvoke();
-        it.previous();
-        Map<ConstNumber, ConstNumber> oldToNew = new HashMap<>();
-        for (int i = 0; i < invoke.inValues().size(); i++) {
-          Value value = invoke.inValues().get(i);
-          if (value.isConstNumber() && value.numberOfUsers() > 1) {
-            ConstNumber definition = value.getConstInstruction().asConstNumber();
-            Value originalValue = definition.outValue();
-            ConstNumber newNumber = oldToNew.get(definition);
-            if (newNumber == null) {
-              newNumber = ConstNumber.copyOf(code, definition);
-              it.add(newNumber);
-              oldToNew.put(definition, newNumber);
+      InstructionListIterator it = block.listIterator();
+      while (it.hasNext()) {
+        Instruction current = it.next();
+        if (current.isInvoke() && current.asInvoke().requiredArgumentRegisters() > 5) {
+          Invoke invoke = current.asInvoke();
+          it.previous();
+          Map<ConstNumber, ConstNumber> oldToNew = new HashMap<>();
+          for (int i = 0; i < invoke.inValues().size(); i++) {
+            Value value = invoke.inValues().get(i);
+            if (value.isConstNumber() && value.numberOfUsers() > 1) {
+              ConstNumber definition = value.getConstInstruction().asConstNumber();
+              Value originalValue = definition.outValue();
+              ConstNumber newNumber = oldToNew.get(definition);
+              if (newNumber == null) {
+                newNumber = ConstNumber.copyOf(code, definition);
+                it.add(newNumber);
+                oldToNew.put(definition, newNumber);
+              }
+              invoke.inValues().set(i, newNumber.outValue());
+              originalValue.removeUser(invoke);
+              newNumber.outValue().addUser(invoke);
             }
-            invoke.inValues().set(i, newNumber.outValue());
-            originalValue.removeUser(invoke);
-            newNumber.outValue().addUser(invoke);
           }
-        }
-        it.next();
-      }
-    }
-  }
-
-  private void splitPhiConstants(IRCode code, BasicBlock block) {
-    for (int i = 0; i < block.getPredecessors().size(); i++) {
-      Map<ConstNumber, ConstNumber> oldToNew = new IdentityHashMap<>();
-      BasicBlock predecessor = block.getPredecessors().get(i);
-      for (Phi phi : block.getPhis()) {
-        Value operand = phi.getOperand(i);
-        if (!operand.isPhi() && operand.isConstNumber()) {
-          ConstNumber definition = operand.getConstInstruction().asConstNumber();
-          ConstNumber newNumber = oldToNew.get(definition);
-          Value originalValue = definition.outValue();
-          if (newNumber == null) {
-            newNumber = ConstNumber.copyOf(code, definition);
-            oldToNew.put(definition, newNumber);
-            insertConstantInBlock(newNumber, predecessor);
-          }
-          phi.getOperands().set(i, newNumber.outValue());
-          originalValue.removePhiUser(phi);
-          newNumber.outValue().addPhiUser(phi);
+          it.next();
         }
       }
     }
