@@ -6,6 +6,7 @@ package com.android.tools.r8.jasmin;
 import static org.junit.Assert.assertEquals;
 
 import com.android.tools.r8.ToolHelper;
+import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 
@@ -82,7 +83,7 @@ public class InvalidDebugInfoTests extends JasminTestBase {
     JasminBuilder builder = new JasminBuilder();
     JasminBuilder.ClassBuilder clazz = builder.addClass("Test");
 
-    clazz.addStaticMethod("foo", ImmutableList.of("I","I"), "V",
+    clazz.addStaticMethod("foo", ImmutableList.of("I", "I"), "V",
         ".limit stack 2",
         ".limit locals 3",
         ".var 0 is x I from LabelInit to LabelExit",
@@ -123,4 +124,165 @@ public class InvalidDebugInfoTests extends JasminTestBase {
     assertEquals(expected, artResult);
   }
 
+  @Test
+  public void invalidInfoBug63412730_onWrite() throws Throwable {
+    JasminBuilder builder = new JasminBuilder();
+    JasminBuilder.ClassBuilder clazz = builder.addClass("Test");
+    clazz.addStaticMethod("bar", ImmutableList.of(), "V",
+        ".limit stack 3",
+        ".limit locals 2",
+        ".var 1 is i I from LI to End",
+        ".var 0 is f F from LF to End",
+        "Init:",
+        "  ldc 42",
+        "  istore 0",
+        "LI:",
+        "  ldc 7.5",
+        "  fstore 1",
+        "LF:",
+        "  getstatic java/lang/System/out Ljava/io/PrintStream;",
+        "  dup",
+        "  iload 0",
+        "  invokevirtual java/io/PrintStream/println(I)V",
+        "  fload 1",
+        "  invokevirtual java/io/PrintStream/println(F)V",
+        "  return",
+        "End:");
+
+    clazz.addMainMethod(
+        ".limit stack 1",
+        ".limit locals 1",
+        "  invokestatic Test/bar()V",
+        "  return");
+
+    String expected = StringUtils.lines("42", "7.5");
+    String javaResult = runOnJava(builder, clazz.name);
+    assertEquals(expected, javaResult);
+    String artResult = runOnArtD8(builder, clazz.name);
+    assertEquals(expected, artResult);
+  }
+
+  @Test
+  public void invalidInfoBug63412730_onRead() throws Throwable {
+    JasminBuilder builder = new JasminBuilder();
+    JasminBuilder.ClassBuilder clazz = builder.addClass("Test");
+    clazz.addStaticMethod("bar", ImmutableList.of(), "V",
+        ".limit stack 3",
+        ".limit locals 2",
+        ".var 1 is i I from Locals to End",
+        ".var 0 is f F from Locals to End",
+        "Init:",
+        "  ldc 42",
+        "  istore 0",
+        "  ldc 7.5",
+        "  fstore 1",
+        "Locals:",
+        "  getstatic java/lang/System/out Ljava/io/PrintStream;",
+        "  dup",
+        "  iload 0",
+        "  invokevirtual java/io/PrintStream/println(I)V",
+        "  fload 1",
+        "  invokevirtual java/io/PrintStream/println(F)V",
+        "  return",
+        "End:");
+
+    clazz.addMainMethod(
+        ".limit stack 1",
+        ".limit locals 1",
+        "  invokestatic Test/bar()V",
+        "  return");
+
+    String expected = StringUtils.lines("42", "7.5");
+    String javaResult = runOnJava(builder, clazz.name);
+    assertEquals(expected, javaResult);
+    String artResult = runOnArtD8(builder, clazz.name);
+    assertEquals(expected, artResult);
+  }
+
+  @Test
+  public void invalidInfoBug63412730_onMove() throws Throwable {
+    JasminBuilder builder = new JasminBuilder();
+    JasminBuilder.ClassBuilder clazz = builder.addClass("Test");
+    clazz.addStaticMethod("bar", ImmutableList.of(), "V",
+        ".limit stack 3",
+        ".limit locals 2",
+        ".var 1 is i I from LI to End",
+        ".var 0 is j F from LJ to End",
+        "Init:",
+        "  ldc 42",
+        "  istore 0",
+        "LI:",
+        "  ldc 0",
+        "  ldc 0",
+        "  ifeq LZ",
+        "  ldc 75",
+        "  istore 1",
+        "LJ:",
+        "  getstatic java/lang/System/out Ljava/io/PrintStream;",
+        "  iload 1",
+        "  invokevirtual java/io/PrintStream/println(I)V",
+        "  return",
+        "LZ:",
+        "  getstatic java/lang/System/out Ljava/io/PrintStream;",
+        "  iload 0",
+        "  invokevirtual java/io/PrintStream/println(I)V",
+        "  return",
+        "End:");
+
+    clazz.addMainMethod(
+        ".limit stack 1",
+        ".limit locals 1",
+        "  invokestatic Test/bar()V",
+        "  return");
+
+    String expected = StringUtils.lines("42");
+    String javaResult = runOnJava(builder, clazz.name);
+    assertEquals(expected, javaResult);
+    String artResult = runOnArtD8(builder, clazz.name);
+    assertEquals(expected, artResult);
+  }
+
+  @Test
+  public void invalidInfoBug63412730_onPop() throws Throwable {
+    JasminBuilder builder = new JasminBuilder();
+    JasminBuilder.ClassBuilder clazz = builder.addClass("Test");
+    clazz.addStaticMethod("bar", ImmutableList.of(), "V",
+        ".limit stack 3",
+        ".limit locals 2",
+        ".var 1 is a [Ljava/lang/Object; from Locals to End",
+        ".var 0 is o LObject; from Locals to End",
+        "Init:",
+        "  ldc 1",
+        "  anewarray java/lang/Object",
+        "  astore 0",
+        "  new java/lang/Integer",
+        "  dup",
+        "  ldc 42",
+        "  invokespecial java/lang/Integer/<init>(I)V",
+        "  astore 1",
+        "Locals:",
+        "  aload 0",
+        "  ldc 0",
+        "  aload 1",
+        "  aastore",
+        "  getstatic java/lang/System/out Ljava/io/PrintStream;",
+        "  aload 0",
+        "  ldc 0",
+        "  aaload",
+        "  invokevirtual java/io/PrintStream/println(Ljava/lang/Object;)V",
+        "  return",
+        "End:");
+
+    clazz.addMainMethod(
+        ".limit stack 1",
+        ".limit locals 1",
+        "  invokestatic Test/bar()V",
+        "  return");
+
+    String expected = StringUtils.lines("42");
+    String javaResult = runOnJava(builder, clazz.name);
+    assertEquals(expected, javaResult);
+    String artResult = runOnArtD8(builder, clazz.name);
+    assertEquals(expected, artResult);
+  }
 }

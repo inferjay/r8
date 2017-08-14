@@ -12,6 +12,8 @@ import java.util.function.Function;
 
 public class StringUtils {
 
+  public final static String LINE_SEPARATOR = System.getProperty("line.separator");
+
   private final static char[] IDENTIFIER_LETTERS
       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_".toCharArray();
   private final static int NUMBER_OF_LETTERS = IDENTIFIER_LETTERS.length;
@@ -107,7 +109,7 @@ public class StringUtils {
     return join(collection, separator, BraceType.NONE);
   }
 
-  public static String join(String separator, String... strings) {
+  public static <T> String join(String separator, T... strings) {
     return join(Arrays.asList(strings), separator, BraceType.NONE);
   }
 
@@ -120,6 +122,18 @@ public class StringUtils {
     StringBuilder builder = new StringBuilder();
     append(builder, ListUtils.map(collection, fn), separator, brace);
     return builder.toString();
+  }
+
+  public static <T> String lines(T... lines) {
+    StringBuilder builder = new StringBuilder();
+    for (T line : lines) {
+      builder.append(line).append(LINE_SEPARATOR);
+    }
+    return builder.toString();
+  }
+
+  public static <T> String joinLines(T... lines) {
+    return join(LINE_SEPARATOR, lines);
   }
 
   public static String zeroPrefix(int i, int width) {

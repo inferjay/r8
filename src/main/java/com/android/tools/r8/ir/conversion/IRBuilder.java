@@ -7,6 +7,7 @@ package com.android.tools.r8.ir.conversion;
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InternalCompilerError;
+import com.android.tools.r8.errors.InvalidDebugInfoException;
 import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.graph.DexCallSite;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -1434,7 +1435,11 @@ public class IRBuilder {
     DebugLocalInfo local = getCurrentLocal(register);
     Value value = readRegister(register, currentBlock, EdgeType.NON_EDGE, type, local);
     // Check that any information about a current-local is consistent with the read.
-    assert local == null || value.getLocalInfo() == local || value.isUninitializedLocal();
+    if (local != null && value.getLocalInfo() != local && !value.isUninitializedLocal()) {
+      throw new InvalidDebugInfoException(
+          "Attempt to read local " + local
+              + " but no local information was associated with the value being read.");
+    }
     // Check that any local information on the value is actually visible.
     // If this assert triggers, the probable cause is that we end up reading an SSA value
     // after it should have been ended on a fallthrough from a conditional jump or a trivial-phi

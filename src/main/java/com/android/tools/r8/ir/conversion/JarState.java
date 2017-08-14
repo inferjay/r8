@@ -3,7 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.conversion;
 
+import com.android.tools.r8.errors.InvalidDebugInfoException;
 import com.android.tools.r8.graph.DebugLocalInfo;
+import com.android.tools.r8.utils.DescriptorUtils;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -336,7 +338,10 @@ public class JarState {
   public int writeLocal(int index, Type type) {
     assert nonNullType(type);
     Local local = getLocal(index, type);
-    assert local == null || local.info == null || local.slot.isCompatibleWith(type);
+    if (local != null && local.info != null && !local.slot.isCompatibleWith(type)) {
+      throw new InvalidDebugInfoException(
+          "Attempt to write value of type " + prettyType(type) + " to local " + local.info);
+    }
     // We cannot assume consistency for writes because we do not have complete information about the
     // scopes of locals. We assume the program to be verified and overwrite if the types mismatch.
     if (local == null || (local.info == null && !typeEquals(local.slot.type, type))) {
@@ -353,6 +358,10 @@ public class JarState {
   public Slot readLocal(int index, Type type) {
     Local local = getLocal(index, type);
     assert local != null;
+    if (local.info != null && !local.slot.isCompatibleWith(type)) {
+      throw new InvalidDebugInfoException(
+          "Attempt to read value of type " + prettyType(type) + " from local " + local.info);
+    }
     assert local.slot.isCompatibleWith(type);
     return local.slot;
   }
@@ -395,7 +404,12 @@ public class JarState {
 
   public Slot pop(Type type) {
     Slot slot = pop();
-    assert slot.isCompatibleWith(type);
+    boolean compatible = slot.isCompatibleWith(type);
+    if (!compatible && !localVariables.isEmpty()) {
+      throw new InvalidDebugInfoException("Expected to read stack value of type " + prettyType(type)
+          + " but found value of type " + prettyType(slot.type));
+    }
+    assert compatible;
     return slot;
   }
 
@@ -578,5 +592,18 @@ public class JarState {
     }
     builder.append(" }");
     return builder.toString();
+  }
+
+  private String prettyType(Type type) {
+    if (type == BYTE_OR_BOOL_TYPE) {
+      return "<byte|bool>";
+    }
+    if (type == ARRAY_TYPE) {
+      return type.getElementType().getInternalName();
+    }
+    if (type == REFERENCE_TYPE || type == OBJECT_TYPE || type == NULL_TYPE) {
+      return type.getInternalName();
+    }
+    return DescriptorUtils.descriptorToJavaType(type.getDescriptor());
   }
 }
