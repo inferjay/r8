@@ -308,6 +308,7 @@ public class JarSourceCode implements SourceCode {
       }
     }
     computeBlockEntryJarStates(builder);
+    state.setBuilding();
   }
 
   private void computeBlockEntryJarStates(IRBuilder builder) {
@@ -360,6 +361,7 @@ public class JarSourceCode implements SourceCode {
         }
       }
     }
+    state.restoreState(0);
   }
 
   private void updateStateForLocalVariableEnd(AbstractInsnNode insn) {
@@ -1146,9 +1148,11 @@ public class JarSourceCode implements SourceCode {
         state.pop();
         Type elementType = state.pop(JarState.ARRAY_TYPE).getArrayElementType();
         if (elementType == null) {
-          // We propagate the null type, which will then get resolved to an
-          // actual type if we have a non-null type on another flow edge.
-          elementType = JarState.NULL_TYPE;
+          // We propagate the byte-or-bool type, which will then get resolved to an
+          // actual type if we have a concrete byte type or bool type on another flow edge.
+          elementType = (Opcodes.BALOAD == opcode)
+              ? JarState.BYTE_OR_BOOL_TYPE
+              : getArrayElementTypeForOpcode(opcode);
         }
         state.push(elementType);
         break;

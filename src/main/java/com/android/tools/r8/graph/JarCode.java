@@ -80,20 +80,27 @@ public class JarCode extends Code {
 
   @Override
   public IRCode buildIR(DexEncodedMethod encodedMethod, InternalOptions options) {
-    triggerDelayedParsingIfNeccessary();
-    JarSourceCode source = new JarSourceCode(clazz, node, application);
-    IRBuilder builder = new IRBuilder(encodedMethod, source, options);
-    return builder.build();
+    return internalBuild(encodedMethod, null, options);
   }
 
-  public IRCode buildIR(DexEncodedMethod encodedMethod, ValueNumberGenerator generator,
-      InternalOptions options) {
-    triggerDelayedParsingIfNeccessary();
-    JarSourceCode source = new JarSourceCode(clazz, node, application);
-    IRBuilder builder = new IRBuilder(encodedMethod, source, generator, options);
-    return builder.build();
+  public IRCode buildIR(
+      DexEncodedMethod encodedMethod, ValueNumberGenerator generator, InternalOptions options) {
+    return internalBuild(encodedMethod, generator, options);
   }
 
+  private IRCode internalBuild(
+      DexEncodedMethod encodedMethod, ValueNumberGenerator generator, InternalOptions options) {
+    triggerDelayedParsingIfNeccessary();
+    if (!options.debug) {
+      node.localVariables.clear();
+    }
+    JarSourceCode source = new JarSourceCode(clazz, node, application);
+    IRBuilder builder =
+        (generator == null)
+            ? new IRBuilder(encodedMethod, source, options)
+            : new IRBuilder(encodedMethod, source, generator, options);
+    return builder.build();
+  }
 
   @Override
   public void registerReachableDefinitions(UseRegistry registry) {
