@@ -56,7 +56,7 @@ def makedirs_if_needed(path):
 
 def upload_html_to_cloud_storage(directory, destination):
   # Upload and make the content encoding right for viewing directly
-  cmd = ['gsutil.py', 'cp', '-z', 'html', '-a',
+  cmd = [sys.executable, 'gsutil.py', 'cp', '-z', 'html', '-a',
          'public-read', '-R', directory, destination]
   PrintCmd(cmd)
   subprocess.check_call(cmd)
