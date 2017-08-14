@@ -102,11 +102,26 @@ public class InternalOptions {
 
   public String warningInvalidParameterAnnotations = null;
 
+  public boolean warningMissingEnclosingMember = false;
+
   public boolean printWarnings() {
     boolean printed = false;
+    boolean printOutdatedToolchain = false;
     if (warningInvalidParameterAnnotations != null) {
       System.out.println("Warning: " + warningInvalidParameterAnnotations);
       printed = true;
+    }
+    if (warningMissingEnclosingMember) {
+      System.out.println(
+          "Warning: InnerClass annotations are missing corresponding EnclosingMember annotations."
+              + " Such InnerClass annotations are ignored.");
+      printed = true;
+      printOutdatedToolchain = true;
+    }
+    if (printOutdatedToolchain) {
+      System.out.println(
+          "Some warnings are typically a sign of using an outdated Java toolchain."
+              + " To fix, recompile the source with an updated toolchain.");
     }
     return printed;
   }

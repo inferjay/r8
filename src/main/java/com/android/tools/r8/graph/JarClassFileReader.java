@@ -236,10 +236,7 @@ public class JarClassFileReader {
       }
       if (innerClassAnnotation != null) {
         if (enclosingAnnotation == null) {
-          System.out.println("InnerClass annotation is missing a corresponding EnclosingMember " +
-              "annotation. This is typically a sign of using an outdated Java toolchain. To fix, " +
-              "recompile the source with an updated toolchain. The InnerClass annotation will be " +
-              "ignored.");
+          application.options.warningMissingEnclosingMember = true;
         } else {
           addAnnotation(innerClassAnnotation);
           addAnnotation(enclosingAnnotation);
