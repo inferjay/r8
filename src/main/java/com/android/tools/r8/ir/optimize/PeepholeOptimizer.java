@@ -3,8 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.ir.optimize;
 
+import com.android.tools.r8.graph.DebugLocalInfo;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.ConstNumber;
+import com.android.tools.r8.ir.code.DebugLocalsChange;
 import com.android.tools.r8.ir.code.Goto;
 import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Instruction;
@@ -15,6 +17,9 @@ import com.android.tools.r8.ir.regalloc.LinearScanRegisterAllocator;
 import com.android.tools.r8.ir.regalloc.LiveIntervals;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.google.common.base.Equivalence.Wrapper;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap.Entry;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -99,16 +104,30 @@ public class PeepholeOptimizer {
   }
 
   private static BasicBlock createAndInsertBlockForSuffix(
-      int blockNumber, int suffixSize, List<BasicBlock> preds, BasicBlock block) {
+      int blockNumber, int suffixSize, List<BasicBlock> preds, BasicBlock successorBlock) {
     BasicBlock newBlock = BasicBlock.createGotoBlock(blockNumber);
     BasicBlock first = preds.get(0);
     InstructionListIterator from = first.listIterator(first.getInstructions().size() - 1);
+    Int2ReferenceMap<DebugLocalInfo> newBlockEntryLocals = successorBlock.getLocalsAtEntry() == null
+        ? null
+        : new Int2ReferenceOpenHashMap<>(successorBlock.getLocalsAtEntry());
     boolean movedThrowingInstruction = false;
     for (int i = 0; i < suffixSize; i++) {
       Instruction instruction = from.previous();
       movedThrowingInstruction = movedThrowingInstruction || instruction.instructionTypeCanThrow();
       newBlock.getInstructions().addFirst(instruction);
       instruction.setBlock(newBlock);
+      if (instruction.isDebugLocalsChange()) {
+        // Replay the debug local changes backwards to compute the entry state.
+        assert newBlockEntryLocals != null;
+        DebugLocalsChange change = instruction.asDebugLocalsChange();
+        for (int starting : change.getStarting().keySet()) {
+          newBlockEntryLocals.remove(starting);
+        }
+        for (Entry<DebugLocalInfo> ending : change.getEnding().int2ReferenceEntrySet()) {
+          newBlockEntryLocals.put(ending.getIntKey(), ending.getValue());
+        }
+      }
     }
     if (movedThrowingInstruction && first.hasCatchHandlers()) {
       newBlock.transferCatchHandlers(first);
@@ -121,13 +140,14 @@ public class PeepholeOptimizer {
       }
       instructions.add(exit);
       newBlock.getPredecessors().add(pred);
-      pred.replaceSuccessor(block, newBlock);
-      block.getPredecessors().remove(pred);
+      pred.replaceSuccessor(successorBlock, newBlock);
+      successorBlock.getPredecessors().remove(pred);
       if (movedThrowingInstruction) {
         pred.clearCatchHandlers();
       }
     }
-    newBlock.link(block);
+    newBlock.setLocalsAtEntry(newBlockEntryLocals);
+    newBlock.link(successorBlock);
     return newBlock;
   }
 
