@@ -16,10 +16,12 @@ import sys
 
 import utils
 
-JCTFROOT = 'third_party/jctf'
-DESTINATION_DIR = 'build/generated/test/java/com/android/tools/r8/jctf'
+JCTFROOT = join(utils.REPO_ROOT, 'third_party', 'jctf')
+DESTINATION_DIR = join(utils.REPO_ROOT, 'build', 'generated', 'test', 'java',
+    'com', 'android', 'tools', 'r8', 'jctf')
 PACKAGE_PREFIX = 'com.google.jctf.test.lib.java.'
-RELATIVE_TESTDIR = 'LibTests/src/com/google/jctf/test/lib/java'
+RELATIVE_TESTDIR = join('LibTests', 'src', 'com', 'google', 'jctf', 'test',
+    'lib', 'java')
 TESTDIR = join(JCTFROOT, RELATIVE_TESTDIR)
 TEMPLATE = Template(
 """// Copyright (c) 2017, the R8 project authors. Please see the AUTHORS file
@@ -58,12 +60,17 @@ public class ${testClassName} extends R8RunArtTestsTest {
 EXIT_FAILURE = 1
 RE_PACKAGE = re.compile('package\\s+(com[^\\s;]*)')
 
+def fix_long_path(p):
+  if os.name == 'nt':
+    p = ('\\\\?\\' + p).decode('utf-8')
+  return p
+
 def file_contains_string(filepath, search_string):
-  with open(filepath) as f:
+  with open(fix_long_path(filepath)) as f:
     return search_string in f.read()
 
 def read_package_from_java_file(filepath):
-  with open(filepath) as f:
+  with open(fix_long_path(filepath)) as f:
     for line in f:
       m = RE_PACKAGE.search(line)
       if m:
@@ -74,7 +81,7 @@ def read_package_from_java_file(filepath):
 def generate_test(class_name, compiler_under_test, compiler_under_test_enum,
     relative_package):
   filename = join(DESTINATION_DIR, compiler_under_test,
-      relative_package.replace('.', '/'), class_name + '.java')
+      relative_package.replace('.', os.sep), class_name + '.java')
   utils.makedirs_if_needed(dirname(filename))
 
   full_class_name = '{}{}.{}'.format(PACKAGE_PREFIX, relative_package,
@@ -88,7 +95,7 @@ def generate_test(class_name, compiler_under_test, compiler_under_test_enum,
       classFile = full_class_name.replace('.', '/') + '.class',
       nameWithoutPackagePrefix = '{}.{}'.format(relative_package, class_name))
 
-  with open(filename, 'w') as f:
+  with open(fix_long_path(filename), 'w') as f:
     f.write(contents)
 
 def Main():
@@ -98,7 +105,7 @@ def Main():
     return EXIT_FAILURE
 
   for tool in ['d8', 'r8']:
-    p = join(DESTINATION_DIR, tool)
+    p = fix_long_path(join(DESTINATION_DIR, tool))
     if exists(p):
       rmtree(p)
     makedirs(p)
