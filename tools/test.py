@@ -68,6 +68,7 @@ def archive_failures():
   utils.upload_html_to_cloud_storage(upload_dir, destination)
   url = 'http://storage.googleapis.com/%s/%s/test/index.html' % (BUCKET, u_dir)
   print 'Test results available at: %s' % url
+  print '@@@STEP_LINK@Test failures@%s@@@' % url
 
 def Main():
   (options, args) = ParseOptions()
