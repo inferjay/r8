@@ -423,4 +423,51 @@ public class LocalsTest extends DebugTestBase {
         checkLocal("i", I3),
         run());
   }
+
+  @Test
+  public void tempInCase() throws Throwable {
+    runDebugTest(
+        "Locals",
+        breakpoint("Locals", "tempInCase"),
+        run(),
+        checkLine(SOURCE_FILE, 215),
+        checkLocal("x", Value.createInt(42)),
+        stepOver(),
+        checkLine(SOURCE_FILE, 216),
+        checkLocal("res", Value.createInt(0)),
+        checkNoLocal("i"),
+        stepOver(),
+        checkLine(SOURCE_FILE, 217),
+        stepOver(),
+        checkLine(SOURCE_FILE, 218),
+        checkLocal("rem", Value.createInt(42)),
+        setLocal("rem", Value.createInt(1)),
+        stepOver(),
+        checkLine(SOURCE_FILE, 220),
+        checkLocal("res", Value.createInt(0)),
+        run());
+  }
+
+  @Test
+  public void localSwap() throws Throwable {
+    runDebugTest(
+        "Locals",
+        breakpoint("Locals", "localSwap"),
+        run(),
+        checkLine(SOURCE_FILE, 238),
+        stepOver(),
+        checkLine(SOURCE_FILE, 240),
+        stepOver(),
+        checkLine(SOURCE_FILE, 241),
+        checkLocal("x", Value.createInt(1)),
+        checkLocal("y", Value.createInt(2)),
+        checkLocal("t", Value.createInt(1)),
+        stepOver(),
+        stepOver(),
+        checkLine(SOURCE_FILE, 244),
+        checkLocal("x", Value.createInt(2)),
+        checkLocal("y", Value.createInt(1)),
+        checkNoLocal("t"),
+        run());
+  }
 }
