@@ -211,6 +211,39 @@ public class Locals {
 
   public static void nop() {}
 
+  public static int tempInCase(int x) {
+    int res = 0;
+    for (int i = 0; i < x; ++i) {
+      int rem = x - i;
+      switch (rem) {
+        case 1:
+          return res;
+        case 5:
+          int tmp = res + x + i;
+          res += tmp;
+          break;
+        case 10:
+          i++;
+          break;
+        default:
+          res += rem;
+      }
+      res += rem % 2;
+    }
+    res *= x;
+    return res;
+  }
+
+  public static int localSwap(int x, int y) {
+    int sum = x + y;
+    {
+      int t = x;
+      x = y;
+      y = t;
+    }
+    return sum + x + y;
+  }
+
   public static void main(String[] args) {
     noLocals();
     unusedLocals();
@@ -224,6 +257,7 @@ public class Locals {
     stepEmptyForLoopBody1(3);
     stepEmptyForLoopBody2(3);
     stepNonEmptyForLoopBody(3);
+    tempInCase(42);
+    localSwap(1, 2);
   }
-
 }

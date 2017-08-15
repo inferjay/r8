@@ -22,11 +22,11 @@ public class BackBranchToSelfTestRunner extends DebugInfoTestBase {
     assertEquals(expected, runOnArt(d8App, clazz.getCanonicalName()));
     assertEquals(expected, runOnArt(dxApp, clazz.getCanonicalName()));
 
-    checkBackBranchToSelf(inspectMethod(d8App, clazz, "int", "backBranchToSelf", "boolean"), false);
-    checkBackBranchToSelf(inspectMethod(dxApp, clazz, "int", "backBranchToSelf", "boolean"), true);
+    checkBackBranchToSelf(inspectMethod(d8App, clazz, "int", "backBranchToSelf", "boolean"));
+    checkBackBranchToSelf(inspectMethod(dxApp, clazz, "int", "backBranchToSelf", "boolean"));
   }
 
-  private void checkBackBranchToSelf(DebugInfoInspector info, boolean dx) {
+  private void checkBackBranchToSelf(DebugInfoInspector info) {
     info.checkStartLine(10);
     info.checkLineHasExactLocals(10, "loop", "boolean");
     info.checkNoLine(11);
