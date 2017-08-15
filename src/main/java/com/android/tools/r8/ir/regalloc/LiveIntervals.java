@@ -96,8 +96,20 @@ public class LiveIntervals {
     // these computations. We use the unadjusted real register number to make sure that
     // isRematerializable for the same intervals does not change from one phase of
     // compilation to the next.
+    if (getMaxNonSpilledRegister() == NO_REGISTER) {
+      assert allSplitsAreSpilled();
+      return true;
+    }
     int max = registerAllocator.unadjustedRealRegisterFromAllocated(getMaxNonSpilledRegister());
     return max < Constants.U8BIT_MAX;
+  }
+
+  private boolean allSplitsAreSpilled() {
+    assert isSpilled();
+    for (LiveIntervals splitChild : splitChildren) {
+      assert splitChild.isSpilled();
+    }
+    return true;
   }
 
   public boolean isSpilledAndRematerializable(LinearScanRegisterAllocator allocator) {
