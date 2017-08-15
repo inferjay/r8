@@ -113,7 +113,7 @@ def Main():
     return_code = gradle.RunGradle(gradle_args + ['-Pdex_vm=%s' % art_vm],
                                    throw_on_failure=False)
     if return_code != 0:
-      if options.archive_failures:
+      if options.archive_failures and os.name != 'nt':
         archive_failures()
       return return_code
 
