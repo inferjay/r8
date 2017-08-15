@@ -80,8 +80,7 @@ public class FillArrayDataPayload extends Nop {
   public String toSmaliString(ClassNameMapper naming) {
     StringBuilder builder = new StringBuilder();
     builder.append("    ");
-    builder.append(".array-data");
-    builder.append(" 0x");
+    builder.append(".array-data ");
     builder.append(StringUtils.hexString(element_width, 1));
     builder.append("  # ");
     builder.append(element_width);
@@ -93,7 +92,6 @@ public class FillArrayDataPayload extends Nop {
           int value = (data[i] >> j * 8) & 0xff;
           if (i * 2 + j < size) {
             builder.append("      ");
-            builder.append("0x");
             builder.append(StringUtils.hexString(value, 2));
             builder.append("  # ");
             builder.append(value);
@@ -109,7 +107,6 @@ public class FillArrayDataPayload extends Nop {
         value = (Short.toUnsignedLong(data[i]) << (16 * (i % (element_width / 2)))) | value;
         if ((((i + 1) * 2) % element_width) == 0) {
           builder.append("      ");
-          builder.append("0x");
           builder.append(StringUtils.hexString(value, element_width * 2));
           builder.append("  # ");
           builder.append(value);

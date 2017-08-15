@@ -193,7 +193,7 @@ public class DexCode extends Code {
     int instructionNumber = 0;
     for (Instruction insn : instructions) {
       while (debugInfo != null && debugInfo.address == insn.getOffset()) {
-        builder.append("      ").append(debugInfo).append("\n");
+        builder.append("         ").append(debugInfo.toString(false)).append("\n");
         debugInfo = debugInfoIterator.hasNext() ? debugInfoIterator.next() : null;
       }
       StringUtils.appendLeftPadded(builder, Integer.toString(instructionNumber++), 5);
@@ -353,9 +353,9 @@ public class DexCode extends Code {
 
     public String toString() {
       return "["
-          + startAddress
+          + StringUtils.hexString(startAddress, 2)
           + " .. "
-          + (startAddress + instructionCount - 1)
+          + StringUtils.hexString(startAddress + instructionCount - 1, 2)
           + "] -> "
           + handlerIndex;
     }
@@ -420,12 +420,12 @@ public class DexCode extends Code {
         builder.append("       ");
         builder.append(pair.type);
         builder.append(" -> ");
-        builder.append(pair.addr);
+        builder.append(StringUtils.hexString(pair.addr, 2));
         builder.append("\n");
       }
       if (catchAllAddr != NO_HANDLER) {
         builder.append("       default -> ");
-        builder.append(catchAllAddr);
+        builder.append(StringUtils.hexString(catchAllAddr, 2));
         builder.append("\n");
       }
       builder.append("     ]");

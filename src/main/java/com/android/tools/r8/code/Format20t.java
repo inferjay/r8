@@ -40,7 +40,7 @@ abstract class Format20t extends Base2Format {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("" + AAAA + " (" + (getOffset() + AAAA) + ")");
+    return formatString("" + AAAA + " " + formatRelativeOffset(AAAA));
   }
 
   public String toSmaliString(ClassNameMapper naming) {

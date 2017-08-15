@@ -58,7 +58,7 @@ public abstract class Format31t extends Base3Format {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", +" + BBBBBBBB + " (" + (getOffset() + BBBBBBBB) + ")");
+    return formatString("v" + AA + ", " + formatRelativeOffset(BBBBBBBB));
   }
 
   @Override

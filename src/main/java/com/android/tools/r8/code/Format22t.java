@@ -66,7 +66,7 @@ public abstract class Format22t extends Base2Format {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + A + ", v" + B + ", +" + CCCC + " (" + (getOffset() + CCCC) + ")");
+    return formatString("v" + A + ", v" + B + ", " + formatRelativeOffset(CCCC));
   }
 
   public String toSmaliString(ClassNameMapper naming) {

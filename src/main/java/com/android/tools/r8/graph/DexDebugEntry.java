@@ -33,8 +33,15 @@ public class DexDebugEntry {
 
   @Override
   public String toString() {
+    return toString(true);
+  }
+
+  public String toString(boolean withPcPrefix) {
     StringBuilder builder = new StringBuilder();
-    builder.append("pc 0x").append(StringUtils.hexString(address, 2));
+    if (withPcPrefix) {
+      builder.append("pc ");
+    }
+    builder.append(StringUtils.hexString(address, 2));
     builder.append(", line ").append(line);
     if (sourceFile != null) {
       builder.append(", file ").append(sourceFile);

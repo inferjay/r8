@@ -94,7 +94,6 @@ public class PackedSwitchPayload extends SwitchPayload {
     StringBuilder builder = new StringBuilder();
     builder.append("    ");
     builder.append(".packed-switch ");
-    builder.append("0x");
     builder.append(StringUtils.hexString(first_key, 8));
     builder.append("  # ");
     builder.append(first_key);
