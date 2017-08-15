@@ -180,8 +180,8 @@ public class IfSimplificationTest extends SmaliTestBase {
         ":return",
         "  return v0");
     DexCode code = method.getCode().asDexCode();
-    assertEquals(12, code.instructions.length);
-    assertTrue(code.instructions[11] instanceof Return);
+    assertEquals(10, code.instructions.length);
+    assertTrue(code.instructions[9] instanceof Return);
   }
 
   @Test
@@ -443,6 +443,6 @@ public class IfSimplificationTest extends SmaliTestBase {
     DexCode code = method.getCode().asDexCode();
     // TODO(sgjesse): Maybe this test is too fragile, as it leaves quite a lot of code, so the
     // expectation might need changing with other optimizations.
-    assertEquals(29, code.instructions.length);
+    assertEquals(27, code.instructions.length);
   }
 }
