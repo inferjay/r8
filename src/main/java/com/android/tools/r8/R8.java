@@ -71,7 +71,7 @@ import java.util.concurrent.Executors;
 
 public class R8 {
 
-  private static final String kVersion = "v0.0.1";
+  private static final String kVersion = "v0.1.0";
   private final Timing timing = new Timing("R8");
   private final InternalOptions options;
 
