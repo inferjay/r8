@@ -5,6 +5,7 @@ package com.android.tools.r8.ir.optimize;
 
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.Move;
+import com.android.tools.r8.ir.code.MoveType;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import java.util.HashSet;
@@ -30,9 +31,17 @@ class MoveEliminator {
             allocator.getRegisterForValue(activeMove.src(), activeMove.getNumber());
         int activeMoveDstRegister =
             allocator.getRegisterForValue(activeMove.dest(), activeMove.getNumber());
-        if (activeMoveSrcRegister == moveSrcRegister
-            && activeMoveDstRegister == moveDstRegister) {
+        if (activeMoveSrcRegister == moveSrcRegister && activeMoveDstRegister == moveDstRegister) {
           return true;
+        }
+        if (activeMoveDstRegister == moveSrcRegister && activeMoveSrcRegister == moveDstRegister) {
+          if (move.outType() != MoveType.WIDE) {
+            return true;
+          }
+          // If the move is wide make sure the register pair is non-overlapping.
+          if (moveSrcRegister != moveDstRegister + 1 && moveSrcRegister + 1 != moveDstRegister) {
+            return true;
+          }
         }
       }
     }
@@ -40,11 +49,14 @@ class MoveEliminator {
       Value defined = instruction.outValue();
       int definedRegister = allocator.getRegisterForValue(defined, instruction.getNumber());
       activeMoves.removeIf((m) -> {
-        int moveSrcRegister = allocator.getRegisterForValue(m.inValues().get(0), m.getNumber());
-        int moveDstRegister = allocator.getRegisterForValue(m.outValue(), m.getNumber());
+        int moveSrcRegister = allocator.getRegisterForValue(m.src(), m.getNumber());
+        int moveDstRegister = allocator.getRegisterForValue(m.dest(), m.getNumber());
         for (int i = 0; i < defined.requiredRegisters(); i++) {
-          if (definedRegister + i == moveDstRegister || definedRegister + i == moveSrcRegister) {
-            return true;
+          for (int j = 0; j < m.outValue().requiredRegisters(); j++) {
+            if (definedRegister + i == moveDstRegister + j
+                || definedRegister + i == moveSrcRegister + j) {
+              return true;
+            }
           }
         }
         return false;
