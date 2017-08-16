@@ -15,7 +15,7 @@ public class DexEncodedField extends KeyedDexItem<DexField> {
   public final DexField field;
   public final DexAccessFlags accessFlags;
   public DexAnnotationSet annotations;
-  public final DexValue staticValue;
+  public DexValue staticValue;
 
   public DexEncodedField(DexField field, DexAccessFlags accessFlags, DexAnnotationSet annotations,
       DexValue staticValue) {

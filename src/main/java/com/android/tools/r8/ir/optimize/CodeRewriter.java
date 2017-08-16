@@ -6,13 +6,26 @@ package com.android.tools.r8.ir.optimize;
 
 import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
+import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.AppInfo;
 import com.android.tools.r8.graph.DexClass;
+import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
+import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexMethod;
 import com.android.tools.r8.graph.DexProto;
 import com.android.tools.r8.graph.DexType;
+import com.android.tools.r8.graph.DexValue.DexValueBoolean;
+import com.android.tools.r8.graph.DexValue.DexValueByte;
+import com.android.tools.r8.graph.DexValue.DexValueChar;
+import com.android.tools.r8.graph.DexValue.DexValueDouble;
+import com.android.tools.r8.graph.DexValue.DexValueFloat;
+import com.android.tools.r8.graph.DexValue.DexValueInt;
+import com.android.tools.r8.graph.DexValue.DexValueLong;
+import com.android.tools.r8.graph.DexValue.DexValueNull;
+import com.android.tools.r8.graph.DexValue.DexValueShort;
+import com.android.tools.r8.graph.DexValue.DexValueString;
 import com.android.tools.r8.ir.code.ArrayPut;
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.Binop;
@@ -55,6 +68,7 @@ import com.google.common.base.Equivalence.Wrapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -602,6 +616,102 @@ public class CodeRewriter {
           iterator.replaceCurrentInstruction(code.createTrue());
         }
       }
+    }
+  }
+
+  public void collectClassInitializerDefaults(DexEncodedMethod method, IRCode code) {
+    if (!method.isClassInitializer()) {
+      return;
+    }
+
+    // Collect all static put which are dominated by the exit block, and not dominated by a
+    // static get.
+    // This does not check for instructions that can throw. However, as classes which throw in the
+    // class initializer are never visible to the program (see Java Virtual Machine Specification
+    // section 5.5, https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5), this
+    // does not matter (except maybe for removal of const-string instructions, but that is
+    // acceptable).
+    DominatorTree dominatorTree = new DominatorTree(code);
+    BasicBlock exit = code.getNormalExitBlock();
+    if (exit == null) {
+      return;
+    }
+    Map<DexField, StaticPut> puts = Maps.newIdentityHashMap();
+    for (BasicBlock block : dominatorTree.dominatorBlocks(exit)) {
+      InstructionListIterator iterator = block.listIterator(block.getInstructions().size());
+      while (iterator.hasPrevious()) {
+        Instruction current = iterator.previous();
+        if (current.isStaticPut()) {
+          StaticPut put = current.asStaticPut();
+          DexField field = put.getField();
+          if (!(field.type.isPrimitiveType()
+              || field.type == dexItemFactory.stringType)
+              || field.getHolder() != method.method.getHolder()) {
+            continue;
+          }
+          if (put.inValue().isConstant()) {
+            // Collect put as a potential default value.
+            puts.put(put.getField(), put);
+          }
+        }
+        if (current.isStaticGet()) {
+          // If a static field is read, any collected potential default value cannot be a
+          // default value.
+          if (puts.containsKey(current.asStaticGet().getField())) {
+            puts.remove(current.asStaticGet().getField());
+          }
+        }
+      }
+    }
+
+    if (!puts.isEmpty()) {
+      // Set initial values for static fields from the definitive static put instructions collected.
+      for (StaticPut put : puts.values()) {
+        DexField field = put.getField();
+        DexEncodedField encodedField = appInfo.definitionFor(field);
+        if (field.type == dexItemFactory.stringType) {
+          if (put.inValue().getConstInstruction().isConstNumber()) {
+            assert put.inValue().getConstInstruction().asConstNumber().isZero();
+            encodedField.staticValue = DexValueNull.NULL;
+          } else {
+            ConstString cnst = put.inValue().getConstInstruction().asConstString();
+            encodedField.staticValue = new DexValueString(cnst.getValue());
+          }
+        } else {
+          ConstNumber cnst = put.inValue().getConstInstruction().asConstNumber();
+          if (field.type == dexItemFactory.booleanType) {
+            encodedField.staticValue = DexValueBoolean.create(cnst.getBooleanValue());
+          } else if (field.type == dexItemFactory.byteType) {
+            encodedField.staticValue = DexValueByte.create((byte) cnst.getIntValue());
+          } else if (field.type == dexItemFactory.shortType) {
+            encodedField.staticValue = DexValueShort.create((short) cnst.getIntValue());
+          } else if (field.type == dexItemFactory.intType) {
+            encodedField.staticValue = DexValueInt.create(cnst.getIntValue());
+          } else if (field.type == dexItemFactory.longType) {
+            encodedField.staticValue = DexValueLong.create(cnst.getLongValue());
+          } else if (field.type == dexItemFactory.floatType) {
+            encodedField.staticValue = DexValueFloat.create(cnst.getFloatValue());
+          } else if (field.type == dexItemFactory.doubleType) {
+            encodedField.staticValue = DexValueDouble.create(cnst.getDoubleValue());
+          } else if (field.type == dexItemFactory.charType) {
+            encodedField.staticValue = DexValueChar.create((char) cnst.getIntValue());
+          } else {
+             throw new Unreachable("Unexpected field type.");
+          }
+        }
+      }
+
+      // Remove the static put instructions now replaced by static filed initial values.
+      for (BasicBlock block : dominatorTree.dominatorBlocks(exit)) {
+        InstructionListIterator iterator = block.listIterator();
+        while (iterator.hasNext()) {
+          Instruction current = iterator.next();
+          if (current.isStaticPut() && puts.values().contains(current.asStaticPut())) {
+            iterator.remove();
+          }
+        }
+      }
+
     }
   }
 

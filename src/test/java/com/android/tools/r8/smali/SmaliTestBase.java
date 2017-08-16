@@ -71,6 +71,10 @@ public class SmaliTestBase {
       this.returnType = returnType;
       this.parameterTypes = parameterTypes;
     }
+
+    public static MethodSignature staticInitializer(String clazz) {
+      return new MethodSignature(clazz, "<clinit>", "void", ImmutableList.of());
+    }
   }
 
   public static class SmaliBuilder {
@@ -210,6 +214,29 @@ public class SmaliTestBase {
       );
     }
 
+    public void addStaticField(String name, String type, String defaultValue) {
+      StringBuilder builder = new StringBuilder();
+      builder.append(".field static ");
+      builder.append(name);
+      builder.append(":");
+      builder.append(type);
+      if (defaultValue != null) {
+        builder.append(" = ");
+        if (type.equals("Ljava/lang/String;")) {
+          builder.append('"');
+          builder.append(defaultValue);
+          builder.append('"');
+        } else {
+          builder.append(defaultValue);
+        }
+      }
+      getSource(currentClassName).add(builder.toString());
+    }
+
+    public void addStaticField(String name, String type) {
+      addStaticField(name, type, null);
+    }
+
     public MethodSignature addStaticMethod(String returnType, String name, List<String> parameters,
         int locals, String... instructions) {
       StringBuilder builder = new StringBuilder();
@@ -222,8 +249,30 @@ public class SmaliTestBase {
 
     public MethodSignature addStaticMethod(String returnType, String name, List<String> parameters,
         int locals, String code) {
+      return addStaticMethod("", returnType, name, parameters, locals, code);
+    }
+
+    public MethodSignature addStaticInitializer(int locals, String... instructions) {
+      StringBuilder builder = new StringBuilder();
+      for (String instruction : instructions) {
+        builder.append(instruction);
+        builder.append("\n");
+      }
+      return addStaticInitializer(locals, builder.toString());
+    }
+
+    public MethodSignature addStaticInitializer(int locals, String code) {
+      return addStaticMethod("constructor", "void", "<clinit>", ImmutableList.of(), locals, code);
+    }
+
+    private MethodSignature addStaticMethod(String flags, String returnType, String name,
+        List<String> parameters, int locals, String code) {
       StringBuilder builder = new StringBuilder();
       builder.append(".method public static ");
+      if (flags != null && flags.length() > 0) {
+        builder.append(flags);
+        builder.append(" ");
+      }
       builder.append(name);
       builder.append("(");
       for (String parameter : parameters) {

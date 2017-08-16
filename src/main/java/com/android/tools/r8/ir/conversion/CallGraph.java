@@ -14,7 +14,6 @@ import com.android.tools.r8.graph.DexProgramClass;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.graph.GraphLense;
 import com.android.tools.r8.graph.UseRegistry;
-import com.android.tools.r8.ir.code.Invoke;
 import com.android.tools.r8.ir.code.Invoke.Type;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.utils.InternalOptions;
@@ -328,16 +327,57 @@ public class CallGraph {
       this.graph = graph;
     }
 
-    private void processInvoke(DexEncodedMethod source, Invoke.Type type, DexMethod method) {
+    private void addClassInitializerTarget(DexClass clazz) {
+      assert clazz != null;
+      if (clazz.hasClassInitializer() && !clazz.isLibraryClass()) {
+        DexEncodedMethod possibleTarget = clazz.getClassInitializer();
+        addTarget(possibleTarget);
+      }
+    }
+
+    private void addClassInitializerTarget(DexType type) {
+      if (type.isArrayType()) {
+        type = type.toBaseType(appInfo.dexItemFactory);
+      }
+      DexClass clazz = appInfo.definitionFor(type);
+      if (clazz != null) {
+        addClassInitializerTarget(clazz);
+      }
+    }
+
+    private void addTarget(DexEncodedMethod target) {
+      Node callee = graph.ensureMethodNode(target);
+      graph.addCall(caller, callee);
+    }
+
+    private void addPossibleTarget(DexEncodedMethod possibleTarget) {
+      DexClass possibleTargetClass =
+          appInfo.definitionFor(possibleTarget.method.getHolder());
+      if (possibleTargetClass != null && !possibleTargetClass.isLibraryClass()) {
+        addTarget(possibleTarget);
+      }
+    }
+
+    private void addPossibleTargets(
+        DexEncodedMethod definition, Set<DexEncodedMethod> possibleTargets) {
+      for (DexEncodedMethod possibleTarget : possibleTargets) {
+        if (possibleTarget != definition) {
+          addPossibleTarget(possibleTarget);
+        }
+      }
+    }
+
+    private void processInvoke(Type type, DexMethod method) {
+      DexEncodedMethod source = caller.method;
       method = graphLense.lookupMethod(method, source);
       DexEncodedMethod definition = appInfo.lookup(type, method);
       if (definition != null) {
         assert !source.accessFlags.isBridge() || definition != caller.method;
-        DexType definitionHolder = definition.method.getHolder();
-        assert definitionHolder.isClassType();
-        if (!appInfo.definitionFor(definitionHolder).isLibraryClass()) {
-          Node callee = graph.ensureMethodNode(definition);
-          graph.addCall(caller, callee);
+        DexClass definitionHolder = appInfo.definitionFor(definition.method.getHolder());
+        assert definitionHolder != null;
+        if (!definitionHolder.isLibraryClass()) {
+          addClassInitializerTarget(definitionHolder);
+          addTarget(definition);
           // For virtual and interface calls add all potential targets that could be called.
           if (type == Type.VIRTUAL || type == Type.INTERFACE) {
             Set<DexEncodedMethod> possibleTargets;
@@ -346,73 +386,74 @@ public class CallGraph {
             } else {
               possibleTargets = appInfo.lookupVirtualTargets(definition.method);
             }
-            for (DexEncodedMethod possibleTarget : possibleTargets) {
-              if (possibleTarget != definition) {
-                DexClass possibleTargetClass =
-                    appInfo.definitionFor(possibleTarget.method.getHolder());
-                if (possibleTargetClass != null && !possibleTargetClass.isLibraryClass()) {
-                  callee = graph.ensureMethodNode(possibleTarget);
-                  graph.addCall(caller, callee);
-                }
-              }
-            }
+            addPossibleTargets(definition, possibleTargets);
           }
         }
       }
     }
 
+    private void processFieldAccess(DexField field) {
+      // Any field access implicitly calls the class initializer.
+      addClassInitializerTarget(field.getHolder());
+    }
+
     @Override
     public boolean registerInvokeVirtual(DexMethod method) {
-      processInvoke(caller.method, Type.VIRTUAL, method);
+      processInvoke(Type.VIRTUAL, method);
       return false;
     }
 
     @Override
     public boolean registerInvokeDirect(DexMethod method) {
-      processInvoke(caller.method, Type.DIRECT, method);
+      processInvoke(Type.DIRECT, method);
       return false;
     }
 
     @Override
     public boolean registerInvokeStatic(DexMethod method) {
-      processInvoke(caller.method, Type.STATIC, method);
+      processInvoke(Type.STATIC, method);
       return false;
     }
 
     @Override
     public boolean registerInvokeInterface(DexMethod method) {
-      processInvoke(caller.method, Type.INTERFACE, method);
+      processInvoke(Type.INTERFACE, method);
       return false;
     }
 
     @Override
     public boolean registerInvokeSuper(DexMethod method) {
-      processInvoke(caller.method, Type.SUPER, method);
+      processInvoke(Type.SUPER, method);
       return false;
     }
 
     @Override
     public boolean registerInstanceFieldWrite(DexField field) {
+      processFieldAccess(field);
       return false;
     }
 
     @Override
     public boolean registerInstanceFieldRead(DexField field) {
+      processFieldAccess(field);
       return false;
     }
 
     @Override
     public boolean registerNewInstance(DexType type) {
+      addClassInitializerTarget(type);
       return false;
     }
 
     @Override
     public boolean registerStaticFieldRead(DexField field) {
+      processFieldAccess(field);
       return false;
     }
 
     @Override
     public boolean registerStaticFieldWrite(DexField field) {
+      processFieldAccess(field);
       return false;
     }
 
