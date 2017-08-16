@@ -109,7 +109,7 @@ public class StringUtils {
     return join(collection, separator, BraceType.NONE);
   }
 
-  public static <T> String join(String separator, T... strings) {
+  public static String join(String separator, String... strings) {
     return join(Arrays.asList(strings), separator, BraceType.NONE);
   }
 
@@ -124,15 +124,15 @@ public class StringUtils {
     return builder.toString();
   }
 
-  public static <T> String lines(T... lines) {
+  public static String lines(String... lines) {
     StringBuilder builder = new StringBuilder();
-    for (T line : lines) {
+    for (String line : lines) {
       builder.append(line).append(LINE_SEPARATOR);
     }
     return builder.toString();
   }
 
-  public static <T> String joinLines(T... lines) {
+  public static String joinLines(String... lines) {
     return join(LINE_SEPARATOR, lines);
   }
 
