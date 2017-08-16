@@ -8,6 +8,7 @@ import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.utils.StringUtils;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -15,19 +16,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class NamingState<T extends CanonicalizedDexItem> {
+class NamingState<T extends CanonicalizedDexItem> {
 
   private final NamingState<T> parent;
   private final Map<T, InternalState> usedNames = new IdentityHashMap<>();
   private final DexItemFactory itemFactory;
-  private final List<String> dictionary;
+  private final ImmutableList<String> dictionary;
 
-  public static <T extends CanonicalizedDexItem> NamingState<T> createRoot(
-      DexItemFactory itemFactory, List<String> dictionary) {
+  static <T extends CanonicalizedDexItem> NamingState<T> createRoot(
+      DexItemFactory itemFactory, ImmutableList<String> dictionary) {
     return new NamingState<>(null, itemFactory, dictionary);
   }
 
-  private NamingState(NamingState<T> parent, DexItemFactory itemFactory, List<String> dictionary) {
+  private NamingState(
+      NamingState<T> parent,
+      DexItemFactory itemFactory,
+      ImmutableList<String> dictionary) {
     this.parent = parent;
     this.itemFactory = itemFactory;
     this.dictionary = dictionary;

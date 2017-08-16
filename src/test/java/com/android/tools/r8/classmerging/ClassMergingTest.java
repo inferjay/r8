@@ -36,7 +36,6 @@ public class ClassMergingTest {
             .addProguardConfigurationFiles(EXAMPLE_KEEP)
             .setMinification(false)
             .build(), o -> {
-          o.allowAccessModification = false;
           o.skipClassMerging = false;
         });
     inspector = new DexInspector(

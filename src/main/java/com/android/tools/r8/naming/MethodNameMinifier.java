@@ -3,7 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.naming;
 
+import com.android.tools.r8.utils.InternalOptions;
 import com.google.common.base.Equivalence.Wrapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
 import com.android.tools.r8.graph.AppInfoWithSubtyping;
@@ -91,13 +93,12 @@ class MethodNameMinifier {
   private final Map<DexType, NamingState<DexProto>> states = new IdentityHashMap<>();
   private final NamingState<DexProto> globalState;
   private MethodSignatureEquivalence equivalence = MethodSignatureEquivalence.get();
-  private final List<String> dictionary;
+  private final ImmutableList<String> dictionary;
 
-  MethodNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet,
-      List<String> dictionary) {
+  MethodNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet, InternalOptions options) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
-    this.dictionary = dictionary;
+    this.dictionary = options.proguardConfiguration.getObfuscationDictionary();
     this.globalState = NamingState.createRoot(appInfo.dexItemFactory, dictionary);
   }
 

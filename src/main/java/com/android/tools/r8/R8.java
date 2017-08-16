@@ -244,7 +244,8 @@ public class R8 {
       timing.begin("Strip unused code");
       try {
         Set<DexType> missingClasses = appInfo.getMissingClasses();
-        missingClasses = filterMissingClasses(missingClasses, options.dontWarnPatterns);
+        missingClasses = filterMissingClasses(
+            missingClasses, options.proguardConfiguration.getDontWarnPatterns());
         if (!missingClasses.isEmpty()) {
           System.err.println();
           System.err.println("WARNING, some classes are missing:");
@@ -256,11 +257,12 @@ public class R8 {
                 "Shrinking can't be performed because some library classes are missing.");
           }
         }
-        rootSet = new RootSetBuilder(application, appInfo, options.keepRules).run(executorService);
+        rootSet = new RootSetBuilder(application, appInfo, options.proguardConfiguration.getRules())
+            .run(executorService);
         Enqueuer enqueuer = new Enqueuer(appInfo);
         enqueuer.addExtension(new ProtoLiteExtension(appInfo));
         appInfo = enqueuer.traceApplication(rootSet, timing);
-        if (options.printSeeds) {
+        if (options.proguardConfiguration.isPrintSeeds()) {
           ByteArrayOutputStream bytes = new ByteArrayOutputStream();
           PrintStream out = new PrintStream(bytes);
           RootSetBuilder.writeSeeds(appInfo.withLiveness().pinnedItems, out);
@@ -278,7 +280,7 @@ public class R8 {
         timing.end();
       }
 
-      if (options.allowAccessModification) {
+      if (options.proguardConfiguration.isAccessModificationAllowed()) {
         ClassAndMemberPublicizer.run(application);
         // We can now remove visibility bridges. Note that we do not need to update the
         // invoke-targets here, as the existing invokes will simply dispatch to the now
@@ -424,23 +426,23 @@ public class R8 {
       outputApp.write(command.getOutputPath(), options.outputMode);
     }
 
-    if (options.printMapping && !options.skipMinification) {
+    if (options.proguardConfiguration.isPrintMapping() && !options.skipMinification) {
       assert outputApp.hasProguardMap();
       try (Closer closer = Closer.create()) {
         OutputStream mapOut = FileUtils.openPathWithDefault(
             closer,
-            options.printMappingFile,
+            options.proguardConfiguration.getPrintMappingFile(),
             System.out,
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         outputApp.writeProguardMap(closer, mapOut);
       }
     }
-    if (options.printSeeds) {
+    if (options.proguardConfiguration.isPrintSeeds()) {
       assert outputApp.hasProguardSeeds();
       try (Closer closer = Closer.create()) {
         OutputStream seedsOut = FileUtils.openPathWithDefault(
             closer,
-            options.seedsFile,
+            options.proguardConfiguration.getSeedFile(),
             System.out,
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         outputApp.writeProguardSeeds(closer, seedsOut);
@@ -457,11 +459,11 @@ public class R8 {
         outputApp.writeMainDexList(closer, mainDexOut);
       }
     }
-    if (options.printUsage && outputApp.hasDeadCode()) {
+    if (options.proguardConfiguration.isPrintUsage() && outputApp.hasDeadCode()) {
       try (Closer closer = Closer.create()) {
         OutputStream deadCodeOut = FileUtils.openPathWithDefault(
             closer,
-            options.printUsageFile,
+            options.proguardConfiguration.getPrintUsageFile(),
             System.out,
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         outputApp.writeDeadCode(closer, deadCodeOut);

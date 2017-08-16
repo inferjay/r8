@@ -9,10 +9,9 @@ import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.InvalidDebugInfoException;
 import com.android.tools.r8.graph.DexEncodedMethod;
 import com.android.tools.r8.graph.DexItemFactory;
+import com.android.tools.r8.shaking.ProguardConfiguration;
 import com.android.tools.r8.shaking.ProguardConfigurationRule;
-import com.android.tools.r8.shaking.ProguardTypeMatcher;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
@@ -20,14 +19,26 @@ import java.util.function.Function;
 public class InternalOptions {
 
   public final DexItemFactory itemFactory;
+  public final ProguardConfiguration proguardConfiguration;
 
+  // Constructor for testing and/or other utilities.
   public InternalOptions() {
     itemFactory = new DexItemFactory();
+    proguardConfiguration = ProguardConfiguration.defaultConfiguration(itemFactory);
   }
 
+  // Constructor for D8.
   public InternalOptions(DexItemFactory factory) {
     assert factory != null;
     itemFactory = factory;
+    proguardConfiguration = ProguardConfiguration.defaultConfiguration(itemFactory);
+  }
+
+  // Constructor for R8.
+  public InternalOptions(ProguardConfiguration proguardConfiguration) {
+    assert proguardConfiguration != null;
+    this.proguardConfiguration = proguardConfiguration;
+    itemFactory = proguardConfiguration.getDexItemFactory();
   }
 
   public final int NOT_SPECIFIED = -1;
@@ -80,21 +91,12 @@ public class InternalOptions {
   public OutputMode outputMode = OutputMode.Indexed;
 
   public boolean useTreeShaking = true;
-  public boolean printUsage = false;
-  public Path printUsageFile = null;
 
   public boolean printCfg = false;
   public String printCfgFile;
-  public boolean printSeeds;
-  public Path seedsFile;
-  public boolean printMapping;
-  public Path printMappingFile;
   public Path printMainDexListFile;
   public boolean ignoreMissingClasses = false;
   public boolean skipMinification = false;
-  public PackageObfuscationMode packageObfuscationMode = PackageObfuscationMode.NONE;
-  public String packagePrefix = "";
-  public boolean allowAccessModification = true;
   public boolean inlineAccessors = true;
   public boolean removeSwitchMaps = true;
   public boolean disableAssertions = true;
@@ -107,14 +109,8 @@ public class InternalOptions {
   public boolean singleStepDebug = false;
   public final TestingOptions testing = new TestingOptions();
 
-  // TODO(zerny): These stateful dictionaries do not belong here.
-  public List<String> classObfuscationDictionary = ImmutableList.of();
-  public List<String> obfuscationDictionary = ImmutableList.of();
-
   public ImmutableList<ProguardConfigurationRule> mainDexKeepRules = ImmutableList.of();
   public boolean minimalMainDex;
-  public ImmutableList<ProguardConfigurationRule> keepRules = ImmutableList.of();
-  public ImmutableSet<ProguardTypeMatcher> dontWarnPatterns = ImmutableSet.of();
 
   public String warningInvalidParameterAnnotations = null;
 
@@ -200,8 +196,8 @@ public class InternalOptions {
 
   public static class TestingOptions {
 
-    public Function<List<DexEncodedMethod>, List<DexEncodedMethod>> irOrdering
-        = Function.identity();
+    public Function<List<DexEncodedMethod>, List<DexEncodedMethod>> irOrdering =
+        Function.identity();
   }
 
   public static class AttributeRemovalOptions {

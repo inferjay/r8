@@ -52,7 +52,7 @@ public class DictionaryReader implements AutoCloseable {
     }
   }
 
-  public static List<String> readAllNames(Path path) {
+  public static ImmutableList<String> readAllNames(Path path) {
     if (path != null) {
       Builder<String> namesBuilder = new ImmutableList.Builder<String>();
       try (DictionaryReader reader = new DictionaryReader(path);) {

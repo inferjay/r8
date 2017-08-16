@@ -31,7 +31,7 @@ public class ProguardConfiguration {
     private boolean printUsage = false;
     private Path printUsageFile;
     private boolean printMapping;
-    private Path printMappingOutput;
+    private Path printMappingFile;
     private boolean verbose = false;
     private final List<String> attributesRemovalPatterns = new ArrayList<>();
     private final Set<ProguardTypeMatcher> dontWarnPatterns = new HashSet<>();
@@ -106,8 +106,8 @@ public class ProguardConfiguration {
       this.printMapping = printMapping;
     }
 
-    public void setPrintMappingOutput(Path file) {
-      this.printMappingOutput = file;
+    public void setPrintMappingFile(Path file) {
+      this.printMappingFile = file;
     }
 
     public void setVerbose(boolean verbose) {
@@ -130,7 +130,7 @@ public class ProguardConfiguration {
       this.seedFile = seedFile;
     }
 
-    public void setPrintSeed(boolean printSeeds) {
+    public void setPrintSeeds(boolean printSeeds) {
       this.printSeeds = printSeeds;
     }
 
@@ -161,7 +161,7 @@ public class ProguardConfiguration {
           printUsage,
           printUsageFile,
           printMapping,
-          printMappingOutput,
+          printMappingFile,
           verbose,
           attributesRemovalPatterns,
           dontWarnPatterns,
@@ -175,8 +175,8 @@ public class ProguardConfiguration {
   }
 
   private final DexItemFactory dexItemFactory;
-  private final List<Path> injars;
-  private final List<Path> libraryjars;
+  private final ImmutableList<Path> injars;
+  private final ImmutableList<Path> libraryjars;
   private final PackageObfuscationMode packageObfuscationMode;
   private final String packagePrefix;
   private final boolean allowAccessModification;
@@ -187,16 +187,16 @@ public class ProguardConfiguration {
   private final boolean printUsage;
   private final Path printUsageFile;
   private final boolean printMapping;
-  private final Path printMappingOutput;
+  private final Path printMappingFile;
   private final boolean verbose;
-  private final List<String> attributesRemovalPatterns;
+  private final ImmutableList<String> attributesRemovalPatterns;
   private final ImmutableSet<ProguardTypeMatcher> dontWarnPatterns;
   protected final ImmutableList<ProguardConfigurationRule> rules;
   private final boolean printSeeds;
   private final Path seedFile;
-  private final List<String> obfuscationDictionary;
-  private final List<String> classObfuscationDictionary;
-  private final List<String> packageObfuscationDictionary;
+  private final ImmutableList<String> obfuscationDictionary;
+  private final ImmutableList<String> classObfuscationDictionary;
+  private final ImmutableList<String> packageObfuscationDictionary;
 
   private ProguardConfiguration(
       DexItemFactory factory,
@@ -212,16 +212,16 @@ public class ProguardConfiguration {
       boolean printUsage,
       Path printUsageFile,
       boolean printMapping,
-      Path printMappingOutput,
+      Path printMappingFile,
       boolean verbose,
       List<String> attributesRemovalPatterns,
       Set<ProguardTypeMatcher> dontWarnPatterns,
       List<ProguardConfigurationRule> rules,
       boolean printSeeds,
       Path seedFile,
-      List<String> obfuscationDictionary,
-      List<String> classObfuscationDictionary,
-      List<String> packageObfuscationDictionary) {
+      ImmutableList<String> obfuscationDictionary,
+      ImmutableList<String> classObfuscationDictionary,
+      ImmutableList<String> packageObfuscationDictionary) {
     this.dexItemFactory = factory;
     this.injars = ImmutableList.copyOf(injars);
     this.libraryjars = ImmutableList.copyOf(libraryjars);
@@ -235,7 +235,7 @@ public class ProguardConfiguration {
     this.printUsage = printUsage;
     this.printUsageFile = printUsageFile;
     this.printMapping = printMapping;
-    this.printMappingOutput = printMappingOutput;
+    this.printMappingFile = printMappingFile;
     this.verbose = verbose;
     this.attributesRemovalPatterns = ImmutableList.copyOf(attributesRemovalPatterns);
     this.dontWarnPatterns = ImmutableSet.copyOf(dontWarnPatterns);
@@ -262,11 +262,11 @@ public class ProguardConfiguration {
     return false;
   }
 
-  public List<Path> getInjars() {
+  public ImmutableList<Path> getInjars() {
     return injars;
   }
 
-  public List<Path> getLibraryjars() {
+  public ImmutableList<Path> getLibraryjars() {
     return libraryjars;
   }
 
@@ -278,16 +278,16 @@ public class ProguardConfiguration {
     return packagePrefix;
   }
 
-  public boolean getAllowAccessModification() {
+  public boolean isAccessModificationAllowed() {
     return allowAccessModification;
   }
 
-  public boolean isPrintingMapping() {
+  public boolean isPrintMapping() {
     return printMapping;
   }
 
-  public Path getPrintMappingOutput() {
-    return printMappingOutput;
+  public Path getPrintMappingFile() {
+    return printMappingFile;
   }
 
   public boolean isIgnoreWarnings() {
@@ -318,7 +318,7 @@ public class ProguardConfiguration {
     return verbose;
   }
 
-  public List<String> getAttributesRemovalPatterns() {
+  public ImmutableList<String> getAttributesRemovalPatterns() {
     return attributesRemovalPatterns;
   }
 
@@ -330,21 +330,20 @@ public class ProguardConfiguration {
     return rules;
   }
 
-  public List<String> getObfuscationDictionary() {
+  public ImmutableList<String> getObfuscationDictionary() {
     return obfuscationDictionary;
   }
 
-  public List<String> getPackageObfuscationDictionary() {
-    return packageObfuscationDictionary;
-  }
-
-  public List<String> getClassObfuscationDictionary() {
+  public ImmutableList<String> getClassObfuscationDictionary() {
     return classObfuscationDictionary;
   }
 
+  public ImmutableList<String> getPackageObfuscationDictionary() {
+    return packageObfuscationDictionary;
+  }
+
   public static ProguardConfiguration defaultConfiguration(DexItemFactory dexItemFactory) {
-    ProguardConfiguration config = new DefaultProguardConfiguration(dexItemFactory);
-    return config;
+    return new DefaultProguardConfiguration(dexItemFactory);
   }
 
   public static class DefaultProguardConfiguration extends ProguardConfiguration {
@@ -372,7 +371,7 @@ public class ProguardConfiguration {
           null                  /* seedFile */,
           ImmutableList.of()     /* obfuscationDictionary */,
           ImmutableList.of()     /* classObfuscationDictionary */,
-          ImmutableList.of()     /* packageObfucationDictionary */);
+          ImmutableList.of()     /* packageObfuscationDictionary */);
     }
 
     @Override
@@ -381,7 +380,7 @@ public class ProguardConfiguration {
     }
   }
 
-  public boolean getPrintSeeds() {
+  public boolean isPrintSeeds() {
     return printSeeds;
   }
 

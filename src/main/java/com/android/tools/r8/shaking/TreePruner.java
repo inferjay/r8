@@ -30,7 +30,8 @@ public class TreePruner {
     this.application = application;
     this.appInfo = appInfo;
     this.options = options;
-    this.usagePrinter = options.printUsage ? new UsagePrinter() : UsagePrinter.DONT_PRINT;
+    this.usagePrinter = options.proguardConfiguration.isPrintUsage()
+        ? new UsagePrinter() : UsagePrinter.DONT_PRINT;
   }
 
   public DexApplication run() throws IOException {

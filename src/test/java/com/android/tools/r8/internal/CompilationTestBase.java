@@ -82,14 +82,11 @@ public abstract class CompilationTestBase {
         builder.addProguardConfigurationFiles(Paths.get(pgConf));
       }
       builder.setMode(mode);
-      outputApp = ToolHelper.runR8(builder.build(),
-                  options -> {
-                    options.printSeeds = false;
-                    options.minApiLevel = Constants.ANDROID_L_API;
-                    if (optionsConsumer != null) {
-                      optionsConsumer.accept(options);
-                    }
-                  });
+      builder.setMinApiLevel(Constants.ANDROID_L_API);
+      builder.addProguardConfigurationConsumer(b -> {
+        b.setPrintSeeds(false);
+      });
+      outputApp = ToolHelper.runR8(builder.build(), optionsConsumer);
     } else {
       assert compiler == CompilerUnderTest.D8;
       outputApp =

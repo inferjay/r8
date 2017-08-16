@@ -172,7 +172,6 @@ public final class D8 {
 
       // Disable global optimizations.
       options.skipMinification = true;
-      options.allowAccessModification = false;
       options.inlineAccessors = false;
       options.outline.enabled = false;
 
