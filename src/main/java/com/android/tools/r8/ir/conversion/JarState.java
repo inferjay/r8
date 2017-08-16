@@ -87,6 +87,9 @@ public class JarState {
       if (type == BYTE_OR_BOOL_TYPE) {
         type = Type.BYTE_TYPE;
       }
+      if (other == BYTE_OR_BOOL_TYPE) {
+        other = Type.BYTE_TYPE;
+      }
       int sort = type.getSort();
       int otherSort = other.getSort();
       if (isReferenceCompatible(type, other)) {
@@ -256,7 +259,7 @@ public class JarState {
     Collection<LocalVariableNode> nodes = localVariableStartPoints.get(label);
     ArrayList<Local> locals = new ArrayList<>(nodes.size());
     for (LocalVariableNode node : nodes) {
-      locals.add(setLocal(node.index, Type.getType(node.desc), localVariables.get(node)));
+      locals.add(setLocalInfo(node.index, Type.getType(node.desc), localVariables.get(node)));
     }
     // Sort to ensure deterministic instruction ordering (correctness is unaffected).
     locals.sort(Comparator.comparingInt(local -> local.slot.register));
@@ -335,6 +338,18 @@ public class JarState {
     return local;
   }
 
+  private Local setLocalInfo(int index, Type type, DebugLocalInfo info) {
+    return setLocalInfoForRegister(getLocalRegister(index, type), type, info);
+  }
+
+  private Local setLocalInfoForRegister(int register, Type type, DebugLocalInfo info) {
+    Local existingLocal = getLocalForRegister(register);
+    Local local = new Local(existingLocal.slot, info);
+    locals[register] = local;
+    return local;
+  }
+
+
   public int writeLocal(int index, Type type) {
     assert nonNullType(type);
     Local local = getLocal(index, type);
@@ -344,8 +359,9 @@ public class JarState {
     }
     // We cannot assume consistency for writes because we do not have complete information about the
     // scopes of locals. We assume the program to be verified and overwrite if the types mismatch.
-    if (local == null || (local.info == null && !typeEquals(local.slot.type, type))) {
-      local = setLocal(index, type, null);
+    if (local == null || !typeEquals(local.slot.type, type)) {
+      DebugLocalInfo info = local == null ? null : local.info;
+      local = setLocal(index, type, info);
     }
     return local.slot.register;
   }

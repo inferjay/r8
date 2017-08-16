@@ -183,9 +183,9 @@ public class DebugLocalTests extends JasminTestBase {
         "MethodStart:",
         ".line 1",
 
-        "LabelXStart:",
         "  ldc 0",
         "  istore 1",
+        "LabelXStart:",
         ".line 2",
         "  invokestatic Test/ensureLine()V",
         "LabelXEnd:",
