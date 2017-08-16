@@ -43,7 +43,7 @@ def parse_arguments():
           ' third_party/framework/framework*.jar.'
           ' Report Golem-compatible CodeSize and RunTimeRaw values.')
   parser.add_argument('--tool',
-      choices = ['dx', 'd8', 'd8-release', 'goyt'],
+      choices = ['dx', 'd8', 'd8-release', 'goyt', 'goyt-release'],
       required = True,
       help = 'Compiler tool to use.')
   parser.add_argument('--name',
@@ -65,13 +65,15 @@ def Main():
 
   with utils.TempDir() as temp_dir:
 
-    if args.tool in ['dx', 'goyt']:
+    if args.tool in ['dx', 'goyt', 'goyt-release']:
       tool_args = ['--dex', '--output=' + temp_dir, '--multi-dex',
           '--min-sdk-version=' + MIN_SDK_VERSION]
 
-    if args.tool == 'goyt':
+    if args.tool.startswith('goyt'):
       tool_file = GOYT_EXE
       tool_args = ['--num-threads=8'] + tool_args
+      if args.tool == 'goyt-release':
+        tool_args.append('--no-locals')
     elif args.tool == 'dx':
       tool_file = DX_JAR
     else:
