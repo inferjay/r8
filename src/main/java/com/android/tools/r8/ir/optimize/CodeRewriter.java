@@ -8,6 +8,7 @@ import com.android.tools.r8.dex.Constants;
 import com.android.tools.r8.errors.CompilationError;
 import com.android.tools.r8.errors.Unreachable;
 import com.android.tools.r8.graph.AppInfo;
+import com.android.tools.r8.graph.AppInfoWithSubtyping;
 import com.android.tools.r8.graph.DexClass;
 import com.android.tools.r8.graph.DexEncodedField;
 import com.android.tools.r8.graph.DexEncodedMethod;
@@ -96,12 +97,12 @@ public class CodeRewriter {
 
   private final AppInfo appInfo;
   private final DexItemFactory dexItemFactory;
-  private final Set<DexType> libraryClassesWithOptimizationInfo;
+  private final Set<DexMethod> libraryMethodsReturningReceiver;
 
-  public CodeRewriter(AppInfo appInfo, Set<DexType> libraryClassesWithOptimizationInfo) {
+  public CodeRewriter(AppInfo appInfo, Set<DexMethod> libraryMethodsReturningReceiver) {
     this.appInfo = appInfo;
     this.dexItemFactory = appInfo.dexItemFactory;
-    this.libraryClassesWithOptimizationInfo = libraryClassesWithOptimizationInfo;
+    this.libraryMethodsReturningReceiver = libraryMethodsReturningReceiver;
   }
 
   /**
@@ -517,37 +518,39 @@ public class CodeRewriter {
 
   // Replace result uses for methods where something is known about what is returned.
   public void rewriteMoveResult(IRCode code) {
-    if (!appInfo.hasSubtyping()) {
-      return;
-    }
+    AppInfoWithSubtyping appInfoWithSubtyping = appInfo.withSubtyping();
     InstructionIterator iterator = code.instructionIterator();
     while (iterator.hasNext()) {
       Instruction current = iterator.next();
       if (current.isInvokeMethod()) {
         InvokeMethod invoke = current.asInvokeMethod();
         if (invoke.outValue() != null && invoke.outValue().getLocalInfo() == null) {
-          DexEncodedMethod target = invoke.computeSingleTarget(appInfo.withSubtyping());
-          // We have a set of library classes with optimization information - consider those
-          // as well.
-          if ((target == null) &&
-              libraryClassesWithOptimizationInfo.contains(invoke.getInvokedMethod().getHolder())) {
-            target = appInfo.definitionFor(invoke.getInvokedMethod());
-          }
-          if (target != null) {
-            DexMethod invokedMethod = target.method;
-            // Check if the invoked method is known to return one of its arguments.
-            DexEncodedMethod definition = appInfo.definitionFor(invokedMethod);
-            if (definition != null && definition.getOptimizationInfo().returnsArgument()) {
-              int argumentIndex = definition.getOptimizationInfo().getReturnedArgument();
-              // Replace the out value of the invoke with the argument and ignore the out value.
-              if (argumentIndex != -1 && checkArgumentType(invoke, target.method, argumentIndex)) {
-                Value argument = invoke.arguments().get(argumentIndex);
-                assert (invoke.outType() == argument.outType()) ||
-                    (invoke.outType() == MoveType.OBJECT
-                        && argument.outType() == MoveType.SINGLE
-                        && argument.getConstInstruction().asConstNumber().isZero());
-                invoke.outValue().replaceUsers(argument);
-                invoke.setOutValue(null);
+          boolean isLibraryMethodReturningReceiver =
+              libraryMethodsReturningReceiver.contains(invoke.getInvokedMethod());
+          if (isLibraryMethodReturningReceiver) {
+            if (checkArgumentType(invoke, invoke.getInvokedMethod(), 0)) {
+              invoke.outValue().replaceUsers(invoke.arguments().get(0));
+              invoke.setOutValue(null);
+            }
+          } else if (appInfoWithSubtyping != null) {
+            DexEncodedMethod target = invoke.computeSingleTarget(appInfoWithSubtyping);
+            if (target != null) {
+              DexMethod invokedMethod = target.method;
+              // Check if the invoked method is known to return one of its arguments.
+              DexEncodedMethod definition = appInfo.definitionFor(invokedMethod);
+              if (definition != null && definition.getOptimizationInfo().returnsArgument()) {
+                int argumentIndex = definition.getOptimizationInfo().getReturnedArgument();
+                // Replace the out value of the invoke with the argument and ignore the out value.
+                if (argumentIndex != -1 && checkArgumentType(invoke, target.method,
+                    argumentIndex)) {
+                  Value argument = invoke.arguments().get(argumentIndex);
+                  assert (invoke.outType() == argument.outType()) ||
+                      (invoke.outType() == MoveType.OBJECT
+                          && argument.outType() == MoveType.SINGLE
+                          && argument.getConstInstruction().asConstNumber().isZero());
+                  invoke.outValue().replaceUsers(argument);
+                  invoke.setOutValue(null);
+                }
               }
             }
           }

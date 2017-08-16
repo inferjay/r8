@@ -38,8 +38,8 @@ import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.ThreadUtils;
 import com.android.tools.r8.utils.Timing;
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -89,8 +89,7 @@ public class IRConverter {
     this.graphLense = graphLense != null ? graphLense : GraphLense.getIdentityLense();
     this.options = options;
     this.printer = printer;
-    Set<DexType> libraryClassesWithOptimizationInfo = markLibraryMethodsReturningReceiver();
-    this.codeRewriter = new CodeRewriter(appInfo, libraryClassesWithOptimizationInfo);
+    this.codeRewriter = new CodeRewriter(appInfo, libraryMethodsReturningReceiver());
     this.lambdaRewriter = enableDesugaring ? new LambdaRewriter(this) : null;
     this.interfaceMethodRewriter =
         (enableDesugaring && enableInterfaceMethodDesugaring())
@@ -183,18 +182,12 @@ public class IRConverter {
     throw new Unreachable();
   }
 
-  private Set<DexType> markLibraryMethodsReturningReceiver() {
+  private Set<DexMethod> libraryMethodsReturningReceiver() {
+    Set<DexMethod> methods = new HashSet<>();
     DexItemFactory dexItemFactory = appInfo.dexItemFactory;
-    dexItemFactory.stringBuilderMethods.forEachAppendMethod(this::markReturnsReceiver);
-    dexItemFactory.stringBufferMethods.forEachAppendMethod(this::markReturnsReceiver);
-    return ImmutableSet.of(dexItemFactory.stringBuilderType, dexItemFactory.stringBufferType);
-  }
-
-  private void markReturnsReceiver(DexMethod method) {
-    DexEncodedMethod definition = appInfo.definitionFor(method);
-    if (definition != null) {
-      definition.markReturnsArgument(0);
-    }
+    dexItemFactory.stringBufferMethods.forEachAppendMethod(methods::add);
+    dexItemFactory.stringBuilderMethods.forEachAppendMethod(methods::add);
+    return methods;
   }
 
   private void removeLambdaDeserializationMethods() {
@@ -512,7 +505,7 @@ public class IRConverter {
     }
     printMethod(code, "Final IR (non-SSA)");
 
-    // After all the optimizations have take place, we compute whether method should be inlined.
+    // After all the optimizations have take place, we compute whether method should be inlinedex.
     Constraint state;
     if (!options.inlineAccessors || inliner == null) {
       state = Constraint.NEVER;
