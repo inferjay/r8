@@ -91,7 +91,7 @@ def Main():
       cmd.extend(['tools/track_memory.sh', track_memory_file])
 
     if tool_file.endswith('.jar'):
-      cmd.extend(['java', '-jar'])
+      cmd.extend(['java', '-Xmx600m', '-jar'])
 
     cmd.extend([tool_file] + tool_args + [FRAMEWORK_JAR])
 
