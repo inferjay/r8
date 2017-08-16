@@ -205,7 +205,7 @@ public class RunJdwpTests {
       String pkg = "org.apache.harmony.jpda.tests.jdwp";
       command = Arrays.asList(
           ToolHelper.getJavaExecutable(),
-          "-cp", System.getProperty("java.class.path") + ":" + lib,
+          "-cp", System.getProperty("java.class.path") + File.pathSeparator + lib,
           run, pkg + "." + test);
     } else {
       command = Arrays.asList(
