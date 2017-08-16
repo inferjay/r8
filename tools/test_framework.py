@@ -69,6 +69,7 @@ def Main():
       tool_args = ['--dex', '--output=' + temp_dir, '--multi-dex',
           '--min-sdk-version=' + MIN_SDK_VERSION]
 
+    xmx = None
     if args.tool.startswith('goyt'):
       tool_file = GOYT_EXE
       tool_args = ['--num-threads=8'] + tool_args
@@ -76,12 +77,13 @@ def Main():
         tool_args.append('--no-locals')
     elif args.tool == 'dx':
       tool_file = DX_JAR
+      xmx = '-Xmx1600m'
     else:
       tool_file = D8_JAR
       tool_args = ['--output', temp_dir, '--min-api', MIN_SDK_VERSION]
       if args.tool == 'd8-release':
         tool_args.append('--release')
-
+      xmx = '-Xmx600m'
 
     cmd = []
 
@@ -91,7 +93,8 @@ def Main():
       cmd.extend(['tools/track_memory.sh', track_memory_file])
 
     if tool_file.endswith('.jar'):
-      cmd.extend(['java', '-Xmx600m', '-jar'])
+      assert xmx is not None
+      cmd.extend(['java', xmx, '-jar'])
 
     cmd.extend([tool_file] + tool_args + [FRAMEWORK_JAR])
 
