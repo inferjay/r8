@@ -34,7 +34,7 @@ D8_JAR = os.path.join(utils.REPO_ROOT, 'build', 'libs', 'd8.jar')
 GOYT_EXE = os.path.join('third_party', 'goyt',
     'goyt_164843480')
 FRAMEWORK_JAR = os.path.join('third_party', 'framework',
-    'framework_160115954.jar')
+    'framework_14082017_desugared.jar')
 MIN_SDK_VERSION = '24'
 
 def parse_arguments():
