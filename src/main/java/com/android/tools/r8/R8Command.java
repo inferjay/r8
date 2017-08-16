@@ -37,14 +37,10 @@ public class R8Command extends BaseCommand {
 
     private Builder() {
       super(CompilationMode.RELEASE);
-      // TODO(b/62048823): Minifier should not depend on -allowaccessmodification.
-      proguardConfigurationConsumer = builder -> builder.setAllowAccessModification(true);
     }
 
     private Builder(AndroidApp app) {
       super(app, CompilationMode.RELEASE);
-      // TODO(b/62048823): Minifier should not depend on -allowaccessmodification.
-      proguardConfigurationConsumer = builder -> builder.setAllowAccessModification(true);
     }
 
     @Override
