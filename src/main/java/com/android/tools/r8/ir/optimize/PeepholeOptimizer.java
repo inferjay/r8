@@ -173,7 +173,7 @@ public class PeepholeOptimizer {
    */
   private static void removeIdenticalPredecessorBlocks(IRCode code, RegisterAllocator allocator) {
     BasicBlockInstructionsEquivalence equivalence =
-        new BasicBlockInstructionsEquivalence(allocator);
+        new BasicBlockInstructionsEquivalence(code, allocator);
     // Locate one block at a time that has identical predecessors. Rewrite those predecessors and
     // then start over. Restarting when one blocks predecessors have been rewritten simplifies
     // the rewriting and reduces the size of the data structures.
@@ -194,6 +194,7 @@ public class PeepholeOptimizer {
             BasicBlock otherPred = block.getPredecessors().get(otherPredIndex);
             pred.clearCatchHandlers();
             pred.getInstructions().clear();
+            equivalence.clearComputedHash(pred);
             for (BasicBlock succ : pred.getSuccessors()) {
               succ.removePredecessor(pred);
             }
