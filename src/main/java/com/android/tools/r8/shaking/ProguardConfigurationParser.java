@@ -76,6 +76,10 @@ public class ProguardConfigurationParser {
     configurationBuilder = ProguardConfiguration.builder(dexItemFactory);
   }
 
+  public ProguardConfiguration.Builder getConfigurationBuilder() {
+    return configurationBuilder;
+  }
+
   public ProguardConfiguration getConfig() {
     return configurationBuilder.build();
   }
@@ -214,7 +218,7 @@ public class ProguardConfigurationParser {
         configurationBuilder.setPrintMapping(true);
         skipWhitespace();
         if (isOptionalArgumentGiven()) {
-          configurationBuilder.setPrintMappingOutput(parseFileName());
+          configurationBuilder.setPrintMappingFile(parseFileName());
         }
       } else if (acceptString("assumenosideeffects")) {
         ProguardAssumeNoSideEffectRule rule = parseAssumeNoSideEffectsRule();
@@ -233,7 +237,7 @@ public class ProguardConfigurationParser {
       } else if (acceptString("libraryjars")) {
         configurationBuilder.addLibraryJars(parseClassPath());
       } else if (acceptString("printseeds")) {
-        configurationBuilder.setPrintSeed(true);
+        configurationBuilder.setPrintSeeds(true);
         skipWhitespace();
         if (isOptionalArgumentGiven()) {
           configurationBuilder.setSeedFile(parseFileName());

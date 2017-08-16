@@ -10,9 +10,10 @@ import com.android.tools.r8.graph.DexField;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.graph.DexType;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.Timing;
+import com.google.common.collect.ImmutableList;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 
 class FieldNameMinifier {
@@ -20,13 +21,13 @@ class FieldNameMinifier {
   private final AppInfoWithSubtyping appInfo;
   private final RootSet rootSet;
   private final Map<DexField, DexString> renaming = new IdentityHashMap<>();
-  private final List<String> dictionary;
+  private final ImmutableList<String> dictionary;
   private final Map<DexType, NamingState<DexType>> states = new IdentityHashMap<>();
 
-  FieldNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet, List<String> dictionary) {
+  FieldNameMinifier(AppInfoWithSubtyping appInfo, RootSet rootSet, InternalOptions options) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
-    this.dictionary = dictionary;
+    this.dictionary = options.proguardConfiguration.getObfuscationDictionary();
   }
 
   Map<DexField, DexString> computeRenaming(Timing timing) {

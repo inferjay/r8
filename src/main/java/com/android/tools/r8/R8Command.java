@@ -5,13 +5,13 @@ package com.android.tools.r8;
 
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.shaking.ProguardConfiguration;
+import com.android.tools.r8.shaking.ProguardConfiguration.Builder;
 import com.android.tools.r8.shaking.ProguardConfigurationParser;
 import com.android.tools.r8.shaking.ProguardConfigurationRule;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
 import com.android.tools.r8.utils.AndroidApp;
 import com.android.tools.r8.utils.FileUtils;
 import com.android.tools.r8.utils.InternalOptions;
-import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.OutputMode;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class R8Command extends BaseCommand {
 
@@ -28,6 +29,7 @@ public class R8Command extends BaseCommand {
 
     private final List<Path> mainDexRules = new ArrayList<>();
     private Path mainDexListOutput = null;
+    private Consumer<ProguardConfiguration.Builder> proguardConfigurationConsumer = null;
     private final List<Path> proguardConfigFiles = new ArrayList<>();
     private Optional<Boolean> treeShaking = Optional.empty();
     private Optional<Boolean> minification = Optional.empty();
@@ -35,10 +37,14 @@ public class R8Command extends BaseCommand {
 
     private Builder() {
       super(CompilationMode.RELEASE);
+      // TODO(b/62048823): Minifier should not depend on -allowaccessmodification.
+      proguardConfigurationConsumer = builder -> builder.setAllowAccessModification(true);
     }
 
     private Builder(AndroidApp app) {
       super(app, CompilationMode.RELEASE);
+      // TODO(b/62048823): Minifier should not depend on -allowaccessmodification.
+      proguardConfigurationConsumer = builder -> builder.setAllowAccessModification(true);
     }
 
     @Override
@@ -96,6 +102,20 @@ public class R8Command extends BaseCommand {
      */
     public Builder addProguardConfigurationFiles(List<Path> paths) {
       proguardConfigFiles.addAll(paths);
+      return self();
+    }
+
+    /**
+     * Add and/or chain proguard configuration consumer(s) for testing.
+     */
+    public Builder addProguardConfigurationConsumer(Consumer<ProguardConfiguration.Builder> c) {
+      Consumer<ProguardConfiguration.Builder> oldConsumer = proguardConfigurationConsumer;
+      proguardConfigurationConsumer = builder -> {
+        if (oldConsumer != null) {
+          oldConsumer.accept(builder);
+        }
+        c.accept(builder);
+      };
       return self();
     }
 
@@ -164,7 +184,11 @@ public class R8Command extends BaseCommand {
         } catch (ProguardRuleParserException e) {
           throw new CompilationException(e.getMessage(), e.getCause());
         }
-        configuration = parser.getConfig();
+        ProguardConfiguration.Builder configurationBuilder = parser.getConfigurationBuilder();
+        if (proguardConfigurationConsumer != null) {
+          proguardConfigurationConsumer.accept(configurationBuilder);
+        }
+        configuration = configurationBuilder.build();
         addProgramFiles(configuration.getInjars());
         addLibraryFiles(configuration.getLibraryjars());
       }
@@ -364,55 +388,27 @@ public class R8Command extends BaseCommand {
 
   @Override
   InternalOptions getInternalOptions() {
-    InternalOptions internal = new InternalOptions(proguardConfiguration.getDexItemFactory());
+    InternalOptions internal = new InternalOptions(proguardConfiguration);
     assert !internal.debug;
     internal.debug = getMode() == CompilationMode.DEBUG;
     internal.minApiLevel = getMinApiLevel();
     assert !internal.skipMinification;
-    internal.skipMinification = !useMinification();
+    internal.skipMinification = !useMinification() || !proguardConfiguration.isObfuscating();
     assert internal.useTreeShaking;
     internal.useTreeShaking = useTreeShaking();
-    assert !internal.printUsage;
-    internal.printUsage = proguardConfiguration.isPrintUsage();
-    internal.printUsageFile = proguardConfiguration.getPrintUsageFile();
     assert !internal.ignoreMissingClasses;
     internal.ignoreMissingClasses = ignoreMissingClasses;
-
-    // TODO(zerny): Consider which other proguard options should be given flags.
-    assert internal.packagePrefix.length() == 0;
-    internal.packageObfuscationMode = proguardConfiguration.getPackageObfuscationMode();
-    internal.packagePrefix = proguardConfiguration.getPackagePrefix();
-    assert internal.allowAccessModification;
-    internal.allowAccessModification = proguardConfiguration.getAllowAccessModification();
     for (String pattern : proguardConfiguration.getAttributesRemovalPatterns()) {
       internal.attributeRemoval.applyPattern(pattern);
     }
-    if (proguardConfiguration.isIgnoreWarnings()) {
-      internal.ignoreMissingClasses = true;
-    }
-    assert internal.seedsFile == null;
-    if (proguardConfiguration.getSeedFile() != null) {
-      internal.seedsFile = proguardConfiguration.getSeedFile();
-    }
+    internal.ignoreMissingClasses |= proguardConfiguration.isIgnoreWarnings();
     assert !internal.verbose;
-    if (proguardConfiguration.isVerbose()) {
-      internal.verbose = true;
-    }
-    if (!proguardConfiguration.isObfuscating()) {
-      internal.skipMinification = true;
-    }
-    internal.printSeeds |= proguardConfiguration.getPrintSeeds();
-    internal.printMapping |= proguardConfiguration.isPrintingMapping();
-    internal.printMappingFile = proguardConfiguration.getPrintMappingOutput();
-    internal.classObfuscationDictionary = proguardConfiguration.getClassObfuscationDictionary();
-    internal.obfuscationDictionary = proguardConfiguration.getObfuscationDictionary();
+    internal.verbose |= proguardConfiguration.isVerbose();
     internal.mainDexKeepRules = mainDexKeepRules;
     internal.minimalMainDex = internal.debug;
     if (mainDexListOutput != null) {
       internal.printMainDexListFile = mainDexListOutput;
     }
-    internal.keepRules = proguardConfiguration.getRules();
-    internal.dontWarnPatterns = proguardConfiguration.getDontWarnPatterns();
     internal.outputMode = getOutputMode();
     if (internal.debug) {
       // TODO(zerny): Should we support removeSwitchMaps in debug mode? b/62936642

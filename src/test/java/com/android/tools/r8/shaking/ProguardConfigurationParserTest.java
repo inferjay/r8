@@ -384,7 +384,7 @@ public class ProguardConfigurationParserTest extends TestBase {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(SEEDS));
     ProguardConfiguration config = parser.getConfig();
-    assertTrue(config.getPrintSeeds());
+    assertTrue(config.isPrintSeeds());
     assertNull(config.getSeedFile());
   }
 
@@ -393,7 +393,7 @@ public class ProguardConfigurationParserTest extends TestBase {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(SEEDS_2));
     ProguardConfiguration config = parser.getConfig();
-    assertTrue(config.getPrintSeeds());
+    assertTrue(config.isPrintSeeds());
     assertNotNull(config.getSeedFile());
   }
 

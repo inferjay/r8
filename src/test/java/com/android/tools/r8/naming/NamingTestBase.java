@@ -64,10 +64,9 @@ abstract class NamingTestBase {
       throws IOException, ProguardRuleParserException, ExecutionException {
     ProguardConfiguration configuration =
         ToolHelper.loadProguardConfiguration(dexItemFactory, configPaths);
-    InternalOptions options = new InternalOptions();
-    copyProguardConfigurationToInternalOptions(configuration, options);
+    InternalOptions options = new InternalOptions(configuration);
 
-    if (options.allowAccessModification) {
+    if (options.proguardConfiguration.isAccessModificationAllowed()) {
       ClassAndMemberPublicizer.run(program);
     }
 
@@ -76,16 +75,6 @@ abstract class NamingTestBase {
     Enqueuer enqueuer = new Enqueuer(appInfo);
     appInfo = enqueuer.traceApplication(rootSet, timing);
     return new Minifier(appInfo.withLiveness(), rootSet, options).run(timing);
-  }
-
-  private void copyProguardConfigurationToInternalOptions(
-      ProguardConfiguration config, InternalOptions options) {
-    options.packageObfuscationMode = config.getPackageObfuscationMode();
-    options.packagePrefix = config.getPackagePrefix();
-    options.allowAccessModification = config.getAllowAccessModification();
-    options.classObfuscationDictionary = config.getClassObfuscationDictionary();
-    options.obfuscationDictionary = config.getObfuscationDictionary();
-    options.keepRules = config.getRules();
   }
 
   static <T> Collection<Object[]> createTests(List<String> tests, Map<String, T> inspections) {

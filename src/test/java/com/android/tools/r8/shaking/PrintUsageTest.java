@@ -71,13 +71,15 @@ public class PrintUsageTest {
             .setOutputPath(out)
             .addProgramFiles(Paths.get(programFile))
             .addProguardConfigurationFiles(ListUtils.map(keepRulesFiles, Paths::get))
+            .addProguardConfigurationConsumer(builder -> {
+              builder.setPrintUsage(true);
+              builder.setPrintUsageFile(out.resolve(test + PRINT_USAGE_FILE_SUFFIX));
+            })
             .addLibraryFiles(Paths.get(ANDROID_JAR))
             .build();
     ToolHelper.runR8(command, options -> {
       // Disable inlining to make this test not depend on inlining decisions.
       options.inlineAccessors = false;
-      options.printUsage = true;
-      options.printUsageFile = out.resolve(test + PRINT_USAGE_FILE_SUFFIX);
     });
   }
 

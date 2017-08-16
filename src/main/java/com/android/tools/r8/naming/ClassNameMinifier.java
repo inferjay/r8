@@ -20,15 +20,16 @@ import com.android.tools.r8.naming.signature.GenericSignatureAction;
 import com.android.tools.r8.naming.signature.GenericSignatureParser;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.StringUtils;
 import com.android.tools.r8.utils.Timing;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -42,7 +43,8 @@ class ClassNameMinifier {
 
   private final Map<DexType, DexString> renaming = Maps.newIdentityHashMap();
   private final Map<String, ClassNamingState> states = new HashMap<>();
-  private final List<String> dictionary;
+  private final ImmutableList<String> packageDictionary;
+  private final ImmutableList<String> classDictionary;
   private final boolean keepInnerClassStructure;
 
   private final ClassNamingState topLevelState;
@@ -55,18 +57,17 @@ class ClassNameMinifier {
   ClassNameMinifier(
       AppInfoWithLiveness appInfo,
       RootSet rootSet,
-      PackageObfuscationMode packageObfuscationMode,
-      String packagePrefix,
-      List<String> dictionary,
-      boolean keepInnerClassStructure) {
+      InternalOptions options) {
     this.appInfo = appInfo;
     this.rootSet = rootSet;
-    this.packageObfuscationMode = packageObfuscationMode;
-    this.dictionary = dictionary;
-    this.keepInnerClassStructure = keepInnerClassStructure;
+    this.packageObfuscationMode = options.proguardConfiguration.getPackageObfuscationMode();
+    this.packageDictionary = options.proguardConfiguration.getPackageObfuscationDictionary();
+    this.classDictionary = options.proguardConfiguration.getClassObfuscationDictionary();
+    this.keepInnerClassStructure = options.attributeRemoval.signature;
 
     // Initialize top-level naming state.
-    topLevelState = new ClassNamingState(getPackageBinaryNameFromJavaType(packagePrefix));
+    topLevelState = new ClassNamingState(getPackageBinaryNameFromJavaType(
+        options.proguardConfiguration.getPackagePrefix()));
     states.computeIfAbsent("", k -> topLevelState);
   }
 
@@ -270,7 +271,8 @@ class ClassNameMinifier {
           // L or La/b/ (or La/b/C$)
           + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
-      this.dictionaryIterator = dictionary.iterator();
+      // TODO(b/36799686): general obfuscation should use packageDictionary when renaming package.
+      this.dictionaryIterator = classDictionary.iterator();
     }
 
     public char[] getPackagePrefix() {

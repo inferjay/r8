@@ -130,13 +130,15 @@ public class TreeShakingTest {
             .setOutputPath(out)
             .addProgramFiles(Paths.get(programFile))
             .addProguardConfigurationFiles(ListUtils.map(keepRulesFiles, Paths::get))
+            .addProguardConfigurationConsumer(builder -> {
+              builder.setPrintMapping(true);
+              builder.setPrintMappingFile(out.resolve(AndroidApp.DEFAULT_PROGUARD_MAP_FILE));
+            })
             .addLibraryFiles(JAR_LIBRARIES)
             .setMinification(minify)
             .build();
     ToolHelper.runR8(command, options -> {
       options.inlineAccessors = inline;
-      options.printMapping = true;
-      options.printMappingFile = out.resolve(AndroidApp.DEFAULT_PROGUARD_MAP_FILE);
     });
   }
 

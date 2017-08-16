@@ -215,8 +215,6 @@ public class D8Command extends BaseCommand {
     internal.useTreeShaking = false;
     assert internal.interfaceMethodDesugaring == OffOrAuto.Off;
     assert internal.tryWithResourcesDesugaring == OffOrAuto.Off;
-    assert internal.allowAccessModification;
-    internal.allowAccessModification = false;
     assert internal.inlineAccessors;
     internal.inlineAccessors = false;
     assert internal.removeSwitchMaps;
