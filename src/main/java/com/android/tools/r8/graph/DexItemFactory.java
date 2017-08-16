@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 public class DexItemFactory {
 
   private final Map<DexString, DexString> strings = new HashMap<>();
-  private final Map<DexType, DexType> types = new HashMap<>();
+  private final Map<DexString, DexType> types = new HashMap<>();
   private final Map<DexField, DexField> fields = new HashMap<>();
   private final Map<DexProto, DexProto> protos = new HashMap<>();
   private final Map<DexMethod, DexMethod> methods = new HashMap<>();
@@ -302,10 +302,16 @@ public class DexItemFactory {
     return null;
   }
 
-  public DexType createType(DexString descriptor) {
+  synchronized public DexType createType(DexString descriptor) {
     assert !sorted;
-    DexType type = new DexType(descriptor);
-    return canonicalize(types, type);
+    assert descriptor != null;
+    DexType result = types.get(descriptor);
+    if (result == null) {
+      result = new DexType(descriptor);
+      assert !internalSentinels.contains(result);
+      types.put(descriptor, result);
+    }
+    return result;
   }
 
   public DexType createType(String descriptor) {

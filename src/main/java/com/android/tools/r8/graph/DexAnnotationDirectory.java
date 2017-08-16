@@ -17,9 +17,11 @@ public class DexAnnotationDirectory extends DexItem {
   private final List<DexEncodedMethod> methodAnnotations;
   private final List<DexEncodedMethod> parameterAnnotations;
   private final List<DexEncodedField> fieldAnnotations;
+  private final boolean classHasOnlyInternalizableAnnotations;
 
   public DexAnnotationDirectory(DexProgramClass clazz) {
     this.clazz = clazz;
+    this.classHasOnlyInternalizableAnnotations = clazz.hasOnlyInternalizableAnnotations();
     assert isSorted(clazz.directMethods());
     assert isSorted(clazz.virtualMethods());
     OrderedMergingIterator<DexEncodedMethod, DexMethod> methods =
@@ -77,7 +79,7 @@ public class DexAnnotationDirectory extends DexItem {
     if (!(obj instanceof DexAnnotationDirectory)) {
       return false;
     }
-    if (clazz.hasOnlyInternalizableAnnotations()) {
+    if (classHasOnlyInternalizableAnnotations) {
       DexAnnotationDirectory other = (DexAnnotationDirectory) obj;
       if (!other.clazz.hasOnlyInternalizableAnnotations()) {
         return false;
@@ -89,7 +91,7 @@ public class DexAnnotationDirectory extends DexItem {
 
   @Override
   public final int hashCode() {
-    if (clazz.hasOnlyInternalizableAnnotations()) {
+    if (classHasOnlyInternalizableAnnotations) {
       return clazz.annotations.hashCode();
     }
     return super.hashCode();

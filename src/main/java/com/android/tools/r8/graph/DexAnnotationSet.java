@@ -7,7 +7,7 @@ import com.android.tools.r8.dex.IndexedItemCollection;
 import com.android.tools.r8.dex.MixedSectionCollection;
 import java.util.Arrays;
 
-public class DexAnnotationSet extends DexItem {
+public class DexAnnotationSet extends CachedHashValueDexItem {
 
   private static final int UNSORTED = 0;
   private static final DexAnnotationSet THE_EMPTY_ANNOTATIONS_SET =
@@ -25,15 +25,12 @@ public class DexAnnotationSet extends DexItem {
   }
 
   @Override
-  public int hashCode() {
+  public int computeHashCode() {
     return Arrays.hashCode(annotations);
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (this == other) {
-      return true;
-    }
+  public boolean computeEquals(Object other) {
     if (other instanceof DexAnnotationSet) {
       DexAnnotationSet o = (DexAnnotationSet) other;
       return Arrays.equals(annotations, o.annotations);

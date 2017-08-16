@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.naming;
 
-import com.android.tools.r8.graph.CanonicalizedDexItem;
+import com.android.tools.r8.graph.CachedHashValueDexItem;
 import com.android.tools.r8.graph.DexItemFactory;
 import com.android.tools.r8.graph.DexString;
 import com.android.tools.r8.utils.StringUtils;
@@ -16,14 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class NamingState<T extends CanonicalizedDexItem> {
+class NamingState<T extends CachedHashValueDexItem> {
 
   private final NamingState<T> parent;
   private final Map<T, InternalState> usedNames = new IdentityHashMap<>();
   private final DexItemFactory itemFactory;
   private final ImmutableList<String> dictionary;
 
-  static <T extends CanonicalizedDexItem> NamingState<T> createRoot(
+  static <T extends CachedHashValueDexItem> NamingState<T> createRoot(
       DexItemFactory itemFactory, ImmutableList<String> dictionary) {
     return new NamingState<>(null, itemFactory, dictionary);
   }

@@ -11,7 +11,7 @@ import com.android.tools.r8.ir.optimize.Outliner.OutlineCode;
 import com.android.tools.r8.naming.ClassNameMapper;
 import com.android.tools.r8.utils.InternalOptions;
 
-public abstract class Code extends CanonicalizedDexItem {
+public abstract class Code extends CachedHashValueDexItem {
 
   public abstract IRCode buildIR(DexEncodedMethod encodedMethod, InternalOptions options);
 
