@@ -4,9 +4,9 @@
 package com.android.tools.r8.graph;
 
 /**
- * DexItems of this kind have to be canonicalized for the whole application.
+ * DexItems of this kind have cached hash values and quick equals check.
  */
-public abstract class CanonicalizedDexItem extends DexItem {
+public abstract class CachedHashValueDexItem extends DexItem {
 
   private static final int NOT_COMPUTED_HASH_VALUE = -1;
   private static final int SENTINEL_HASH_VALUE = 0;

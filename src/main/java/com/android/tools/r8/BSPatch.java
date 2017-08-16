@@ -202,7 +202,6 @@ public class BSPatch {
 
     @Override
     public void copyOld(int blockSize) throws IOException {
-      assert mergeBuffer != null;
       assert mergeBuffer.length == blockSize;
       byte[] data = new byte[blockSize];
       oldInput.get(data);

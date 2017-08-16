@@ -8,7 +8,7 @@ import com.android.tools.r8.dex.MixedSectionCollection;
 import java.util.Arrays;
 import java.util.List;
 
-public class DexDebugInfo extends CanonicalizedDexItem {
+public class DexDebugInfo extends CachedHashValueDexItem {
 
   public final int startLine;
   public final DexString[] parameters;

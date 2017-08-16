@@ -10,7 +10,7 @@ import java.util.Arrays;
 /**
  * Subset of dex items that are referenced by some table index.
  */
-public abstract class IndexedDexItem extends CanonicalizedDexItem implements Presorted {
+public abstract class IndexedDexItem extends CachedHashValueDexItem implements Presorted {
 
   private static final int SORTED_INDEX_UNKNOWN = -1;
   private int sortedIndex = SORTED_INDEX_UNKNOWN; // assigned globally after reading.
