@@ -5,19 +5,25 @@ package com.android.tools.r8.ir.optimize;
 
 import com.android.tools.r8.ir.code.BasicBlock;
 import com.android.tools.r8.ir.code.CatchHandlers;
+import com.android.tools.r8.ir.code.IRCode;
 import com.android.tools.r8.ir.code.Instruction;
 import com.android.tools.r8.ir.code.Value;
 import com.android.tools.r8.ir.regalloc.RegisterAllocator;
 import com.google.common.base.Equivalence;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 class BasicBlockInstructionsEquivalence extends Equivalence<BasicBlock> {
-
+  private static final int UNKNOW_HASH = -1;
   private static final int MAX_HASH_INSTRUCTIONS = 5;
   private final RegisterAllocator allocator;
+  private final int[] hashes;
 
-  BasicBlockInstructionsEquivalence(RegisterAllocator allocator) {
+  BasicBlockInstructionsEquivalence(IRCode code, RegisterAllocator allocator) {
     this.allocator = allocator;
+    hashes = new int[code.getHighestBlockNumber() + 1];
+    Arrays.fill(hashes, UNKNOW_HASH);
   }
 
   private boolean hasIdenticalInstructions(BasicBlock first, BasicBlock second) {
@@ -60,8 +66,23 @@ class BasicBlockInstructionsEquivalence extends Equivalence<BasicBlock> {
     return hasIdenticalInstructions(a, b);
   }
 
+  void clearComputedHash(BasicBlock basicBlock) {
+    hashes[basicBlock.getNumber()] = UNKNOW_HASH;
+  }
+
   @Override
   protected int doHash(BasicBlock basicBlock) {
+    int hash = hashes[basicBlock.getNumber()];
+    if (hash != UNKNOW_HASH) {
+      assert hash == computeHash(basicBlock);
+      return hash;
+    }
+    hash = computeHash(basicBlock);
+    hashes[basicBlock.getNumber()] = hash;
+    return hash;
+  }
+
+  private int computeHash(BasicBlock basicBlock) {
     List<Instruction> instructions = basicBlock.getInstructions();
     int hash = instructions.size();
     for (int i = 0; i < instructions.size() && i < MAX_HASH_INSTRUCTIONS; i++) {
