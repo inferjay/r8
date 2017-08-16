@@ -40,8 +40,7 @@ abstract class Format10t extends Base1Format {
   }
 
   public String toString(ClassNameMapper naming) {
-    String relative = AA >= 0 ? ("+" + AA) : Integer.toString(AA);
-    return formatString(relative + " (" + (getOffset() + AA) + ")");
+    return formatString(formatRelativeOffset(AA));
   }
 
   public String toSmaliString(ClassNameMapper naming) {

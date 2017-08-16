@@ -41,12 +41,12 @@ public class ConstHigh16 extends Format21h implements SingleConstant {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 8) +
+    return formatString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 8) +
         " (" + decodedValue() + ")");
   }
 
   public String toSmaliString(ClassNameMapper naming) {
-    return formatSmaliString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 8) +
+    return formatSmaliString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 8) +
         "  # " + decodedValue());
   }
 

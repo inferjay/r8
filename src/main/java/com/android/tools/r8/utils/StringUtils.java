@@ -158,11 +158,11 @@ public class StringUtils {
     assert(0 <= width && width <= 8);
     String hex = Integer.toHexString(value);
     if (value >= 0) {
-      return zeroPrefixString(hex, width);
+      return "0x" + zeroPrefixString(hex, width);
     } else {
       // Negative ints are always formatted as 8 characters.
       assert(hex.length() == 8);
-      return hex;
+      return "0x" + hex;
     }
   }
 
@@ -170,11 +170,11 @@ public class StringUtils {
     assert(0 <= width && width <= 16);
     String hex = Long.toHexString(value);
     if (value >= 0) {
-      return zeroPrefixString(hex, width);
+      return "0x" + zeroPrefixString(hex, width);
     } else {
       // Negative longs are always formatted as 16 characters.
       assert(hex.length() == 16);
-      return hex;
+      return "0x" + hex;
     }
   }
 

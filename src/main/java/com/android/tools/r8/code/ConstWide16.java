@@ -41,13 +41,13 @@ public class ConstWide16 extends Format21s implements WideConstant {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 16) +
+    return formatString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 16) +
         " (" + decodedValue() + ")");
   }
 
   public String toSmaliString(ClassNameMapper naming) {
     return formatSmaliString(
-        "v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 16) + "L  # " + decodedValue());
+        "v" + AA + ", " + StringUtils.hexString(decodedValue(), 16) + "L  # " + decodedValue());
   }
 
   @Override

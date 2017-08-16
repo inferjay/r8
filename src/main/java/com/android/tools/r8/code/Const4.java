@@ -41,12 +41,12 @@ public class Const4 extends Format11n implements SingleConstant {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + A + ", 0x" + StringUtils.hexString(decodedValue(), 1) +
+    return formatString("v" + A + ", " + StringUtils.hexString(decodedValue(), 1) +
         " (" + decodedValue() + ")");
   }
 
   public String toSmaliString(ClassNameMapper naming) {
-    return formatSmaliString("v" + A + ", 0x" + StringUtils.hexString(decodedValue(), 2) +
+    return formatSmaliString("v" + A + ", " + StringUtils.hexString(decodedValue(), 2) +
         "  # " + decodedValue());
   }
 

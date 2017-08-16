@@ -41,12 +41,12 @@ public class Const extends Format31i implements SingleConstant {
   }
 
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 8) +
+    return formatString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 8) +
         " (" + decodedValue() + ")");
   }
 
   public String toSmaliString(ClassNameMapper naming) {
-    return formatSmaliString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 8) +
+    return formatSmaliString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 8) +
         "  # " + decodedValue());
   }
 

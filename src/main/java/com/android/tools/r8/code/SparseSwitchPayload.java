@@ -103,7 +103,6 @@ public class SparseSwitchPayload extends SwitchPayload {
     builder.append("\n");
     for (int i = 0; i < keys.length; i++) {
       builder.append("      ");
-      builder.append("0x");
       builder.append(StringUtils.hexString(keys[i], 8));
       builder.append(" -> :label_");
       builder.append(payloadUser.getOffset() + targets[i]);

@@ -42,7 +42,7 @@ public class Const16 extends Format21s implements SingleConstant {
 
   @Override
   public String toString(ClassNameMapper naming) {
-    return formatString("v" + AA + ", 0x" + StringUtils.hexString(decodedValue(), 4) +
+    return formatString("v" + AA + ", " + StringUtils.hexString(decodedValue(), 4) +
         " (" + decodedValue() + ")");
   }
 

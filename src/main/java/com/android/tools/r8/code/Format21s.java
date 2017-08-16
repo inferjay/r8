@@ -51,7 +51,7 @@ abstract class Format21s extends Base2Format {
   }
 
   public String toSmaliString(ClassNameMapper naming) {
-    return formatSmaliString("v" + AA + ", 0x" + StringUtils.hexString(BBBB, 4) + "  # " + BBBB);
+    return formatSmaliString("v" + AA + ", " + StringUtils.hexString(BBBB, 4) + "  # " + BBBB);
   }
 
   @Override

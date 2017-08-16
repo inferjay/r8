@@ -142,9 +142,18 @@ public abstract class Instruction {
     return 0;
   }
 
+  static String formatOffset(int offset) {
+    return StringUtils.hexString(offset, 2);
+  }
+
+  String formatRelativeOffset(int offset) {
+    String relativeString = offset >= 0 ? ("+" + offset) : Integer.toString(offset);
+    return formatOffset(getOffset() + offset) + " (" + relativeString + ")";
+  }
+
   String formatString(String left) {
     StringBuilder builder = new StringBuilder();
-    StringUtils.appendLeftPadded(builder, Integer.toString(getOffset()), 6);
+    StringUtils.appendLeftPadded(builder, formatOffset(getOffset()), 6);
     builder.append(": ");
     StringUtils.appendRightPadded(builder, getName(), 20);
     builder.append(left == null ? "" : left);
