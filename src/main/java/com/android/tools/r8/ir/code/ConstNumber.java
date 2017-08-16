@@ -48,6 +48,10 @@ public class ConstNumber extends ConstInstruction {
     return outValue;
   }
 
+  public boolean getBooleanValue() {
+    return !isZero();
+  }
+
   public int getIntValue() {
     assert type == ConstType.INT || type == ConstType.INT_OR_FLOAT;
     return (int) value;

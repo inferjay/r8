@@ -13,10 +13,11 @@ public class EncodedValueUtils {
     long result = 0;
     int shift = 0;
     for (int i = 1; i < numberOfBytes; i++) {
-      result |= ((long) ((file.get() & 0xFF))) << shift;
+      result |= ((long) (file.get() & 0xFF)) << shift;
       shift += 8;
     }
-    return result | (file.get() << shift);
+    // Let the last byte sign-extend into any remaining bytes.
+    return result | (((long) file.get()) << shift);
   }
 
   // Inspired by com.android.dex.EncodedValueCodec

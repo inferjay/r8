@@ -267,6 +267,10 @@ public class DexInspector {
 
     public abstract MethodSubject method(String returnType, String name, List<String> parameters);
 
+    public MethodSubject clinit() {
+      return method("void", "<clinit>", ImmutableList.of());
+    }
+
     public MethodSubject method(MethodSignature signature) {
       return method(signature.type, signature.name, ImmutableList.copyOf(signature.parameters));
     }
