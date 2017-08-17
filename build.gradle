@@ -922,6 +922,9 @@ test {
         println "JCTF: compiling only"
         systemProperty 'jctf_compile_only', '1'
     }
+    if (project.hasProperty('test_dir')) {
+        systemProperty 'test_dir', project.property('test_dir')
+    }
 
     if (OperatingSystem.current().isLinux()
             || OperatingSystem.current().isMacOsX()

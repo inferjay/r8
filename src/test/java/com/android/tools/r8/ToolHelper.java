@@ -314,10 +314,22 @@ public class ToolHelper {
     }
   }
 
+  static class RetainedTemporaryFolder extends TemporaryFolder {
+    RetainedTemporaryFolder(java.io.File parentFolder) {
+      super(parentFolder);
+    }
+    protected void after() {} // instead of remove, do nothing
+  }
+
   // For non-Linux platforms create the temporary directory in the repository root to simplify
   // running Art in a docker container
   public static TemporaryFolder getTemporaryFolderForTest() {
-    return new TemporaryFolder(ToolHelper.isLinux() ? null : Paths.get("build", "tmp").toFile());
+    String tmpDir = System.getProperty("test_dir");
+    if (tmpDir == null) {
+      return new TemporaryFolder(ToolHelper.isLinux() ? null : Paths.get("build", "tmp").toFile());
+    } else {
+      return new RetainedTemporaryFolder(new java.io.File(tmpDir));
+    }
   }
 
   public static String getArtBinary() {

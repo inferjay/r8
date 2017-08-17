@@ -44,7 +44,8 @@ def ParseOptions():
       help='Print a line before a tests starts and after it ends to stdout.',
       default=False, action='store_true')
   result.add_option('--tool',
-      help='Tool to run ART tests with: "r8" (default) or "d8". Ignored if "--all_tests" enabled.',
+      help='Tool to run ART tests with: "r8" (default) or "d8". Ignored if'
+          ' "--all_tests" enabled.',
       default=None, choices=["r8", "d8"])
   result.add_option('--jctf',
       help='Run JCTF tests with: "r8" (default) or "d8".',
@@ -56,11 +57,15 @@ def ParseOptions():
       help="Don't run, only compile JCTF tests.",
       default=False, action='store_true')
   result.add_option('--disable_assertions',
-      help="Disable assertions when running tests.",
+      help='Disable assertions when running tests.',
       default=False, action='store_true')
   result.add_option('--with_code_coverage',
-      help="Enable code coverage with Jacoco.",
+      help='Enable code coverage with Jacoco.',
       default=False, action='store_true')
+  result.add_option('--test_dir',
+      help='Use a custom directory for the test artifacts instead of a'
+          ' temporary (which is automatically removed after the test).'
+          ' Note that the directory will not be cleared before the test.')
 
   return result.parse_args()
 
@@ -112,6 +117,10 @@ def Main():
     gradle_args.append('jctfCommonJar')
     gradle_args.append('-x')
     gradle_args.append('jctfTestsClasses')
+  if options.test_dir:
+    gradle_args.append('-Ptest_dir=' + options.test_dir)
+    if not os.path.exists(options.test_dir):
+      os.makedirs(options.test_dir)
 
   # Add Gradle tasks
   gradle_args.append('cleanTest')
