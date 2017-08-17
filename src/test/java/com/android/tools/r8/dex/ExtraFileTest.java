@@ -4,6 +4,7 @@
 package com.android.tools.r8.dex;
 
 import com.android.tools.r8.CompilationException;
+import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.R8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.shaking.ProguardRuleParserException;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 public class ExtraFileTest {
@@ -32,8 +34,11 @@ public class ExtraFileTest {
   @Rule
   public TemporaryFolder temp = ToolHelper.getTemporaryFolderForTest();
 
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
   @Test
-  public void splitMemberRebindingTwoFiles()
+  public void splitMemberRebindingTwoFilesRelease()
       throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
     if (!ToolHelper.artSupported()) {
       return;
@@ -46,6 +51,7 @@ public class ExtraFileTest {
     R8Command command =
         R8Command.builder()
             .addProgramFiles(original)
+            .setMode(CompilationMode.RELEASE)
             .setOutputPath(out)
             .setMinApiLevel(Constants.ANDROID_L_API) // Allow native multidex.
             .setProguardMapFile(proguardMap)
@@ -65,5 +71,25 @@ public class ExtraFileTest {
         EXAMPLE_CLASS,
         null,
         null);
+  }
+
+  @Test
+  public void splitMemberRebindingTwoFilesDebug()
+      throws IOException, ProguardRuleParserException, ExecutionException, CompilationException {
+    thrown.expect(CompilationException.class);
+    Path out = temp.getRoot().toPath();
+    Path original = Paths.get(EXAMPLE_DIR, EXAMPLE_DEX);
+    Path packageMap = Paths.get(ToolHelper.EXAMPLES_DIR, EXAMPLE_PACKAGE_MAP);
+    Path proguardMap = Paths.get(ToolHelper.EXAMPLES_DIR, EXAMPLE_PROGUARD_MAP);
+    R8Command command =
+        R8Command.builder()
+            .addProgramFiles(original)
+            .setMode(CompilationMode.DEBUG)
+            .setOutputPath(out)
+            .setMinApiLevel(Constants.ANDROID_L_API) // Allow native multidex.
+            .setProguardMapFile(proguardMap)
+            .setPackageDistributionFile(packageMap)
+            .build();
+    ToolHelper.runR8(command);
   }
 }
