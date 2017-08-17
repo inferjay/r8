@@ -7,6 +7,7 @@ import utils.Utils
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'com.google.protobuf'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 apply from: 'copyAdditionalJctfCommonFiles.gradle'
 
@@ -23,9 +24,11 @@ repositories {
 buildscript {
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
     }
 }
 
@@ -318,17 +321,25 @@ task R8(type: Jar) {
     }
 }
 
-task D8(type: Jar) {
+task D8(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     from sourceSets.main.output
     baseName 'd8'
+    classifier = null
+    version = null
     manifest {
-      attributes 'Main-Class': 'com.android.tools.r8.D8'
+        attributes 'Main-Class': 'com.android.tools.r8.D8'
     }
     // In order to build without dependencies, pass the exclude_deps property using:
     // gradle -Pexclude_deps D8
     if (!project.hasProperty('exclude_deps')) {
+        // Relocating dependencies to avoid conflicts.
+        relocate 'com.google', 'com.android.tools.r8.com.google'
+        relocate 'joptsimple', 'com.android.tools.r8.joptsimple'
+        relocate 'org', 'com.android.tools.r8.org'
+        relocate 'it.unimi.dsi.fastutil', 'com.android.tools.r8.it.unimi.dsi.fastutil'
+        relocate 'junit', 'com.android.tools.r8.junit'
         // Also include dependencies
-        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+        configurations = [project.configurations.compile]
     }
 }
 
