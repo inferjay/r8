@@ -4656,14 +4656,6 @@ public class JctfTestSpecifications {
           // 1) t04
           // java.lang.AssertionError
 
-          .put("lang.reflect.Field.getLjava_lang_Object.Field_get_A04", match(R8_AFTER_D8_COMPILER))
-          // 1) t02
-          // java.lang.AssertionError: expected:<9223372036854775807> but was:<72057594037927935>
-
-          .put("lang.reflect.Field.getLongLjava_lang_Object.Field_getLong_A04", match(R8_AFTER_D8_COMPILER))
-          // 1)
-          // java.lang.AssertionError: expected:<9223372036854775807> but was:<72057594037927935>
-
           .build(); // end of failuresToTriage
 
   public static final Multimap<String, TestCondition> flakyWithArt =
