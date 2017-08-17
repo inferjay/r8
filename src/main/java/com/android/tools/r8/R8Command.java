@@ -34,6 +34,7 @@ public class R8Command extends BaseCommand {
     private Optional<Boolean> treeShaking = Optional.empty();
     private Optional<Boolean> minification = Optional.empty();
     private boolean ignoreMissingClasses = false;
+    private Path packageDistributionFile = null;
 
     private Builder() {
       super(CompilationMode.RELEASE);
@@ -127,7 +128,7 @@ public class R8Command extends BaseCommand {
      * Set a package distribution file resource.
      */
     public Builder setPackageDistributionFile(Path path) {
-      getAppBuilder().setPackageDistributionFile(path);
+      packageDistributionFile = path;
       return self();
     }
 
@@ -146,6 +147,10 @@ public class R8Command extends BaseCommand {
       if (mainDexListOutput != null && mainDexRules.isEmpty() && !getAppBuilder().hasMainDexList()) {
         throw new CompilationException(
             "Option --main-dex-list-output require --main-dex-rules and/or --main-dex-list");
+      }
+      if (getMode() == CompilationMode.DEBUG && packageDistributionFile != null) {
+        throw new CompilationException(
+            "Package distribution file is not supported in debug mode");
       }
     }
 
@@ -187,6 +192,10 @@ public class R8Command extends BaseCommand {
         configuration = configurationBuilder.build();
         addProgramFiles(configuration.getInjars());
         addLibraryFiles(configuration.getLibraryjars());
+      }
+
+      if (packageDistributionFile != null) {
+        getAppBuilder().setPackageDistributionFile(packageDistributionFile);
       }
 
       boolean useTreeShaking = treeShaking.orElse(configuration.isShrinking());
