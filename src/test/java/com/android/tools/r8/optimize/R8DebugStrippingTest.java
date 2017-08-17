@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closer;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -115,8 +116,8 @@ public class R8DebugStrippingTest {
         ToolHelper.runR8(command, (options) -> options.skipDebugLineNumberOpt = !compressRanges);
 
     ClassNameMapper classNameMapper;
-    try (Closer closer = Closer.create()) {
-      classNameMapper = ProguardMapReader.mapperFromInputStream(result.getProguardMap(closer));
+    try (InputStream is = result.getProguardMap()) {
+      classNameMapper = ProguardMapReader.mapperFromInputStream(is);
     }
     if (compressRanges) {
       classNameMapper.forAllClassNamings(this::ensureRangesAreUniquePerClass);

@@ -70,10 +70,8 @@ public class JSR45Tests {
                 .addProguardConfigurationFiles(keepRulesPath)
                 .build());
     if (androidApp.hasProguardMap()) {
-      try (Closer closer = Closer.create()) {
-        androidApp.writeProguardMap(closer, new FileOutputStream(
+        androidApp.writeProguardMap(new FileOutputStream(
             Paths.get(tmpOutputDir.getRoot().getCanonicalPath(), DEFAULT_MAP_FILENAME).toFile()));
-      }
     }
   }
 

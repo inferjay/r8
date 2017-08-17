@@ -212,8 +212,8 @@ public class AndroidApp {
   /**
    * Get the input stream of the proguard-map resource if it exists.
    */
-  public InputStream getProguardMap(Closer closer) throws IOException {
-    return proguardMap == null ? null : closer.register(proguardMap.getStream());
+  public InputStream getProguardMap() throws IOException {
+    return proguardMap == null ? null : proguardMap.getStream();
   }
 
   /**
@@ -382,10 +382,11 @@ public class AndroidApp {
     }
   }
 
-  public void writeProguardMap(Closer closer, OutputStream out) throws IOException {
-    InputStream input = getProguardMap(closer);
-    assert input != null;
-    out.write(ByteStreams.toByteArray(input));
+  public void writeProguardMap(OutputStream out) throws IOException {
+    try (InputStream input = getProguardMap()) {
+      assert input != null;
+      out.write(ByteStreams.toByteArray(input));
+    }
   }
 
   public void writeProguardSeeds(Closer closer, OutputStream out) throws IOException {

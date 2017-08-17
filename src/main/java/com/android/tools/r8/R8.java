@@ -434,7 +434,7 @@ public class R8 {
             options.proguardConfiguration.getPrintMappingFile(),
             System.out,
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        outputApp.writeProguardMap(closer, mapOut);
+        outputApp.writeProguardMap(mapOut);
       }
     }
     if (options.proguardConfiguration.isPrintSeeds()) {

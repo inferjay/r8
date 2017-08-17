@@ -75,7 +75,7 @@ public class ApplicationReader {
       throws IOException, ExecutionException {
     timing.begin("DexApplication.read");
     final DexApplication.Builder builder = new DexApplication.Builder(itemFactory, timing);
-    try (Closer closer = Closer.create()) {
+    try {
       List<Future<?>> futures = new ArrayList<>();
       // Still preload some of the classes, primarily for two reasons:
       // (a) class lazy loading is not supported for DEX files
@@ -84,9 +84,9 @@ public class ApplicationReader {
       // (b) some of the class file resources don't provide information
       //     about class descriptor.
       // TODO: try and preload less classes.
-      readProguardMap(builder, executorService, futures, closer);
-      readMainDexList(builder, executorService, futures, closer);
-      ClassReader classReader = new ClassReader(executorService, futures, closer);
+      readProguardMap(builder, executorService, futures);
+      readMainDexList(builder, executorService, futures);
+      ClassReader classReader = new ClassReader(executorService, futures);
       classReader.readSources();
       ThreadUtils.awaitFutures(futures);
       classReader.initializeLazyClassCollection(builder);
@@ -130,13 +130,12 @@ public class ApplicationReader {
   }
 
   private void readProguardMap(DexApplication.Builder builder, ExecutorService executorService,
-      List<Future<?>> futures, Closer closer)
+      List<Future<?>> futures)
       throws IOException {
     // Read the Proguard mapping file in parallel with DexCode and DexProgramClass items.
     if (inputApp.hasProguardMap()) {
       futures.add(executorService.submit(() -> {
-        try {
-          InputStream map = inputApp.getProguardMap(closer);
+        try (InputStream map = inputApp.getProguardMap()) {
           builder.setProguardMap(ProguardMapReader.mapperFromInputStream(map));
         } catch (IOException e) {
           throw new RuntimeException(e);
@@ -146,18 +145,18 @@ public class ApplicationReader {
   }
 
   private void readMainDexList(DexApplication.Builder builder, ExecutorService executorService,
-      List<Future<?>> futures, Closer closer)
+      List<Future<?>> futures)
       throws IOException {
     if (inputApp.hasMainDexList()) {
       futures.add(executorService.submit(() -> {
-        try {
-          for (Resource resource : inputApp.getMainDexListResources()) {
-            InputStream input = closer.register(resource.getStream());
+        for (Resource resource : inputApp.getMainDexListResources()) {
+          try (InputStream input = resource.getStream()) {
             builder.addToMainDexList(MainDexList.parse(input, itemFactory));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
           }
-        } catch (IOException e) {
-          throw new RuntimeException(e);
         }
+
         builder.addToMainDexList(
             inputApp.getMainDexClasses()
                 .stream()
@@ -170,7 +169,6 @@ public class ApplicationReader {
   private final class ClassReader {
     private final ExecutorService executorService;
     private final List<Future<?>> futures;
-    private final Closer closer;
 
     // We use concurrent queues to collect classes
     // since the classes can be collected concurrently.
@@ -180,10 +178,9 @@ public class ApplicationReader {
     // Jar application reader to share across all class readers.
     private final JarApplicationReader application = new JarApplicationReader(options);
 
-    ClassReader(ExecutorService executorService, List<Future<?>> futures, Closer closer) {
+    ClassReader(ExecutorService executorService, List<Future<?>> futures) {
       this.executorService = executorService;
       this.futures = futures;
-      this.closer = closer;
     }
 
     private <T extends DexClass> void readDexSources(List<Resource> dexSources,
@@ -192,9 +189,11 @@ public class ApplicationReader {
         List<DexFileReader> fileReaders = new ArrayList<>(dexSources.size());
         int computedMinApiLevel = options.minApiLevel;
         for (Resource input : dexSources) {
-          DexFile file = new DexFile(closer.register(input.getStream()));
-          computedMinApiLevel = verifyOrComputeMinApiLevel(computedMinApiLevel, file);
-          fileReaders.add(new DexFileReader(file, classKind, itemFactory));
+          try (InputStream is = input.getStream()) {
+            DexFile file = new DexFile(is);
+            computedMinApiLevel = verifyOrComputeMinApiLevel(computedMinApiLevel, file);
+            fileReaders.add(new DexFileReader(file, classKind, itemFactory));
+          }
         }
         options.minApiLevel = computedMinApiLevel;
         for (DexFileReader reader : fileReaders) {
@@ -216,7 +215,9 @@ public class ApplicationReader {
       JarClassFileReader reader = new JarClassFileReader(
           application, classKind.bridgeConsumer(classes::add));
       for (Resource input : classSources) {
-        reader.read(DEFAULT_DEX_FILENAME, classKind, closer.register(input.getStream()));
+        try (InputStream is = input.getStream()) {
+          reader.read(DEFAULT_DEX_FILENAME, classKind, is);
+        }
       }
     }
 
