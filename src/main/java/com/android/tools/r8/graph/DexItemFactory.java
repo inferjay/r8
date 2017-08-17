@@ -24,17 +24,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class DexItemFactory {
 
-  private final Map<DexString, DexString> strings = new HashMap<>();
-  private final Map<DexString, DexType> types = new HashMap<>();
-  private final Map<DexField, DexField> fields = new HashMap<>();
-  private final Map<DexProto, DexProto> protos = new HashMap<>();
-  private final Map<DexMethod, DexMethod> methods = new HashMap<>();
-  private final Map<DexCallSite, DexCallSite> callSites = new HashMap<>();
-  private final Map<DexMethodHandle, DexMethodHandle> methodHandles = new HashMap<>();
+  private final ConcurrentHashMap<DexString, DexString> strings = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexString, DexType> types = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexField, DexField> fields = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexProto, DexProto> protos = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexMethod, DexMethod> methods = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexCallSite, DexCallSite> callSites = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<DexMethodHandle, DexMethodHandle> methodHandles =
+      new ConcurrentHashMap<>();
 
   // DexDebugEvent Canonicalization.
   private final Int2ObjectMap<AdvanceLine> advanceLines = new Int2ObjectOpenHashMap<>();
@@ -280,7 +282,7 @@ public class DexItemFactory {
     }
   }
 
-  synchronized private static <T extends DexItem> T canonicalize(Map<T, T> map, T item) {
+  private static <T extends DexItem> T canonicalize(ConcurrentHashMap<T, T> map, T item) {
     assert item != null;
     assert !internalSentinels.contains(item);
     T previous = map.putIfAbsent(item, item);

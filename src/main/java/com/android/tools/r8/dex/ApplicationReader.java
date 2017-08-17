@@ -214,10 +214,16 @@ public class ApplicationReader {
         ClassKind classKind, Queue<T> classes) throws IOException, ExecutionException {
       JarClassFileReader reader = new JarClassFileReader(
           application, classKind.bridgeConsumer(classes::add));
+      // Read classes in parallel.
       for (Resource input : classSources) {
-        try (InputStream is = input.getStream()) {
-          reader.read(DEFAULT_DEX_FILENAME, classKind, is);
-        }
+        futures.add(executorService.submit(() -> {
+          try (InputStream is = input.getStream()) {
+            reader.read(DEFAULT_DEX_FILENAME, classKind, is);
+          }
+          // No other way to have a void callable, but we want the IOException from the previous
+          // line to be wrapped into an ExecutionException.
+          return null;
+        }));
       }
     }
 
