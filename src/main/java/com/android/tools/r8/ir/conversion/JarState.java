@@ -339,12 +339,19 @@ public class JarState {
   }
 
   private Local setLocalInfo(int index, Type type, DebugLocalInfo info) {
-    return setLocalInfoForRegister(getLocalRegister(index, type), type, info);
+    return setLocalInfoForRegister(getLocalRegister(index, type), info);
   }
 
-  private Local setLocalInfoForRegister(int register, Type type, DebugLocalInfo info) {
+  private Local setLocalInfoForRegister(int register, DebugLocalInfo info) {
     Local existingLocal = getLocalForRegister(register);
-    Local local = new Local(existingLocal.slot, info);
+    // TODO(ager, zerny): Kotlin debug information contains locals that are not referenced.
+    // That seems broken and we currently do not retain that debug information because
+    // we do not let locals debug information influence code generation. Debug information can
+    // be completely malformed, so we shouldn't let it influence code generation. However, we
+    // need to deal with these unused locals in the debug information. For now we
+    // use a null type for the slot, but we should reconsider that.
+    Slot slot = existingLocal != null ? existingLocal.slot : new Slot(register, null);
+    Local local = new Local(slot, info);
     locals[register] = local;
     return local;
   }
