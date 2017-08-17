@@ -84,10 +84,10 @@ public class TreePruner {
         // The class is used and must be kept. Remove the unused fields and methods from
         // the class.
         usagePrinter.visiting(clazz);
-        clazz.directMethods = reachableMethods(clazz.directMethods(), clazz);
-        clazz.virtualMethods = reachableMethods(clazz.virtualMethods(), clazz);
-        clazz.instanceFields = reachableFields(clazz.instanceFields());
-        clazz.staticFields = reachableFields(clazz.staticFields());
+        clazz.setDirectMethods(reachableMethods(clazz.directMethods(), clazz));
+        clazz.setVirtualMethods(reachableMethods(clazz.virtualMethods(), clazz));
+        clazz.setInstanceFields(reachableFields(clazz.instanceFields()));
+        clazz.setStaticFields(reachableFields(clazz.staticFields()));
         usagePrinter.visited();
       }
     }

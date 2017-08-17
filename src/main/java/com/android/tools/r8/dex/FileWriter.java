@@ -253,10 +253,10 @@ public class FileWriter {
 
   private void sortClassData(Collection<DexProgramClass> classesWithData) {
     for (DexProgramClass clazz : classesWithData) {
-      sortEncodedFields(clazz.instanceFields);
-      sortEncodedFields(clazz.staticFields);
-      sortEncodedMethods(clazz.directMethods);
-      sortEncodedMethods(clazz.virtualMethods);
+      sortEncodedFields(clazz.instanceFields());
+      sortEncodedFields(clazz.staticFields());
+      sortEncodedMethods(clazz.directMethods());
+      sortEncodedMethods(clazz.virtualMethods());
     }
   }
 

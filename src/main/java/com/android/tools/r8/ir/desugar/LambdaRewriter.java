@@ -162,7 +162,7 @@ public class LambdaRewriter {
   public void removeLambdaDeserializationMethods(Iterable<DexProgramClass> classes) {
     for (DexProgramClass clazz : classes) {
       // Search for a lambda deserialization method and remove it if found.
-      DexEncodedMethod[] directMethods = clazz.directMethods;
+      DexEncodedMethod[] directMethods = clazz.directMethods();
       if (directMethods != null) {
         int methodCount = directMethods.length;
         for (int i = 0; i < methodCount; i++) {
@@ -177,7 +177,7 @@ public class LambdaRewriter {
             DexEncodedMethod[] newMethods = new DexEncodedMethod[methodCount - 1];
             System.arraycopy(directMethods, 0, newMethods, 0, i);
             System.arraycopy(directMethods, i + 1, newMethods, i, methodCount - i - 1);
-            clazz.directMethods = newMethods;
+            clazz.setDirectMethods(newMethods);
 
             // We assume there is only one such method in the class.
             break;

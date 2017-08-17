@@ -60,7 +60,7 @@ public class VisibilityBridgeRemover {
         .collect(Collectors.toSet());
     for (DexType type : classes) {
       DexClass clazz = appInfo.definitionFor(type);
-      clazz.virtualMethods = removeMethods(clazz.virtualMethods, unneededVisibilityBridges);
+      clazz.setVirtualMethods(removeMethods(clazz.virtualMethods(), unneededVisibilityBridges));
     }
   }
 
