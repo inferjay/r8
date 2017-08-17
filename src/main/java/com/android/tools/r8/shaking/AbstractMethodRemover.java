@@ -35,7 +35,7 @@ public class AbstractMethodRemover {
     DexClass holder = appInfo.definitionFor(type);
     scope = new ScopedDexItemSet(scope);
     if (holder != null) {
-      holder.virtualMethods = processMethods(holder.virtualMethods);
+      holder.setVirtualMethods(processMethods(holder.virtualMethods()));
     }
     type.forAllExtendsSubtypes(this::processClass);
     scope = scope.getParent();
@@ -73,10 +73,6 @@ public class AbstractMethodRemover {
 
     private final ScopedDexItemSet parent;
     private final Set<Wrapper<DexMethod>> items = new HashSet<>();
-
-    private ScopedDexItemSet() {
-      this(null);
-    }
 
     private ScopedDexItemSet(ScopedDexItemSet parent) {
       this.parent = parent;

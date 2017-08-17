@@ -444,7 +444,7 @@ final class LambdaClass {
       DexMethod implMethod = descriptor.implHandle.asMethod();
       DexClass implMethodHolder = definitionFor(implMethod.holder);
 
-      DexEncodedMethod[] directMethods = implMethodHolder.directMethods;
+      DexEncodedMethod[] directMethods = implMethodHolder.directMethods();
       for (int i = 0; i < directMethods.length; i++) {
         DexEncodedMethod encodedMethod = directMethods[i];
         if (implMethod.match(encodedMethod)) {
@@ -491,8 +491,8 @@ final class LambdaClass {
       DexEncodedMethod accessorEncodedMethod = new DexEncodedMethod(
           callTarget, accessorFlags, DexAnnotationSet.empty(), DexAnnotationSetRefList.empty(),
           new SynthesizedCode(new AccessorMethodSourceCode(LambdaClass.this)));
-      accessorClass.directMethods = appendMethod(
-          accessorClass.directMethods, accessorEncodedMethod);
+      accessorClass.setDirectMethods(appendMethod(
+          accessorClass.directMethods(), accessorEncodedMethod));
       rewriter.converter.optimizeSynthesizedMethod(accessorEncodedMethod);
       return true;
     }

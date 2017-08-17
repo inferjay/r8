@@ -257,20 +257,20 @@ public class SimpleClassMerger {
           ? DexTypeList.empty()
           : new DexTypeList(interfaces.toArray(new DexType[interfaces.size()]));
       // Step 2: replace fields and methods.
-      target.directMethods = mergedDirectMethods
-          .toArray(new DexEncodedMethod[mergedDirectMethods.size()]);
-      target.virtualMethods = mergedVirtualMethods
-          .toArray(new DexEncodedMethod[mergedVirtualMethods.size()]);
-      target.staticFields = mergedStaticFields
-          .toArray(new DexEncodedField[mergedStaticFields.size()]);
-      target.instanceFields = mergedInstanceFields
-          .toArray(new DexEncodedField[mergedInstanceFields.size()]);
+      target.setDirectMethods(mergedDirectMethods
+          .toArray(new DexEncodedMethod[mergedDirectMethods.size()]));
+      target.setVirtualMethods(mergedVirtualMethods
+          .toArray(new DexEncodedMethod[mergedVirtualMethods.size()]));
+      target.setStaticFields(mergedStaticFields
+          .toArray(new DexEncodedField[mergedStaticFields.size()]));
+      target.setInstanceFields(mergedInstanceFields
+          .toArray(new DexEncodedField[mergedInstanceFields.size()]));
       // Step 3: Unlink old class to ease tree shaking.
       source.superType = application.dexItemFactory.objectType;
-      source.directMethods = null;
-      source.virtualMethods = null;
-      source.instanceFields = null;
-      source.staticFields = null;
+      source.setDirectMethods(null);
+      source.setVirtualMethods(null);
+      source.setInstanceFields(null);
+      source.setStaticFields(null);
       source.interfaces = DexTypeList.empty();
       // Step 4: Record merging.
       mergedClasses.put(source.type, target.type);
@@ -427,11 +427,11 @@ public class SimpleClassMerger {
     private GraphLense fixupTypeReferences(GraphLense graphLense) {
       // Globally substitute merged class types in protos and holders.
       for (DexProgramClass clazz : appInfo.classes()) {
-        clazz.directMethods = substituteTypesIn(clazz.directMethods);
-        clazz.virtualMethods = substituteTypesIn(clazz.virtualMethods);
-        clazz.virtualMethods = removeDupes(clazz.virtualMethods);
-        clazz.staticFields = substituteTypesIn(clazz.staticFields);
-        clazz.instanceFields = substituteTypesIn(clazz.instanceFields);
+        clazz.setDirectMethods(substituteTypesIn(clazz.directMethods()));
+        clazz.setVirtualMethods(substituteTypesIn(clazz.virtualMethods()));
+        clazz.setVirtualMethods(removeDupes(clazz.virtualMethods()));
+        clazz.setStaticFields(substituteTypesIn(clazz.staticFields()));
+        clazz.setInstanceFields(substituteTypesIn(clazz.instanceFields()));
       }
       // Record type renamings so instanceof and checkcast checks are also fixed.
       for (DexType type : mergedClasses.keySet()) {

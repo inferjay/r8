@@ -80,15 +80,15 @@ final class ClassProcessor {
     }
 
     // Add the methods.
-    DexEncodedMethod[] existing = clazz.virtualMethods;
-    clazz.virtualMethods = new DexEncodedMethod[existing.length + methodsToImplement.size()];
-    System.arraycopy(existing, 0, clazz.virtualMethods, 0, existing.length);
+    DexEncodedMethod[] existing = clazz.virtualMethods();
+    clazz.setVirtualMethods(new DexEncodedMethod[existing.length + methodsToImplement.size()]);
+    System.arraycopy(existing, 0, clazz.virtualMethods(), 0, existing.length);
 
     for (int i = 0; i < methodsToImplement.size(); i++) {
       DexEncodedMethod method = methodsToImplement.get(i);
       assert method.accessFlags.isPublic() && !method.accessFlags.isAbstract();
       DexEncodedMethod newMethod = addForwardingMethod(method, clazz);
-      clazz.virtualMethods[existing.length + i] = newMethod;
+      clazz.virtualMethods()[existing.length + i] = newMethod;
       createdMethods.put(newMethod, method);
     }
   }
@@ -142,7 +142,7 @@ final class ClassProcessor {
     current = clazz;
     while (true) {
       // Hide candidates by virtual method of the class.
-      hideCandidates(current.virtualMethods, candidates, toBeImplemented);
+      hideCandidates(current.virtualMethods(), candidates, toBeImplemented);
       if (candidates.isEmpty()) {
         return toBeImplemented;
       }
@@ -218,12 +218,12 @@ final class ClassProcessor {
     }
 
     // Hide by virtual methods of this interface.
-    for (DexEncodedMethod virtual : clazz.virtualMethods) {
+    for (DexEncodedMethod virtual : clazz.virtualMethods()) {
       helper.hideMatches(virtual.method);
     }
 
     // Add all default methods of this interface.
-    for (DexEncodedMethod encoded : clazz.virtualMethods) {
+    for (DexEncodedMethod encoded : clazz.virtualMethods()) {
       if (rewriter.isDefaultMethod(encoded)) {
         helper.addDefaultMethod(encoded);
       }

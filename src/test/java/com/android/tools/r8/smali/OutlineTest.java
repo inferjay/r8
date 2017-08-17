@@ -828,13 +828,13 @@ public class OutlineTest extends SmaliTestBase {
     DexInspector inspector = new DexInspector(processedApplication);
     ClassSubject clazz = inspector.clazz(options.outline.className);
     assertTrue(clazz.isPresent());
-    assertEquals(3, clazz.getDexClass().directMethods.length);
+    assertEquals(3, clazz.getDexClass().directMethods().length);
     // Collect the return types of the putlines for the body of method1 and method2.
     List<DexType> r = new ArrayList<>();
-    for (int i = 0; i < clazz.getDexClass().directMethods.length; i++) {
-      if (clazz.getDexClass().directMethods[i].getCode().asDexCode().instructions[0]
+    for (int i = 0; i < clazz.getDexClass().directMethods().length; i++) {
+      if (clazz.getDexClass().directMethods()[i].getCode().asDexCode().instructions[0]
           instanceof InvokeVirtual) {
-        r.add(clazz.getDexClass().directMethods[i].method.proto.returnType);
+        r.add(clazz.getDexClass().directMethods()[i].method.proto.returnType);
       }
     }
     assert r.size() == 2;
