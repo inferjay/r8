@@ -53,6 +53,9 @@ public class JumboStringTest extends SmaliTestBase {
     );
 
     InternalOptions options = new InternalOptions();
+    // (b/64777953) Disable outliner optimization for this test because it increases time
+    // from 1 minute to 7 minutes.
+    options.outline.enabled = false;
     DexApplication originalApplication = buildApplication(smaliBuilder, options);
     DexApplication processedApplication = processApplication(originalApplication, options);
     String result = runArt(processedApplication, options);
