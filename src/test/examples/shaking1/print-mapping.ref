@@ -1,4 +1,4 @@
 shaking1.Shaking -> shaking1.Shaking:
-shaking1.Used -> shaking1.a:
+shaking1.Used -> a.a:
     java.lang.String name -> a
     java.lang.String method() -> a
