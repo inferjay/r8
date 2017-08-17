@@ -521,6 +521,8 @@ public class DexInspector {
 
     public abstract boolean isBridge();
 
+    public abstract boolean isClassInitializer();
+
     public abstract DexEncodedMethod getMethod();
 
     public Iterator<InstructionSubject> iterateInstructions() {
@@ -574,6 +576,11 @@ public class DexInspector {
 
     @Override
     public boolean isBridge() {
+      return false;
+    }
+
+    @Override
+    public boolean isClassInitializer() {
       return false;
     }
 
@@ -641,6 +648,11 @@ public class DexInspector {
     @Override
     public boolean isBridge() {
       return dexMethod.accessFlags.isBridge();
+    }
+
+    @Override
+    public boolean isClassInitializer() {
+      return dexMethod.isClassInitializer();
     }
 
     @Override

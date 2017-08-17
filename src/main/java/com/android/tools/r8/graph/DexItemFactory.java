@@ -85,6 +85,8 @@ public class DexItemFactory {
   public final DexString getClassMethodName = createString("getClass");
   public final DexString ordinalMethodName = createString("ordinal");
   public final DexString desiredAssertionStatusMethodName = createString("desiredAssertionStatus");
+  public final DexString getNameName = createString("getName");
+  public final DexString getSimpleNameName = createString("getSimpleName");
   public final DexString assertionsDisabled = createString("$assertionsDisabled");
 
   public final DexString stringDescriptor = createString("Ljava/lang/String;");
@@ -208,10 +210,15 @@ public class DexItemFactory {
   public class ClassMethods {
 
     public DexMethod desiredAssertionStatus;
+    public DexMethod getName;
+    public DexMethod getSimpleName;
 
     private ClassMethods() {
       desiredAssertionStatus = createMethod(classDescriptor,
           desiredAssertionStatusMethodName, booleanDescriptor, DexString.EMPTY_ARRAY);
+      getName = createMethod(classDescriptor, getNameName, stringDescriptor, DexString.EMPTY_ARRAY);
+      getSimpleName = createMethod(classDescriptor,
+          getSimpleNameName, stringDescriptor, DexString.EMPTY_ARRAY);
     }
   }
 

@@ -518,12 +518,16 @@ public class SmaliTestBase {
   }
 
   public String runArt(DexApplication application, InternalOptions options) {
+    return runArt(application, options, DEFAULT_MAIN_CLASS_NAME);
+  }
+
+  public String runArt(DexApplication application, InternalOptions options, String mainClass) {
     try {
       AndroidApp app = writeDex(application, options);
       Path out = temp.getRoot().toPath().resolve("run-art-input.zip");
       // TODO(sgjesse): Pass in a unique temp directory for each run.
       app.writeToZip(out, OutputMode.Indexed);
-      return ToolHelper.runArtNoVerificationErrors(out.toString(), DEFAULT_MAIN_CLASS_NAME);
+      return ToolHelper.runArtNoVerificationErrors(out.toString(), mainClass);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

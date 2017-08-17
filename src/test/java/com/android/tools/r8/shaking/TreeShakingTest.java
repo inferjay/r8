@@ -584,9 +584,12 @@ public class TreeShakingTest {
 
   private static void checkSameStructure(FoundMethodSubject refMethod, ClassSubject clazz) {
     MethodSignature signature = refMethod.getOriginalSignature();
-    Assert.assertTrue("Missing Method: " + clazz.getDexClass().toSourceString() + "."
-            + signature.toString(),
-        clazz.method(signature).isPresent());
+    // Don't check for existence of class initializers, as the code optimization can remove them.
+    if (!refMethod.isClassInitializer()) {
+      Assert.assertTrue("Missing Method: " + clazz.getDexClass().toSourceString() + "."
+              + signature.toString(),
+          clazz.method(signature).isPresent());
+    }
   }
 
   private static void checkSameStructure(FoundFieldSubject refField, ClassSubject clazz) {

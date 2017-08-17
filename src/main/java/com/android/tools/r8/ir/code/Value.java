@@ -426,6 +426,10 @@ public class Value {
     return isConstant() && getConstInstruction().isConstNumber();
   }
 
+  public boolean isConstString() {
+    return isConstant() && getConstInstruction().isConstString();
+  }
+
   public boolean isConstant() {
     return definition.isOutConstant() && getLocalInfo() == null;
   }
