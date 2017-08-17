@@ -20,6 +20,7 @@ import com.android.tools.r8.naming.signature.GenericSignatureAction;
 import com.android.tools.r8.naming.signature.GenericSignatureParser;
 import com.android.tools.r8.shaking.Enqueuer.AppInfoWithLiveness;
 import com.android.tools.r8.shaking.RootSetBuilder.RootSet;
+import com.android.tools.r8.utils.DescriptorUtils;
 import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.InternalOptions.PackageObfuscationMode;
 import com.android.tools.r8.utils.StringUtils;
@@ -39,15 +40,16 @@ class ClassNameMinifier {
   private final AppInfoWithLiveness appInfo;
   private final RootSet rootSet;
   private final PackageObfuscationMode packageObfuscationMode;
+  private final Set<String> usedPackagePrefixes = Sets.newHashSet();
   private final Set<DexString> usedTypeNames = Sets.newIdentityHashSet();
 
   private final Map<DexType, DexString> renaming = Maps.newIdentityHashMap();
-  private final Map<String, ClassNamingState> states = new HashMap<>();
+  private final Map<String, Namespace> states = new HashMap<>();
   private final ImmutableList<String> packageDictionary;
   private final ImmutableList<String> classDictionary;
   private final boolean keepInnerClassStructure;
 
-  private final ClassNamingState topLevelState;
+  private final Namespace topLevelState;
 
   private GenericSignatureRewriter genericSignatureRewriter = new GenericSignatureRewriter();
 
@@ -66,8 +68,8 @@ class ClassNameMinifier {
     this.keepInnerClassStructure = options.attributeRemoval.signature;
 
     // Initialize top-level naming state.
-    topLevelState = new ClassNamingState(getPackageBinaryNameFromJavaType(
-        options.proguardConfiguration.getPackagePrefix()));
+    topLevelState = new Namespace(
+        getPackageBinaryNameFromJavaType(options.proguardConfiguration.getPackagePrefix()));
     states.computeIfAbsent("", k -> topLevelState);
   }
 
@@ -144,6 +146,8 @@ class ClassNameMinifier {
    */
   private void registerClassAsUsed(DexType type) {
     renaming.put(type, type.descriptor);
+    registerPackagePrefixesAsUsed(
+        getParentPackagePrefix(getClassBinaryNameFromDescriptor(type.descriptor.toSourceString())));
     usedTypeNames.add(type.descriptor);
     if (keepInnerClassStructure) {
       DexType outerClass = getOutClassForType(type);
@@ -153,6 +157,17 @@ class ClassNameMinifier {
           registerClassAsUsed(outerClass);
         }
       }
+    }
+  }
+
+  /**
+   * Registers the given package prefix and all of parent packages as used.
+   */
+  private void registerPackagePrefixesAsUsed(String packagePrefix) {
+    String usedPrefix = packagePrefix;
+    while (usedPrefix.length() > 0) {
+      usedPackagePrefixes.add(usedPrefix);
+      usedPrefix = getParentPackagePrefix(usedPrefix);
     }
   }
 
@@ -176,7 +191,7 @@ class ClassNameMinifier {
   }
 
   private DexString computeName(DexClass clazz) {
-    ClassNamingState state = null;
+    Namespace state = null;
     if (keepInnerClassStructure) {
       // When keeping the nesting structure of inner classes, we have to insert the name
       // of the outer class for the $ prefix.
@@ -186,22 +201,22 @@ class ClassNameMinifier {
       }
     }
     if (state == null) {
-      state = getStateFor(clazz);
+      state = getStateForClass(clazz);
     }
     return state.nextTypeName();
   }
 
-  private ClassNamingState getStateFor(DexClass clazz) {
+  private Namespace getStateForClass(DexClass clazz) {
     String packageName = getPackageBinaryNameFromJavaType(clazz.type.getPackageDescriptor());
     // Check whether the given class should be kept.
     if (rootSet.keepPackageName.contains(clazz)) {
-      return states.computeIfAbsent(packageName, ClassNamingState::new);
+      return states.computeIfAbsent(packageName, Namespace::new);
     }
-    ClassNamingState state = topLevelState;
+    Namespace state = topLevelState;
     switch (packageObfuscationMode) {
       case NONE:
-        // TODO(b/36799686): general obfuscation.
-        state = states.computeIfAbsent(packageName, ClassNamingState::new);
+        // For general obfuscation, rename all the involved package prefixes.
+        state = getStateForPackagePrefix(packageName);
         break;
       case REPACKAGE:
         // For repackaging, all classes are repackaged to a single package.
@@ -210,16 +225,29 @@ class ClassNameMinifier {
       case FLATTEN:
         // For flattening, all packages are repackaged to a single package.
         state = states.computeIfAbsent(packageName, k -> {
-          String renamedPackageName =
-              getClassBinaryNameFromDescriptor(topLevelState.nextSuggestedName());
-          return new ClassNamingState(renamedPackageName);
+          String renamedPackagePrefix = topLevelState.nextPackagePrefix();
+          return new Namespace(renamedPackagePrefix);
         });
         break;
     }
     return state;
   }
 
-  private ClassNamingState getStateForOuterClass(DexType outer) {
+  private Namespace getStateForPackagePrefix(String prefix) {
+    return states.computeIfAbsent(prefix, k -> {
+      // Calculate the parent package prefix, e.g., La/b/c -> La/b
+      String parentPackage = getParentPackagePrefix(prefix);
+      // Create a state for parent package prefix, if necessary, in a recursive manner.
+      // That recursion should end when the parent package hits the top-level, "".
+      Namespace superState = getStateForPackagePrefix(parentPackage);
+      // From the super state, get a renamed package prefix for the current level.
+      String renamedPackagePrefix = superState.nextPackagePrefix();
+      // Create a new state, which corresponds to a new name space, for the current level.
+      return new Namespace(renamedPackagePrefix);
+    });
+  }
+
+  private Namespace getStateForOuterClass(DexType outer) {
     String prefix = getClassBinaryNameFromDescriptor(outer.toDescriptorString());
     return states.computeIfAbsent(prefix, k -> {
       // Create a naming state with this classes renaming as prefix.
@@ -235,7 +263,7 @@ class ClassNameMinifier {
         }
       }
       String binaryName = getClassBinaryNameFromDescriptor(renamed.toString());
-      return new ClassNamingState(binaryName, "$");
+      return new Namespace(binaryName, "$");
     });
   }
 
@@ -256,46 +284,67 @@ class ClassNameMinifier {
     }
   }
 
-  private class ClassNamingState {
+  private class Namespace {
 
     private final char[] packagePrefix;
     private int typeCounter = 1;
-    private Iterator<String> dictionaryIterator;
+    private int packageCounter = 1;
+    private Iterator<String> packageDictionaryIterator;
+    private Iterator<String> classDictionaryIterator;
 
-    ClassNamingState(String packageName) {
+    Namespace(String packageName) {
       this(packageName, "/");
     }
 
-    ClassNamingState(String packageName, String separator) {
+    Namespace(String packageName, String separator) {
       this.packagePrefix = ("L" + packageName
           // L or La/b/ (or La/b/C$)
           + (packageName.isEmpty() ? "" : separator))
           .toCharArray();
-      // TODO(b/36799686): general obfuscation should use packageDictionary when renaming package.
-      this.dictionaryIterator = classDictionary.iterator();
+      this.packageDictionaryIterator = packageDictionary.iterator();
+      this.classDictionaryIterator = classDictionary.iterator();
     }
 
-    public char[] getPackagePrefix() {
-      return packagePrefix;
-    }
-
-    String nextSuggestedName() {
+    private String nextSuggestedNameForClass() {
       StringBuilder nextName = new StringBuilder();
-      if (dictionaryIterator.hasNext()) {
-        nextName.append(packagePrefix).append(dictionaryIterator.next()).append(';');
+      if (classDictionaryIterator.hasNext()) {
+        nextName.append(packagePrefix).append(classDictionaryIterator.next()).append(';');
         return nextName.toString();
       } else {
         return StringUtils.numberToIdentifier(packagePrefix, typeCounter++, true);
       }
     }
 
-    private DexString nextTypeName() {
+    DexString nextTypeName() {
       DexString candidate;
       do {
-        candidate = appInfo.dexItemFactory.createString(nextSuggestedName());
+        candidate = appInfo.dexItemFactory.createString(nextSuggestedNameForClass());
       } while (usedTypeNames.contains(candidate));
       return candidate;
     }
+
+    private String nextSuggestedNameForSubpackage() {
+      StringBuilder nextName = new StringBuilder();
+      // Note that the differences between this method and the other variant for class renaming are
+      // 1) this one uses the different dictionary and counter,
+      // 2) this one does not append ';' at the end, and
+      // 3) this one removes 'L' at the beginning to make the return value a binary form.
+      if (packageDictionaryIterator.hasNext()) {
+        nextName.append(packagePrefix).append(packageDictionaryIterator.next());
+      } else {
+        nextName.append(StringUtils.numberToIdentifier(packagePrefix, packageCounter++, false));
+      }
+      return nextName.toString().substring(1);
+    }
+
+    String nextPackagePrefix() {
+      String candidate;
+      do {
+        candidate = nextSuggestedNameForSubpackage();
+      } while (usedPackagePrefixes.contains(candidate));
+      return candidate;
+    }
+
   }
 
   private class GenericSignatureRewriter implements GenericSignatureAction<DexType> {
@@ -354,5 +403,19 @@ class ClassNameMinifier {
     public void stop() {
       // nothing to do
     }
+  }
+
+  /**
+   * Compute parent package prefix from the given package prefix.
+   *
+   * @param packagePrefix i.e. "Ljava/lang"
+   * @return parent package prefix i.e. "Ljava"
+   */
+  static String getParentPackagePrefix(String packagePrefix) {
+    int i = packagePrefix.lastIndexOf(DescriptorUtils.DESCRIPTOR_PACKAGE_SEPARATOR);
+    if (i < 0) {
+      return "";
+    }
+    return packagePrefix.substring(0, i);
   }
 }

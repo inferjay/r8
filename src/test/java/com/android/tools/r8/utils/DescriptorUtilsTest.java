@@ -44,6 +44,15 @@ public class DescriptorUtilsTest {
   }
 
   @Test
+  public void fromDescriptor() throws IOException {
+    String obj = "Ljava/lang/Object;";
+    assertEquals("Object", DescriptorUtils.getSimpleClassNameFromDescriptor(obj));
+    assertEquals("java.lang.Object", DescriptorUtils.getClassNameFromDescriptor(obj));
+    assertEquals("java.lang", DescriptorUtils.getPackageNameFromDescriptor(obj));
+    assertEquals("java/lang/Object", DescriptorUtils.getClassBinaryNameFromDescriptor(obj));
+  }
+
+  @Test
   public void toJavaType() throws IOException {
     assertEquals("boolean", DescriptorUtils.descriptorToJavaType("Z"));
     assertEquals("byte", DescriptorUtils.descriptorToJavaType("B"));
