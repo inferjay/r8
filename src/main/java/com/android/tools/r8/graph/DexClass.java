@@ -204,6 +204,14 @@ public abstract class DexClass extends DexItem {
     return getClassInitializer() != null;
   }
 
+  public boolean hasTrivialClassInitializer() {
+    DexEncodedMethod clinit = getClassInitializer();
+    return clinit != null
+        && clinit.getCode() != null
+        && clinit.getCode().asDexCode().isEmptyVoidMethod();
+  }
+
+
   public boolean hasNonTrivialClassInitializer() {
     DexEncodedMethod clinit = getClassInitializer();
     if (clinit == null || clinit.getCode() == null) {

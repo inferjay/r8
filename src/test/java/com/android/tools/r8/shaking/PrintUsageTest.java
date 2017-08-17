@@ -126,9 +126,7 @@ public class PrintUsageTest {
 
   private static void inspectShaking1(PrintUsageInspector inspector) {
     assertTrue(inspector.clazz("shaking1.Unused").isPresent());
-    assertTrue(inspector.clazz("shaking1.Used").isPresent());
-    ClassSubject used = inspector.clazz("shaking1.Used").get();
-    assertTrue(used.method("void", "<clinit>", ImmutableList.of()));
+    assertFalse(inspector.clazz("shaking1.Used").isPresent());
   }
 
   private static void inspectShaking2(PrintUsageInspector inspector) {

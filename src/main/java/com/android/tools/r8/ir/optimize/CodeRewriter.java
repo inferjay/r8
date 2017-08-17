@@ -622,12 +622,31 @@ public class CodeRewriter {
     }
   }
 
+  // Check if the static put is a constant derived from the class holding the method.
+  // This checks for java.lang.Class.getName and java.lang.Class.getSimpleName.
+  private boolean isClassNameConstant(DexEncodedMethod method, StaticPut put) {
+    if (put.getField().type != dexItemFactory.stringType) {
+      return false;
+    }
+    if (put.inValue().definition != null && put.inValue().definition.isInvokeVirtual()) {
+      InvokeVirtual invoke = put.inValue().definition.asInvokeVirtual();
+      if ((invoke.getInvokedMethod() == dexItemFactory.classMethods.getSimpleName
+          || invoke.getInvokedMethod() == dexItemFactory.classMethods.getName)
+          && invoke.inValues().get(0).definition.isConstClass()
+          && invoke.inValues().get(0).definition.asConstClass().getValue()
+          == method.method.getHolder()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public void collectClassInitializerDefaults(DexEncodedMethod method, IRCode code) {
     if (!method.isClassInitializer()) {
       return;
     }
 
-    // Collect all static put which are dominated by the exit block, and not dominated by a
+    // Collect relevant static put which are dominated by the exit block, and not dominated by a
     // static get.
     // This does not check for instructions that can throw. However, as classes which throw in the
     // class initializer are never visible to the program (see Java Virtual Machine Specification
@@ -647,14 +666,21 @@ public class CodeRewriter {
         if (current.isStaticPut()) {
           StaticPut put = current.asStaticPut();
           DexField field = put.getField();
-          if (!(field.type.isPrimitiveType()
-              || field.type == dexItemFactory.stringType)
-              || field.getHolder() != method.method.getHolder()) {
-            continue;
-          }
-          if (put.inValue().isConstant()) {
-            // Collect put as a potential default value.
-            puts.put(put.getField(), put);
+          if (field.getHolder() == method.method.getHolder()) {
+            if (put.inValue().isConstant()) {
+              if ((field.type.isClassType() || field.type.isArrayType())
+                  && put.inValue().getConstInstruction().isConstNumber() &&
+                  put.inValue().getConstInstruction().asConstNumber().isZero()) {
+                // Collect put of zero as a potential default value.
+                puts.put(put.getField(), put);
+              } else if (field.type.isPrimitiveType() || field.type == dexItemFactory.stringType) {
+                // Collect put as a potential default value.
+                puts.put(put.getField(), put);
+              }
+            } else if (isClassNameConstant(method, put)) {
+              // Collect put of class name constant as a potential default value.
+              puts.put(put.getField(), put);
+            }
           }
         }
         if (current.isStaticGet()) {
@@ -673,12 +699,32 @@ public class CodeRewriter {
         DexField field = put.getField();
         DexEncodedField encodedField = appInfo.definitionFor(field);
         if (field.type == dexItemFactory.stringType) {
-          if (put.inValue().getConstInstruction().isConstNumber()) {
-            assert put.inValue().getConstInstruction().asConstNumber().isZero();
+          if (put.inValue().isConstant()) {
+            if (put.inValue().getConstInstruction().isConstNumber()) {
+              assert put.inValue().getConstInstruction().asConstNumber().isZero();
+              encodedField.staticValue = DexValueNull.NULL;
+            } else {
+              ConstString cnst = put.inValue().getConstInstruction().asConstString();
+              encodedField.staticValue = new DexValueString(cnst.getValue());
+            }
+          } else {
+            InvokeVirtual invoke = put.inValue().definition.asInvokeVirtual();
+            String name = method.method.getHolder().toSourceString();
+            if (invoke.getInvokedMethod() == dexItemFactory.classMethods.getSimpleName) {
+              String simpleName = name.substring(name.lastIndexOf('.') + 1);
+              encodedField.staticValue =
+                  new DexValueString(dexItemFactory.createString(simpleName));
+            } else {
+              assert invoke.getInvokedMethod() == dexItemFactory.classMethods.getName;
+              encodedField.staticValue = new DexValueString(dexItemFactory.createString(name));
+            }
+          }
+        } else if (field.type.isClassType() || field.type.isArrayType()) {
+          if (put.inValue().getConstInstruction().isConstNumber()
+              && put.inValue().getConstInstruction().asConstNumber().isZero()) {
             encodedField.staticValue = DexValueNull.NULL;
           } else {
-            ConstString cnst = put.inValue().getConstInstruction().asConstString();
-            encodedField.staticValue = new DexValueString(cnst.getValue());
+            throw new Unreachable("Unexpected default value for field type " + field.type + ".");
           }
         } else {
           ConstNumber cnst = put.inValue().getConstInstruction().asConstNumber();
@@ -699,22 +745,45 @@ public class CodeRewriter {
           } else if (field.type == dexItemFactory.charType) {
             encodedField.staticValue = DexValueChar.create((char) cnst.getIntValue());
           } else {
-             throw new Unreachable("Unexpected field type.");
+            throw new Unreachable("Unexpected field type " + field.type + ".");
           }
         }
       }
 
       // Remove the static put instructions now replaced by static filed initial values.
+      List<Instruction> toRemove = new ArrayList<>();
       for (BasicBlock block : dominatorTree.dominatorBlocks(exit)) {
         InstructionListIterator iterator = block.listIterator();
         while (iterator.hasNext()) {
           Instruction current = iterator.next();
           if (current.isStaticPut() && puts.values().contains(current.asStaticPut())) {
             iterator.remove();
+            // Collect, for removal, the instruction that created the value for the static put,
+            // if all users are gone. This is done even if these instructions can throw as for
+            // the current patterns matched these exceptions are not detectable.
+            StaticPut put = current.asStaticPut();
+            if (put.inValue().uniqueUsers().size() == 0) {
+              if (put.inValue().isConstString()) {
+                toRemove.add(put.inValue().definition);
+              } else if (put.inValue().definition.isInvokeVirtual()) {
+                toRemove.add(put.inValue().definition);
+              }
+            }
           }
         }
       }
 
+      // Remove the instructions collected for removal.
+      if (toRemove.size() > 0) {
+        for (BasicBlock block : dominatorTree.dominatorBlocks(exit)) {
+          InstructionListIterator iterator = block.listIterator();
+          while (iterator.hasNext()) {
+            if (toRemove.contains(iterator.next())) {
+              iterator.remove();
+            }
+          }
+        }
+      }
     }
   }
 
