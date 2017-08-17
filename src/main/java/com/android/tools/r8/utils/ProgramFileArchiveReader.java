@@ -25,11 +25,13 @@ import java.util.zip.ZipInputStream;
 class ProgramFileArchiveReader {
 
   private final Path archive;
+  private boolean ignoreDexInArchive;
   private List<Resource> dexResources = null;
   private List<Resource> classResources = null;
 
-  ProgramFileArchiveReader(Path archive) {
+  ProgramFileArchiveReader(Path archive, boolean ignoreDexInArchive) {
     this.archive = archive;
+    this.ignoreDexInArchive = ignoreDexInArchive;
   }
 
   private void readArchive() throws IOException {
@@ -41,9 +43,11 @@ class ProgramFileArchiveReader {
       while ((entry = stream.getNextEntry()) != null) {
         Path name = Paths.get(entry.getName());
         if (isDexFile(name)) {
-          Resource resource =
-              new OneShotByteResource(Resource.Kind.DEX, ByteStreams.toByteArray(stream), null);
-          dexResources.add(resource);
+          if (!ignoreDexInArchive) {
+            Resource resource =
+                new OneShotByteResource(Resource.Kind.DEX, ByteStreams.toByteArray(stream), null);
+            dexResources.add(resource);
+          }
         } else if (isClassFile(name)) {
           String descriptor = PreloadedClassFileProvider.guessTypeDescriptor(name);
           Resource resource = new OneShotByteResource(Resource.Kind.CLASSFILE,

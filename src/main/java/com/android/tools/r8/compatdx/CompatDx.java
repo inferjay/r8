@@ -450,7 +450,7 @@ public class CompatDx {
     ExecutorService executor = ThreadUtils.getExecutorService(numberOfThreads);
     D8Output result;
     try {
-      D8Command.Builder builder = D8Command.builder();
+      D8Command.Builder builder = new CompatDxCommandBuilder();
       builder
           .addProgramFiles(inputs)
           .setMode(mode)

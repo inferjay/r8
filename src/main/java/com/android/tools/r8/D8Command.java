@@ -36,7 +36,7 @@ public class D8Command extends BaseCommand {
 
     private boolean intermediate = false;
 
-    private Builder() {
+    protected Builder() {
       super(CompilationMode.DEBUG);
     }
 

@@ -95,6 +95,9 @@ abstract class BaseCommand {
     private CompilationMode mode;
     private int minApiLevel = Constants.DEFAULT_ANDROID_API;
 
+    // Internal flag used by CompatDx to ignore dex files in archives.
+    protected boolean ignoreDexInArchive = false;
+
     protected Builder(CompilationMode mode) {
       this(AndroidApp.builder(), mode);
     }
@@ -108,6 +111,7 @@ abstract class BaseCommand {
       assert mode != null;
       this.app = builder;
       this.mode = mode;
+      app.setIgnoreDexInArchive(ignoreDexInArchive);
     }
 
     abstract B self();

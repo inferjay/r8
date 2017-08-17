@@ -423,6 +423,7 @@ public class AndroidApp {
     private List<Resource> mainDexListResources = new ArrayList<>();
     private List<String> mainDexListClasses = new ArrayList<>();
     private Resource mainDexListOutput;
+    private boolean ignoreDexInArchive = false;
 
     // See AndroidApp::builder().
     private Builder() {
@@ -671,6 +672,17 @@ public class AndroidApp {
     }
 
     /**
+     * Ignore dex resources in input archives.
+     *
+     * In some situations (e.g. AOSP framework build) the input archives include both class and
+     * dex resources. Setting this flag ignores the dex resources and reads the class resources
+     * only.
+     */
+    public void setIgnoreDexInArchive(boolean value) {
+      ignoreDexInArchive = value;
+    }
+
+    /**
      * Build final AndroidApp.
      */
     public AndroidApp build() {
@@ -697,7 +709,7 @@ public class AndroidApp {
       } else if (isClassFile(file)) {
         programResources.add(Resource.fromFile(Resource.Kind.CLASSFILE, file));
       } else if (isArchive(file)) {
-        programFileArchiveReaders.add(new ProgramFileArchiveReader(file));
+        programFileArchiveReaders.add(new ProgramFileArchiveReader(file, ignoreDexInArchive));
       } else {
         throw new CompilationError("Unsupported source file type for file: " + file);
       }
