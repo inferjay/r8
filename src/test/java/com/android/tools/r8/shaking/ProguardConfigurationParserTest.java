@@ -445,7 +445,6 @@ public class ProguardConfigurationParserTest extends TestBase {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(DONT_OPTIMIZE));
     ProguardConfiguration config = parser.getConfig();
-    assertTrue(config.getOptimizationPasses() == 0);
   }
 
   @Test
@@ -453,7 +452,6 @@ public class ProguardConfigurationParserTest extends TestBase {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(DONT_OPTIMIZE_OVERRIDES_PASSES));
     ProguardConfiguration config = parser.getConfig();
-    assertTrue(config.getOptimizationPasses() == 0);
   }
 
   @Test
@@ -461,9 +459,6 @@ public class ProguardConfigurationParserTest extends TestBase {
     ProguardConfigurationParser parser = new ProguardConfigurationParser(new DexItemFactory());
     parser.parse(Paths.get(OPTIMIZATION_PASSES));
     ProguardConfiguration config = parser.getConfig();
-    // TODO(b/36800551): optimizationPasses should not be set at the moment.
-    // assertTrue(config.getOptimizationPasses() == 8);
-    assertTrue(config.getOptimizationPasses() == 1);
   }
 
   @Test
