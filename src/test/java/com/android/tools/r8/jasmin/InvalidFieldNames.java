@@ -3,11 +3,14 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.jasmin;
 
+import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.fail;
 
 import com.android.tools.r8.errors.CompilationError;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -32,10 +35,14 @@ public class InvalidFieldNames extends JasminTestBase {
     String artResult = null;
     try {
       artResult = runOnArt(builder, main);
-    } catch (CompilationError t) {
-      // Ignore.
+      fail();
+    } catch (ExecutionException t) {
+      if (!(t.getCause() instanceof CompilationError)) {
+        t.printStackTrace(System.out);
+        fail("Invalid dex field names should be compilation errors.");
+      }
     }
-    assert artResult == null : "Invalid dex class names should be rejected.";
+    assertNull("Invalid dex field names should be rejected.", artResult);
   }
 
   @Parameters
