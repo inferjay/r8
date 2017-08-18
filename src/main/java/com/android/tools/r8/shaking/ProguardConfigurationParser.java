@@ -163,7 +163,6 @@ public class ProguardConfigurationParser {
         if (expectedOptimizationPasses == null) {
           throw parseError("Missing n of \"-optimizationpasses n\"");
         }
-        configurationBuilder.setOptimizationPasses(expectedOptimizationPasses);
         warnIgnoringOptions("optimizationpasses");
       } else if (acceptString("dontobfuscate")) {
         configurationBuilder.setObfuscating(false);
