@@ -528,6 +528,10 @@ task buildDebugTestResourcesJars {
     dependsOn jar_debugTestResourcesJava8
 }
 
+// Proto lite generated code yields warnings when compiling with javac.
+// We change the options passed to javac to ignore it.
+compileExamplesJava.options.compilerArgs = ["-Xlint:none"]
+
 task buildExampleJars {
     dependsOn downloadProguard
     def examplesDir = file("src/test/examples")
