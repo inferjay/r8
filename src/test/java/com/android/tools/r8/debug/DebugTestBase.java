@@ -3,15 +3,18 @@
 // BSD-style license that can be found in the LICENSE file.
 package com.android.tools.r8.debug;
 
+import com.android.tools.r8.CompilationException;
 import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.D8Command;
 import com.android.tools.r8.ToolHelper;
 import com.android.tools.r8.ToolHelper.ArtCommandBuilder;
 import com.android.tools.r8.ToolHelper.DexVm;
 import com.android.tools.r8.dex.Constants;
+import com.android.tools.r8.utils.InternalOptions;
 import com.android.tools.r8.utils.OffOrAuto;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
@@ -89,12 +92,15 @@ public abstract class DebugTestBase {
       .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources.jar");
   private static final Path DEBUGGEE_JAVA8_JAR = Paths
       .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources_java8.jar");
+  private static final Path DEBUGGEE_KOTLIN_JAR = Paths
+      .get(ToolHelper.BUILD_DIR, "test", "debug_test_resources_kotlin.jar");
 
   @ClassRule
   public static TemporaryFolder temp = new TemporaryFolder();
   private static Path jdwpDexD8 = null;
   private static Path debuggeeDexD8 = null;
   private static Path debuggeeJava8DexD8 = null;
+  private static Path debuggeeKotlinDexD8 = null;
 
   @Rule
   public TestName testName = new TestName();
@@ -103,43 +109,31 @@ public abstract class DebugTestBase {
   public static void setUp() throws Exception {
     // Convert jar to dex with d8 with debug info
     int minSdk = ToolHelper.getMinApiLevelForDexVm(ToolHelper.getDexVm());
-    {
-      Path dexOutputDir = temp.newFolder("d8-jdwp-jar").toPath();
-      jdwpDexD8 = dexOutputDir.resolve("classes.dex");
-      ToolHelper.runD8(
-          D8Command.builder()
-              .addProgramFiles(JDWP_JAR)
-              .setOutputPath(dexOutputDir)
-              .setMinApiLevel(minSdk)
-              .setMode(CompilationMode.DEBUG)
-              .build());
-    }
-    {
-      Path dexOutputDir = temp.newFolder("d8-debuggee-jar").toPath();
-      debuggeeDexD8 = dexOutputDir.resolve("classes.dex");
-      ToolHelper.runD8(
-          D8Command.builder()
-              .addProgramFiles(DEBUGGEE_JAR)
-              .setOutputPath(dexOutputDir)
-              .setMinApiLevel(minSdk)
-              .setMode(CompilationMode.DEBUG)
-              .build());
-    }
-    {
-      Path dexOutputDir = temp.newFolder("d8-debuggee-java8-jar").toPath();
-      debuggeeJava8DexD8 = dexOutputDir.resolve("classes.dex");
-      ToolHelper.runD8(
-          D8Command.builder()
-              .addProgramFiles(DEBUGGEE_JAVA8_JAR)
-              .setOutputPath(dexOutputDir)
-              .setMinApiLevel(minSdk)
-              .setMode(CompilationMode.DEBUG)
-              .build(),
-          options -> {
-            // Enable desugaring for preN runtimes
-            options.interfaceMethodDesugaring = OffOrAuto.Auto;
-          });
-    }
+    jdwpDexD8 = compileJarToDex(JDWP_JAR, minSdk, "d8-jdwp-jar", null);
+    debuggeeDexD8 = compileJarToDex(DEBUGGEE_JAR, minSdk, "d8-debuggee-jar", null);
+    debuggeeJava8DexD8 = compileJarToDex(DEBUGGEE_JAVA8_JAR, minSdk, "d8-debuggee-java8-jar",
+        options -> {
+          // Enable desugaring for preN runtimes
+          options.interfaceMethodDesugaring = OffOrAuto.Auto;
+        });
+    debuggeeKotlinDexD8 = compileJarToDex(DEBUGGEE_KOTLIN_JAR, minSdk, "d8-debuggee-kotlin-jar",
+        null);
+  }
+
+  private static Path compileJarToDex(Path jarToCompile, int minSdk, String tempDirName,
+      Consumer<InternalOptions> optionsConsumer) throws IOException, CompilationException {
+    assert jarToCompile.toFile().exists();
+    Path dexOutputDir = temp.newFolder(tempDirName).toPath();
+    ToolHelper.runD8(
+        D8Command.builder()
+            .addProgramFiles(jarToCompile)
+            .setOutputPath(dexOutputDir)
+            .setMinApiLevel(minSdk)
+            .setMode(CompilationMode.DEBUG)
+            .build(),
+        optionsConsumer);
+    return dexOutputDir.resolve("classes.dex");
+
   }
 
   protected final boolean supportsDefaultMethod() {
@@ -158,7 +152,7 @@ public abstract class DebugTestBase {
 
   protected final void runDebugTest(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
       throws Throwable {
-    runDebugTest(false, debuggeeClass, commands);
+    runDebugTest(LanguageFeatures.JAVA_7, debuggeeClass, commands);
   }
 
   protected final void runDebugTestJava8(String debuggeeClass, JUnit3Wrapper.Command... commands)
@@ -168,12 +162,54 @@ public abstract class DebugTestBase {
 
   protected final void runDebugTestJava8(String debuggeeClass, List<JUnit3Wrapper.Command> commands)
       throws Throwable {
-    runDebugTest(true, debuggeeClass, commands);
+    runDebugTest(LanguageFeatures.JAVA_8, debuggeeClass, commands);
   }
 
-  private void runDebugTest(boolean useJava8, String debuggeeClass,
-      List<JUnit3Wrapper.Command> commands)
+  protected final void runDebugTestKotlin(String debuggeeClass, JUnit3Wrapper.Command... commands)
       throws Throwable {
+    runDebugTestKotlin(debuggeeClass, Arrays.asList(commands));
+  }
+
+  protected final void runDebugTestKotlin(String debuggeeClass,
+      List<JUnit3Wrapper.Command> commands) throws Throwable {
+    runDebugTest(LanguageFeatures.KOTLIN, debuggeeClass, commands);
+  }
+
+  protected enum LanguageFeatures {
+    JAVA_7(DEBUGGEE_JAR) {
+      @Override
+      public Path getDexPath() {
+        return debuggeeDexD8;
+      }
+    },
+    JAVA_8(DEBUGGEE_JAVA8_JAR) {
+      @Override
+      public Path getDexPath() {
+        return debuggeeJava8DexD8;
+      }
+    },
+    KOTLIN(DEBUGGEE_KOTLIN_JAR) {
+      @Override
+      public Path getDexPath() {
+        return debuggeeKotlinDexD8;
+      }
+    };
+
+    private final Path jarPath;
+
+    LanguageFeatures(Path jarPath) {
+      this.jarPath = jarPath;
+    }
+
+    public Path getJarPath() {
+      return jarPath;
+    }
+
+    public abstract Path getDexPath();
+  }
+
+  private void runDebugTest(LanguageFeatures languageFeatures, String debuggeeClass,
+      List<JUnit3Wrapper.Command> commands) throws Throwable {
     // Skip test due to unsupported runtime.
     Assume.assumeTrue("Skipping test " + testName.getMethodName() + " because ART is not supported",
         ToolHelper.artSupported());
@@ -183,15 +219,9 @@ public abstract class DebugTestBase {
 
     String[] paths;
     if (RUNTIME_KIND == RuntimeKind.JAVA) {
-      paths = new String[] {
-          JDWP_JAR.toString(),
-          useJava8 ? DEBUGGEE_JAVA8_JAR.toString() : DEBUGGEE_JAR.toString()
-      };
+      paths = new String[] { JDWP_JAR.toString(), languageFeatures.getJarPath().toString() };
     } else {
-      paths = new String[] {
-          jdwpDexD8.toString(),
-          useJava8 ? debuggeeJava8DexD8.toString() : debuggeeDexD8.toString()
-      };
+      paths = new String[] { jdwpDexD8.toString(), languageFeatures.getDexPath().toString() };
     }
     new JUnit3Wrapper(debuggeeClass, paths, commands).runBare();
   }
@@ -580,6 +610,7 @@ public abstract class DebugTestBase {
         }
 
         public String getSourceFile() {
+          // TODO(shertz) support JSR-45
           Location location = getLocation();
           CommandPacket sourceFileCommand = new CommandPacket(
               JDWPCommands.ReferenceTypeCommandSet.CommandSetID,

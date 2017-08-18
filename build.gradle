@@ -51,6 +51,12 @@ sourceSets {
         }
         output.resourcesDir = 'build/classes/debugTestResourcesJava8'
     }
+    debugTestResourcesKotlin {
+        java {
+            srcDirs = ['src/test/debugTestResourcesKotlin']
+        }
+        output.resourcesDir = 'build/classes/debugTestResourcesKotlin'
+    }
     examples {
         java {
             srcDirs = ['src/test/examples', 'build/generated/source/proto/examples/javalite/' ]
@@ -127,6 +133,7 @@ dependencies {
     supportLibs 'com.android.support:support-v4:25.4.0'
     supportLibs 'junit:junit:4.12'
     supportLibs 'com.android.support.test.espresso:espresso-core:3.0.0'
+    debugTestResourcesKotlinCompileOnly 'org.jetbrains.kotlin:kotlin-stdlib:1.1.3'
 }
 
 protobuf {
@@ -172,6 +179,7 @@ def cloudDependencies = [
                 "jdwp-tests.tar.gz",
                 "jasmin.tar.gz",
                 "jctf.tar.gz",
+                "kotlin.tar.gz",
                 "android_cts_baseline.tar.gz",
         ],
         // All dex-vms have a fixed OS of Linux, as they are only supported on Linux, and will be run in a Docker
@@ -523,9 +531,23 @@ task buildDebugTestResourcesJars {
         from "build/test/debugTestResourcesJava8/classes"
         include "**/*.class"
     }
+    def kotlinResourcesDir = file("src/test/debugTestResourcesKotlin")
+    def kotlinHostJar = "debug_test_resources_kotlin.jar"
+    task "jar_debugTestResourcesKotlin"(type: Exec) {
+        if (OperatingSystem.current().isWindows()) {
+            executable file("third_party/kotlin/kotlinc/bin/kotlinc.bat")
+        } else {
+            executable file("third_party/kotlin/kotlinc/bin/kotlinc");
+        }
+        args "-include-runtime"
+        args "-d"
+        args "build/test/${kotlinHostJar}"
+        args fileTree(dir: kotlinResourcesDir, include: '**/*.kt')
+    }
     dependsOn downloadDeps
     dependsOn jar_debugTestResources
     dependsOn jar_debugTestResourcesJava8
+    dependsOn jar_debugTestResourcesKotlin
 }
 
 task buildExampleJars {
